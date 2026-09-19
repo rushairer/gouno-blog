@@ -37,6 +37,9 @@ const blogWorkflowRecords = await readBlog(
 const blogAgentRecords = await readBlog(
   "src/components/agent/AgentRunRecords.tsx",
 );
+const blogWorkflowDetail = await readBlog(
+  "src/components/agent/WorkflowRunDetail.tsx",
+);
 const blogPage = await readBlog("src/pages/admin/AIOperations.tsx");
 
 function requireBoth(marker, canonical, consumer, label) {
@@ -80,6 +83,43 @@ requireBoth(
   canonicalRecords,
   blogAgentRecords,
   "Agent Run Center rail width",
+);
+
+requireBoth(
+  'data-pattern="dedicated-list-editor"',
+  canonicalAutomation,
+  blogAutomation,
+  "Workflow Dedicated Editor composition",
+);
+requireBoth(
+  "DedicatedEditorLead",
+  canonicalAutomation,
+  blogAutomation,
+  "Workflow Dedicated Editor lead",
+);
+requireBoth(
+  'data-pattern="master-detail-composition"',
+  canonicalRecords,
+  blogWorkflowRecords,
+  "Workflow Run master-detail composition",
+);
+requireBoth(
+  'data-pattern="master-detail-composition"',
+  canonicalRecords,
+  blogAgentRecords,
+  "Agent Run master-detail composition",
+);
+requireBoth(
+  'data-pattern="record-detail-composition"',
+  canonicalRecords,
+  blogWorkflowDetail,
+  "Workflow Run record-detail composition",
+);
+requireBoth(
+  'data-pattern="record-detail-composition"',
+  canonicalRecords,
+  blogAgentRecords,
+  "Agent Run record-detail composition",
 );
 
 for (const marker of ["Workflow 任务", "Agent 运行"]) {

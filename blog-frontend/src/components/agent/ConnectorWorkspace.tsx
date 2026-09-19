@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Check,
+  Edit2,
   Inbox,
   KeyRound,
   Play,
+  Plus,
   RotateCcw,
   ShieldOff,
 } from "lucide-react";
@@ -19,9 +21,11 @@ import {
   Card,
   CardContent,
   Checkbox,
+  Drawer,
   Empty,
   Field,
   FormGrid,
+  FormLayout,
   IconButton,
   Input,
   Select,
@@ -29,6 +33,7 @@ import {
   Text,
   Textarea,
 } from "@gouno/ui/core";
+import { AISettingsEditorSection } from "./AISettingsEditorPatterns";
 
 type Locale = "en" | "zh";
 
@@ -71,9 +76,13 @@ export function ConnectorWorkspace({
   const zh = locale === "zh";
   const [profiles, setProfiles] = useState<ConnectorProfile[]>([]);
   const [outbox, setOutbox] = useState<ConnectorOutboxItem[]>([]);
+  const [editingProfile, setEditingProfile] = useState<
+    ConnectorProfile | "new" | null
+  >(null);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<ConnectorKind>("newsletter");
   const [sandbox, setSandbox] = useState(true);
+  const [enabled, setEnabled] = useState(true);
   const [config, setConfig] = useState('{"rate_limit_per_minute":10}');
   const [credential, setCredential] = useState("");
   const [state, setState] = useState("");
@@ -154,20 +163,45 @@ export function ConnectorWorkspace({
     await onRefresh();
   };
 
-  const saveProfile = async () => {
+  const openProfileEditor = (profile: ConnectorProfile | "new") => {
+    setEditingProfile(profile);
+    setError("");
+    setCredential("");
+    if (profile === "new") {
+      setName("");
+      setKind("newsletter");
+      setSandbox(true);
+      setEnabled(true);
+      setConfig('{"rate_limit_per_minute":10}');
+      return;
+    }
+    setName(profile.name);
+    setKind(profile.kind);
+    setSandbox(profile.sandbox);
+    setEnabled(profile.enabled);
+    setConfig(JSON.stringify(profile.config || {}, null, 2));
+  };
+
+  const closeProfileEditor = () => {
+    setEditingProfile(null);
+    setCredential("");
+  };
+
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     try {
       await action(() =>
         connectorApi.saveProfile({
+          id: editingProfile === "new" ? undefined : editingProfile?.id,
           name,
           kind,
           sandbox,
-          enabled: true,
+          enabled,
           config: JSON.parse(config),
           credential,
         }),
       );
-      setName("");
-      setCredential("");
+      closeProfileEditor();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Request failed");
     }
@@ -231,12 +265,22 @@ export function ConnectorWorkspace({
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <Text size="sm" tone="muted" className="max-w-3xl leading-relaxed">
           {zh
             ? "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。"
             : "Manage Sandbox external capabilities available to Agents, OAuth boundaries, and the Outbox approval path."}
         </Text>
+        <Button
+          size="small"
+          variant="solid"
+          color="primary"
+          type="button"
+          icon={<Plus />}
+          onClick={() => openProfileEditor("new")}
+        >
+          {zh ? "添加 Connector Profile" : "Add Connector Profile"}
+        </Button>
       </div>
 
       <Alert
@@ -261,165 +305,68 @@ export function ConnectorWorkspace({
         </Alert>
       ) : null}
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.15fr)]">
-        <Card padding="base">
-          <div className="flex flex-col gap-5">
+      <Card padding="none" className="overflow-hidden">
+        <div className="border-b px-6 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <strong className="text-base">
-                {zh ? "新建 Connector Profile" : "New Connector Profile"}
-              </strong>
+              <strong className="text-base">Connector Profiles</strong>
               <Text size="xs" tone="muted" className="mt-1">
                 {zh
-                  ? "先定义连接身份，再设置运行配置与凭据。"
-                  : "Define the connection identity first, then its runtime configuration and credentials."}
+                  ? "查看连接模式、凭据状态并发起对应的 OAuth 流程；配置修改在上下文 Drawer 中完成。"
+                  : "Review connection mode and credential state, start OAuth when needed, and edit configuration in the contextual Drawer."}
               </Text>
             </div>
+            <Tag>{profiles.length}</Tag>
+          </div>
+        </div>
 
-            <FormGrid columns={2}>
-              <Field label={zh ? "名称" : "Name"}>
-                <Input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="search-console"
-                />
-              </Field>
-              <Field label={zh ? "类型" : "Kind"}>
-                <Select
-                  aria-label={zh ? "类型" : "Kind"}
-                  value={kind}
-                  onChange={(value) => {
-                    const next = selectValue(value) as ConnectorKind;
-                    setKind(next);
-                    if (next !== "search_console") setSandbox(true);
-                  }}
-                >
-                  {kinds.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {zh ? item.zh : item.en}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </FormGrid>
-
-            {kind === "search_console" ? (
-              <Field label={zh ? "连接模式" : "Connection mode"}>
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={sandbox}
-                    onChange={(event) => setSandbox(event.target.checked)}
-                  />
-                  {zh
-                    ? "Sandbox（取消以启用只读 Google OAuth）"
-                    : "Sandbox (uncheck for read-only Google OAuth)"}
-                </label>
-              </Field>
-            ) : null}
-
-            <Field label={zh ? "配置 JSON" : "Config JSON"}>
-              <Textarea
-                className="font-mono"
-                value={config}
-                onChange={(event) => setConfig(event.target.value)}
-                rows={4}
-                placeholder='{"client_id":"...","redirect_uri":"https://...","site_url":"sc-domain:example.com"}'
-              />
-            </Field>
-
-            <Field
-              label={
-                sandbox
-                  ? zh
-                    ? "凭据（Sandbox 可选）"
-                    : "Credential (optional for Sandbox)"
-                  : zh
-                    ? "Google OAuth Client Secret（加密保存）"
-                    : "Google OAuth client secret (encrypted)"
+        {profiles.length === 0 ? (
+          <CardContent className="p-6">
+            <Empty
+              icon={<Inbox />}
+              title={
+                zh ? "还没有连接器 Profile。" : "No connector profiles yet."
               }
-            >
-              <Input
-                type="password"
-                value={credential}
-                onChange={(event) => setCredential(event.target.value)}
-                autoComplete="new-password"
-              />
-            </Field>
-
-            <div className="flex justify-end border-t pt-4">
-              <Button
-                variant="solid"
-                color="primary"
-                type="button"
-                disabled={!name.trim() || (!sandbox && !credential.trim())}
-                onClick={() => void saveProfile()}
-                icon={<KeyRound />}
+              description={
+                zh
+                  ? "添加 Connector Profile 后可配置 Sandbox、OAuth 与 Outbox 边界。"
+                  : "Add a Connector Profile to configure Sandbox, OAuth, and Outbox boundaries."
+              }
+            />
+          </CardContent>
+        ) : (
+          <CardContent className="divide-y p-0">
+            {profiles.map((profile) => (
+              <div
+                key={profile.id}
+                className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"
               >
-                {zh ? "保存 Profile" : "Save profile"}
-              </Button>
-            </div>
-          </div>
-        </Card>
-
-        <Card padding="none" className="overflow-hidden">
-          <div className="border-b px-6 py-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <strong className="text-base">
-                  {zh ? "Connector Profiles" : "Connector Profiles"}
-                </strong>
-                <Text size="xs" tone="muted" className="mt-1">
-                  {zh
-                    ? "查看连接模式、凭据状态并发起对应的 OAuth 流程。"
-                    : "Review connection mode and credential state, then start the appropriate OAuth flow."}
-                </Text>
-              </div>
-              <Tag>{profiles.length}</Tag>
-            </div>
-          </div>
-
-          {profiles.length === 0 ? (
-            <CardContent className="p-6">
-              <Empty
-                icon={<Inbox />}
-                title={
-                  zh ? "还没有连接器 Profile。" : "No connector profiles yet."
-                }
-              />
-            </CardContent>
-          ) : (
-            <CardContent className="divide-y p-0">
-              {profiles.map((profile) => (
-                <div
-                  key={profile.id}
-                  className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <strong>{profile.name}</strong>
-                      <Tag color={profile.enabled ? "success" : "default"}>
-                        {profile.enabled
-                          ? zh
-                            ? "已启用"
-                            : "Enabled"
-                          : zh
-                            ? "已停用"
-                            : "Disabled"}
-                      </Tag>
-                      <Tag>
-                        {profile.sandbox ? "Sandbox" : "Read-only OAuth"}
-                      </Tag>
-                    </div>
-                    <Text size="xs" tone="muted" className="mt-2">
-                      {profile.kind} ·{" "}
-                      {profile.has_credential
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong>{profile.name}</strong>
+                    <Tag color={profile.enabled ? "success" : "default"}>
+                      {profile.enabled
                         ? zh
-                          ? `凭据 •••• ${profile.credential_last4 || ""}`
-                          : `Credential •••• ${profile.credential_last4 || ""}`
+                          ? "已启用"
+                          : "Enabled"
                         : zh
-                          ? "未配置凭据"
-                          : "No credential"}
-                    </Text>
+                          ? "已停用"
+                          : "Disabled"}
+                    </Tag>
+                    <Tag>{profile.sandbox ? "Sandbox" : "Read-only OAuth"}</Tag>
                   </div>
+                  <Text size="xs" tone="muted" className="mt-2">
+                    {profile.kind} ·{" "}
+                    {profile.has_credential
+                      ? zh
+                        ? `凭据 •••• ${profile.credential_last4 || ""}`
+                        : `Credential •••• ${profile.credential_last4 || ""}`
+                      : zh
+                        ? "未配置凭据"
+                        : "No credential"}
+                  </Text>
+                </div>
+                <div className="flex min-w-max items-center gap-1">
                   <Button
                     variant="outline"
                     size="small"
@@ -435,12 +382,196 @@ export function ConnectorWorkspace({
                         ? "开始 Mock OAuth"
                         : "Start mock OAuth"}
                   </Button>
+                  <IconButton
+                    variant="ghost"
+                    size="small"
+                    label={zh ? "编辑 Connector" : "Edit Connector"}
+                    icon={<Edit2 />}
+                    onClick={() => openProfileEditor(profile)}
+                  />
                 </div>
-              ))}
-            </CardContent>
-          )}
-        </Card>
-      </div>
+              </div>
+            ))}
+          </CardContent>
+        )}
+      </Card>
+
+      <Drawer
+        open={editingProfile !== null}
+        width={720}
+        title={
+          editingProfile === "new"
+            ? zh
+              ? "添加 Connector Profile"
+              : "Add Connector Profile"
+            : zh
+              ? `编辑 Connector：${editingProfile?.name || ""}`
+              : `Edit Connector: ${editingProfile?.name || ""}`
+        }
+        description={
+          zh
+            ? "配置 Connector 的产品身份、授权范围、Sandbox 与凭据状态。"
+            : "Configure Connector identity, authorization boundary, Sandbox mode, and credential state."
+        }
+        onClose={closeProfileEditor}
+        footer={
+          editingProfile ? (
+            <>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={closeProfileEditor}
+              >
+                {zh ? "取消" : "Cancel"}
+              </Button>
+              <Button
+                form="ai-settings-connector-editor"
+                type="submit"
+                variant="solid"
+                color="primary"
+                disabled={
+                  !name.trim() ||
+                  (!sandbox &&
+                    !credential.trim() &&
+                    (editingProfile === "new" ||
+                      !editingProfile.has_credential))
+                }
+              >
+                {zh ? "保存 Connector" : "Save Connector"}
+              </Button>
+            </>
+          ) : null
+        }
+      >
+        {editingProfile ? (
+          <div data-pattern="contextual-list-editor">
+            <FormLayout
+              id="ai-settings-connector-editor"
+              data-pattern="editor-form-composition"
+              onSubmit={saveProfile}
+            >
+              <div className="flex flex-col gap-5">
+                <AISettingsEditorSection
+                  title={zh ? "连接身份" : "Connection identity"}
+                  description={
+                    zh
+                      ? "定义 Connector 的产品名称、类型和启停状态。"
+                      : "Define the Connector name, kind, and enabled state."
+                  }
+                >
+                  <div className="flex flex-col gap-5">
+                    <FormGrid columns={2}>
+                      <Field label={zh ? "名称" : "Name"}>
+                        <Input
+                          required
+                          value={name}
+                          onChange={(event) => setName(event.target.value)}
+                          placeholder="search-console"
+                        />
+                      </Field>
+                      <Field label={zh ? "类型" : "Kind"}>
+                        <Select
+                          aria-label={zh ? "类型" : "Kind"}
+                          value={kind}
+                          onChange={(value) => {
+                            const next = selectValue(value) as ConnectorKind;
+                            setKind(next);
+                            if (next !== "search_console") setSandbox(true);
+                          }}
+                        >
+                          {kinds.map((item) => (
+                            <option key={item.value} value={item.value}>
+                              {zh ? item.zh : item.en}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                    </FormGrid>
+                    <Field label={zh ? "状态" : "Status"}>
+                      <label className="inline-flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={enabled}
+                          onChange={(event) => setEnabled(event.target.checked)}
+                        />
+                        {zh ? "启用 Connector" : "Enable Connector"}
+                      </label>
+                    </Field>
+                  </div>
+                </AISettingsEditorSection>
+
+                <AISettingsEditorSection
+                  title={zh ? "运行与凭据" : "Runtime and credentials"}
+                  description={
+                    zh
+                      ? "Sandbox、配置 JSON 与凭据状态显式分离；生产外部写入仍不在此能力范围。"
+                      : "Keep Sandbox mode, config JSON, and credential state explicit; production external writes remain outside this capability."
+                  }
+                >
+                  <div className="flex flex-col gap-5">
+                    {kind === "search_console" ? (
+                      <Field label={zh ? "连接模式" : "Connection mode"}>
+                        <label className="inline-flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={sandbox}
+                            onChange={(event) =>
+                              setSandbox(event.target.checked)
+                            }
+                          />
+                          {zh
+                            ? "Sandbox（取消以启用只读 Google OAuth）"
+                            : "Sandbox (uncheck for read-only Google OAuth)"}
+                        </label>
+                      </Field>
+                    ) : null}
+
+                    <Field label={zh ? "配置 JSON" : "Config JSON"}>
+                      <Textarea
+                        className="font-mono"
+                        value={config}
+                        onChange={(event) => setConfig(event.target.value)}
+                        rows={6}
+                        placeholder='{"client_id":"...","redirect_uri":"https://...","site_url":"sc-domain:example.com"}'
+                      />
+                    </Field>
+
+                    <Field
+                      label={
+                        sandbox
+                          ? zh
+                            ? "凭据（Sandbox 可选）"
+                            : "Credential (optional for Sandbox)"
+                          : zh
+                            ? "Google OAuth Client Secret（加密保存）"
+                            : "Google OAuth client secret (encrypted)"
+                      }
+                      hint={
+                        editingProfile !== "new" &&
+                        editingProfile.has_credential
+                          ? zh
+                            ? "留空则保留现有凭据。"
+                            : "Leave blank to keep the existing credential."
+                          : undefined
+                      }
+                    >
+                      <Input
+                        type="password"
+                        value={credential}
+                        required={
+                          !sandbox &&
+                          (editingProfile === "new" ||
+                            !editingProfile.has_credential)
+                        }
+                        onChange={(event) => setCredential(event.target.value)}
+                        autoComplete="new-password"
+                      />
+                    </Field>
+                  </div>
+                </AISettingsEditorSection>
+              </div>
+            </FormLayout>
+          </div>
+        ) : null}
+      </Drawer>
 
       {state ? (
         <Card padding="base">

@@ -43,6 +43,7 @@ export function AgentForm({
   labels,
   onSave,
   onCancel,
+  surface = "page",
 }: {
   initial?: Agent;
   providers: ProviderProfile[];
@@ -51,6 +52,7 @@ export function AgentForm({
   labels: Record<string, string>;
   onSave: (value: AgentFormValue) => Promise<void>;
   onCancel: () => void;
+  surface?: "page" | "dedicated";
 }) {
   const [value, setValue] = useState<AgentFormValue>(() =>
     initial ? { ...initial } : emptyAgent(providers[0]?.id),
@@ -141,20 +143,25 @@ export function AgentForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div className="flex flex-col gap-5">
-        <AISettingsEditorHeader
-          title={
-            initial
-              ? `${labels.editAgent}：${initial.name}`
-              : labels.createAgent
-          }
-          description={
-            locale === "zh"
-              ? "Agent 绑定稳定的模型与 Skill Version；运行计划、预算和限制覆盖属于运行治理，不复制 Skill 的安全边界。"
-              : "Agents bind stable model and Skill versions. Schedule, budget, and stricter overrides belong to runtime governance."
-          }
-          icon={<Bot />}
-        />
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
+        {surface === "page" ? (
+          <AISettingsEditorHeader
+            title={
+              initial
+                ? `${labels.editAgent}：${initial.name}`
+                : labels.createAgent
+            }
+            description={
+              locale === "zh"
+                ? "Agent 绑定稳定的模型与 Skill Version；运行计划、预算和限制覆盖属于运行治理，不复制 Skill 的安全边界。"
+                : "Agents bind stable model and Skill versions. Schedule, budget, and stricter overrides belong to runtime governance."
+            }
+            icon={<Bot />}
+          />
+        ) : null}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)]">
           <div className="flex min-w-0 flex-col gap-5">

@@ -680,6 +680,7 @@ export function RecordsWorkspace({
       ) : (
         <div
           data-slot="ops-master-detail"
+          data-pattern="master-detail-composition"
           className="grid min-w-0 items-stretch gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]"
         >
           <section
@@ -734,6 +735,7 @@ export function RecordsWorkspace({
           {selectedRun ? (
             <div
               data-slot="ops-detail-stack"
+              data-pattern="record-detail-composition"
               className="flex min-w-0 flex-col gap-6"
               aria-label={
                 zh

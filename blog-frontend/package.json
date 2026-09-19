@@ -9,7 +9,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "lint": "oxlint",
-    "lint:ui": "node scripts/check-ui-contracts.mjs && node scripts/check-retired-product-classes.mjs && node scripts/check-admin-parity-contracts.mjs && node scripts/check-privileged-access-parity.mjs && node scripts/check-public-parity-contracts.mjs && node scripts/check-action-grammar-contracts.mjs && node scripts/check-ai-ops-layout-contracts.mjs",
+    "lint:ui": "node scripts/check-ui-contracts.mjs && node scripts/check-retired-product-classes.mjs && node scripts/check-admin-parity-contracts.mjs && node scripts/check-privileged-access-parity.mjs && node scripts/check-public-parity-contracts.mjs && node scripts/check-action-grammar-contracts.mjs && node scripts/check-ai-settings-layout-contracts.mjs && node scripts/check-ai-ops-layout-contracts.mjs",
     "test": "vitest",
     "test:run": "tsc -b && vitest run",
     "test:coverage": "vitest run --coverage",
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@gosso/client": "0.9.3",
-    "@gouno/ui": "0.4.7",
+    "@gouno/ui": "0.4.8",
     "@tailwindcss/vite": "^4.3.3",
     "i18next": "^26.3.6",
     "lucide-react": "^1.21.0",

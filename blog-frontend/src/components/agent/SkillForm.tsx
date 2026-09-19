@@ -60,12 +60,14 @@ export function SkillForm({
   locale,
   onSave,
   onCancel,
+  surface = "page",
 }: {
   initial?: AgentSkill;
   tools: ToolDefinition[];
   locale: "en" | "zh";
   onSave: (value: SkillFormValue) => Promise<void>;
   onCancel: () => void;
+  surface?: "page" | "dedicated";
 }) {
   const [value, setValue] = useState<SkillFormValue>(() =>
     initial ? { ...initial } : { ...defaults },
@@ -132,16 +134,21 @@ export function SkillForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div className="flex flex-col gap-5">
-        <AISettingsEditorHeader
-          title={initial ? `${labels.title}：${initial.name}` : labels.title}
-          description={
-            locale === "zh"
-              ? "Skill Version 是行为与安全边界的不可变快照；固定指令、Tool 授权、发布策略和默认治理限制都在这里定义。"
-              : "A Skill Version is an immutable behavior and safety snapshot defining instructions, Tool authorization, publication policy, and governance defaults."
-          }
-          icon={<ListChecks />}
-        />
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
+        {surface === "page" ? (
+          <AISettingsEditorHeader
+            title={initial ? `${labels.title}：${initial.name}` : labels.title}
+            description={
+              locale === "zh"
+                ? "Skill Version 是行为与安全边界的不可变快照；固定指令、Tool 授权、发布策略和默认治理限制都在这里定义。"
+                : "A Skill Version is an immutable behavior and safety snapshot defining instructions, Tool authorization, publication policy, and governance defaults."
+            }
+            icon={<ListChecks />}
+          />
+        ) : null}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)]">
           <AISettingsEditorSection

@@ -182,15 +182,20 @@ describe("AISettings", () => {
   it("opens Provider management from the dedicated settings section", async () => {
     const user = userEvent.setup();
     renderSettings();
-    await user.click(await screen.findByRole("tab", { name: "Providers" }));
+    await user.click(
+      await screen.findByRole("tab", { name: "Model connections" }),
+    );
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Add Provider" }));
-    expect(
-      screen.getByRole("heading", { name: "Add Provider" }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("API Key")).toBeRequired();
+    await user.click(
+      screen.getByRole("button", { name: "Add model connection" }),
+    );
+    const providerDrawer = screen.getByRole("dialog", {
+      name: "Add model connection",
+    });
+    expect(providerDrawer).toBeInTheDocument();
+    expect(within(providerDrawer).getByLabelText("API Key")).toBeRequired();
   });
 
   it("closes a section-scoped editor when changing AI Settings sections", async () => {
@@ -237,13 +242,14 @@ describe("AISettings", () => {
     const user = userEvent.setup();
     renderSettings();
 
-    await user.click(await screen.findByRole("tab", { name: "Providers" }));
-    expect(screen.getByRole("tab", { name: "Providers" })).toHaveAttribute(
-      "aria-selected",
-      "true",
+    await user.click(
+      await screen.findByRole("tab", { name: "Model connections" }),
     );
     expect(
-      screen.queryByRole("heading", { name: "Providers" }),
+      screen.getByRole("tab", { name: "Model connections" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.queryByRole("heading", { name: "Model connections" }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Default Purposes" }),

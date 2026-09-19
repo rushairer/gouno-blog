@@ -209,7 +209,10 @@ export function WorkflowRunDetail({
   );
 
   return (
-    <div className="workflow-run-detail-view flex min-w-0 flex-col gap-6">
+    <div
+      data-pattern="record-detail-composition"
+      className="workflow-run-detail-view flex min-w-0 flex-col gap-6"
+    >
       {onBack ? (
         <div>
           <Button

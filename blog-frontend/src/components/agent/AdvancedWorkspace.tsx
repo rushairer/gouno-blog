@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   Bot,
   CirclePause,
@@ -39,6 +39,7 @@ import {
   Button,
   Card,
   CardContent,
+  Drawer,
   Empty,
   Heading,
   IconButton,
@@ -47,6 +48,7 @@ import {
   Tag,
   Text,
 } from "@gouno/ui/core";
+import { DedicatedEditorLead } from "./DedicatedEditorPatterns";
 
 export type AdvancedSection =
   | "agents"
@@ -192,6 +194,19 @@ export function AdvancedWorkspace({
   const skillFileInputRef = useRef<HTMLInputElement>(null);
   const providerMap = new Map(providers.map((item) => [item.id, item]));
 
+  useEffect(() => {
+    if (!editingAgent && !editingSkill) return;
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.scrollingElement?.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editingAgent, editingSkill]);
+
   return (
     <>
       <Tabs<AdvancedSection>
@@ -232,52 +247,87 @@ export function AdvancedWorkspace({
         ]}
       />
 
-      {advancedSection === "providers" && editingProvider ? (
-        <ProviderForm
-          key={editingProvider === "new" ? "new" : editingProvider.id}
-          initial={editingProvider === "new" ? undefined : editingProvider}
-          labels={labels}
-          onSave={onSaveProvider}
-          onCancel={() => onEditProvider(null)}
-        />
-      ) : null}
-
-      {advancedSection === "knowledge" && editingEmbedding ? (
-        <EmbeddingForm
-          key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
-          initial={editingEmbedding === "new" ? undefined : editingEmbedding}
-          locale={locale}
-          onSave={onSaveEmbedding}
-          onCancel={() => onEditEmbedding(null)}
-        />
-      ) : null}
-
       {advancedSection === "agents" && editingAgent ? (
-        <AgentForm
-          key={editingAgent === "new" ? "new" : editingAgent.id}
-          initial={editingAgent === "new" ? undefined : editingAgent}
-          providers={providers}
-          skills={skills}
-          locale={locale}
-          labels={labels}
-          onSave={onSaveAgent}
-          onCancel={() => onEditAgent(null)}
-        />
+        <div
+          data-pattern="dedicated-list-editor"
+          className="flex flex-col gap-5"
+        >
+          <DedicatedEditorLead
+            title={
+              editingAgent === "new"
+                ? locale === "zh"
+                  ? "创建 Agent"
+                  : "Create Agent"
+                : locale === "zh"
+                  ? `编辑 Agent：${editingAgent.name}`
+                  : `Edit Agent: ${editingAgent.name}`
+            }
+            description={
+              locale === "zh"
+                ? "Agent 是独立的配置任务：绑定模型与 Skill Version，并设置运行计划、预算与更严格的运行限制。"
+                : "Agent editing is a dedicated configuration task for model/Skill binding, schedules, budgets, and stricter runtime limits."
+            }
+            backLabel={
+              locale === "zh" ? "返回 Agent 列表" : "Back to Agent list"
+            }
+            onBack={() => onEditAgent(null)}
+          />
+          <AgentForm
+            key={editingAgent === "new" ? "new" : editingAgent.id}
+            initial={editingAgent === "new" ? undefined : editingAgent}
+            providers={providers}
+            skills={skills}
+            locale={locale}
+            labels={labels}
+            onSave={onSaveAgent}
+            onCancel={() => onEditAgent(null)}
+            surface="dedicated"
+          />
+        </div>
       ) : null}
 
       {advancedSection === "skills" && editingSkill ? (
-        <SkillForm
-          key={editingSkill === "new" ? "new" : editingSkill.id}
-          initial={editingSkill === "new" ? undefined : editingSkill}
-          tools={tools}
-          locale={locale}
-          onSave={onSaveSkill}
-          onCancel={() => onEditSkill(null)}
-        />
+        <div
+          data-pattern="dedicated-list-editor"
+          className="flex flex-col gap-5"
+        >
+          <DedicatedEditorLead
+            title={
+              editingSkill === "new"
+                ? locale === "zh"
+                  ? "创建 Skill"
+                  : "Create Skill"
+                : locale === "zh"
+                  ? `编辑 Skill：${editingSkill.name}`
+                  : `Edit Skill: ${editingSkill.name}`
+            }
+            description={
+              locale === "zh"
+                ? "Skill Version 是独立的配置任务：固定行为指令、Tool 授权、发布策略与默认治理边界。"
+                : "Skill editing is a dedicated configuration task for immutable behavior, Tool authorization, publication policy, and governance defaults."
+            }
+            backLabel={
+              locale === "zh" ? "返回 Skill 列表" : "Back to Skill list"
+            }
+            onBack={() => onEditSkill(null)}
+          />
+          <SkillForm
+            key={editingSkill === "new" ? "new" : editingSkill.id}
+            initial={editingSkill === "new" ? undefined : editingSkill}
+            tools={tools}
+            locale={locale}
+            onSave={onSaveSkill}
+            onCancel={() => onEditSkill(null)}
+            surface="dedicated"
+          />
+        </div>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === "tools" ? (
-        <div className="flex flex-col gap-5">
+      {!editingAgent && !editingSkill && advancedSection === "tools" ? (
+        <div
+          data-pattern="settings-composition"
+          className="flex flex-col gap-5"
+        >
           <TabPanelLead
             description={
               locale === "zh"
@@ -317,8 +367,11 @@ export function AdvancedWorkspace({
         </div>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === "agents" ? (
-        <div className="flex flex-col gap-5">
+      {!editingAgent && !editingSkill && advancedSection === "agents" ? (
+        <div
+          data-pattern="settings-composition"
+          className="flex flex-col gap-5"
+        >
           <TabPanelLead
             description={
               locale === "zh"
@@ -510,7 +563,10 @@ export function AdvancedWorkspace({
       !editingProvider &&
       !editingSkill &&
       advancedSection === "skills" ? (
-        <div className="flex flex-col gap-5">
+        <div
+          data-pattern="settings-composition"
+          className="flex flex-col gap-5"
+        >
           <input
             ref={skillFileInputRef}
             type="file"
@@ -642,429 +698,542 @@ export function AdvancedWorkspace({
         </div>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === "providers" ? (
-        <SudoGate
-          title="模型连接与密钥保护"
-          description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
-          actionLabel="解锁以管理模型连接"
-        >
-          <div className="flex flex-col gap-5">
-            <input
-              ref={providerFileInputRef}
-              type="file"
-              accept=".json,application/json"
-              hidden
-              onChange={(event) => void onImportProviders(event)}
-            />
-            <TabPanelLead
-              description={
-                locale === "zh"
-                  ? "管理模型连接、密钥状态以及文本与图片生成的默认用途。"
-                  : "Manage model connections, credential state, and default usage for text and image generation."
-              }
-              actions={
-                <>
-                  <Button
-                    size="small"
-                    variant="outline"
-                    type="button"
-                    onClick={() => void onExportProviders()}
-                    icon={<Download />}
-                  >
-                    {labels.exportProviders}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outline"
-                    type="button"
-                    onClick={() => providerFileInputRef.current?.click()}
-                    icon={<Upload />}
-                  >
-                    {labels.importProviders}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="solid"
-                    color="primary"
-                    onClick={() => onEditProvider("new")}
-                    icon={<Plus />}
-                  >
-                    {locale === "zh" ? "添加模型连接" : labels.createProvider}
-                  </Button>
-                </>
-              }
-            />
-            <Card padding="base">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <Heading level={2} className="text-base">
-                    {locale === "zh" ? "默认用途" : "Default Purposes"}
-                  </Heading>
-                  <Text size="sm" tone="muted">
-                    {locale === "zh"
-                      ? "决定编辑器、运营分析与图片生成默认使用的模型。"
-                      : "Choose the default models used for editing, operations analysis, and image generation."}
-                  </Text>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="flex flex-col gap-2">
-                    <Text size="sm">
-                      {locale === "zh" ? "文本模型" : "Text Model"}
-                    </Text>
-                    <Select
-                      value={String(
-                        providers.find((item) => item.is_default_writing)?.id ||
-                          "",
-                      )}
-                      onChange={(value) => {
-                        const id = value ? Number(value) : 0;
-                        void onSetDefaultProvider(id, "writing");
-                      }}
-                    >
-                      <option value="">
-                        {locale === "zh"
-                          ? "未设置 (取消选择)"
-                          : "Not set (Clear default)"}
-                      </option>
-                      {providers
-                        .filter((item) => item.enabled)
-                        .map((item) => (
-                          <option key={item.id} value={String(item.id)}>
-                            {item.name} · {item.model}
-                          </option>
-                        ))}
-                    </Select>
-                  </label>
-                  <label className="flex flex-col gap-2">
-                    <Text size="sm">
-                      {locale === "zh" ? "图片生成" : "Image Generation"}
-                    </Text>
-                    <Select
-                      value={String(
-                        providers.find((item) => item.is_default_image)?.id ||
-                          "",
-                      )}
-                      onChange={(value) => {
-                        const id = value ? Number(value) : 0;
-                        void onSetDefaultProvider(id, "image");
-                      }}
-                    >
-                      <option value="">
-                        {locale === "zh"
-                          ? "未设置 (取消选择)"
-                          : "Not set (Clear default)"}
-                      </option>
-                      {providers
-                        .filter((item) => item.enabled)
-                        .map((item) => (
-                          <option key={item.id} value={String(item.id)}>
-                            {item.name} · {item.model}
-                          </option>
-                        ))}
-                    </Select>
-                  </label>
-                </div>
-              </div>
-            </Card>
-            {providers.length === 0 ? (
-              <Card padding="base">
-                <Empty description={labels.noProviders} />
-              </Card>
-            ) : (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {providers.map((provider) => {
-                  const testing = testingConnections.includes(
-                    `provider:${provider.id}`,
-                  );
-                  return (
-                    <Card key={provider.id} padding="base">
-                      <div className="flex h-full flex-col gap-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <strong>{provider.name}</strong>
-                            <Text size="xs" tone="muted">
-                              {provider.provider_type} · {provider.model}
-                            </Text>
-                          </div>
-                          <Tag color={provider.enabled ? "success" : "default"}>
-                            {provider.enabled ? labels.active : labels.paused}
-                          </Tag>
-                        </div>
-                        <Text size="xs" tone="muted" className="break-all">
-                          {provider.base_url}
-                        </Text>
-                        <Text size="xs" tone="muted">
-                          API Key •••• {provider.api_key_last4} ·{" "}
-                          {labels.keyStored}
-                        </Text>
-                        <div className="flex flex-wrap gap-2">
-                          {provider.is_default_writing ? (
-                            <Tag color="primary">
-                              {locale === "zh"
-                                ? "默认文本模型"
-                                : "Default Text Model"}
-                            </Tag>
-                          ) : null}
-                          {provider.is_default_image ? (
-                            <Tag color="primary">
-                              {locale === "zh"
-                                ? "默认图片模型"
-                                : "Default Image Model"}
-                            </Tag>
-                          ) : null}
-                        </div>
-                        <div className="mt-auto flex flex-wrap gap-2 border-t pt-4">
-                          <Button
-                            size="small"
-                            variant="ghost"
-                            icon={
-                              <RefreshCw
-                                className={
-                                  testing
-                                    ? "agent-row-actions__spinner"
-                                    : undefined
-                                }
-                              />
-                            }
-                            aria-busy={testing}
-                            disabled={testing}
-                            onClick={() =>
-                              void onTestConnection(
-                                "provider",
-                                provider.id,
-                                provider.name,
-                              )
-                            }
-                          >
-                            {testing
-                              ? locale === "zh"
-                                ? "正在测试连接"
-                                : "Testing connection"
-                              : labels.test}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="ghost"
-                            icon={<Edit2 />}
-                            onClick={() => onEditProvider(provider)}
-                          >
-                            {labels.edit}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="ghost"
-                            color="error"
-                            icon={<Trash2 />}
-                            onClick={() =>
-                              onDeleteTarget({
-                                kind: "provider",
-                                value: provider,
-                              })
-                            }
-                          >
-                            {labels.delete}
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </SudoGate>
-      ) : null}
-
-      {!editingAgent &&
-      !editingProvider &&
-      !editingEmbedding &&
-      advancedSection === "connectors" ? (
-        <ConnectorWorkspace locale={locale} onRefresh={onRefresh} />
-      ) : null}
-
-      {!editingAgent &&
-      !editingProvider &&
-      !editingEmbedding &&
-      advancedSection === "knowledge" ? (
-        <SudoGate
-          title="知识库与向量模型保护"
-          description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"
-          actionLabel="解锁以管理知识库"
-        >
-          <div className="flex flex-col gap-5">
-            <TabPanelLead
-              description={
-                locale === "zh"
-                  ? "仅索引已发布文章；Embedding Profile 负责把内容转换为可检索知识库。"
-                  : "Only published content is indexed; Embedding Profiles convert content into a searchable knowledge base."
-              }
-              actions={
-                <>
-                  <Button
-                    size="small"
-                    variant="outline"
-                    type="button"
-                    onClick={() => void onRetryIndex()}
-                    icon={<RefreshCw />}
-                  >
-                    {locale === "zh" ? "重试失败任务" : "Retry failed"}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outline"
-                    type="button"
-                    onClick={() => void onRebuildIndex()}
-                    icon={<RefreshCw />}
-                  >
-                    {locale === "zh" ? "全量重建" : "Rebuild all"}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="solid"
-                    color="primary"
-                    type="button"
-                    onClick={() => onEditEmbedding("new")}
-                    icon={<Plus />}
-                  >
-                    {locale === "zh"
-                      ? "添加 Embedding 模型"
-                      : "Add embedding profile"}
-                  </Button>
-                </>
-              }
-            />
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Card padding="base">
-                <Text size="xs" tone="muted">
-                  {locale === "zh" ? "分段" : "Chunks"}
-                </Text>
-                <Heading level={2}>{indexStatus.chunks}</Heading>
-              </Card>
-              <Card padding="base">
-                <Text size="xs" tone="muted">
-                  {locale === "zh" ? "队列" : "Queued"}
-                </Text>
-                <Heading level={2}>{indexStatus.queued}</Heading>
-              </Card>
-              <Card padding="base">
-                <Text size="xs" tone="muted">
-                  {locale === "zh" ? "失败" : "Failed"}
-                </Text>
-                <Heading level={2}>{indexStatus.failed}</Heading>
-              </Card>
-            </div>
-            {indexStatus.failed > 0 ? (
-              <Alert
-                type="warning"
-                showIcon
-                title={
-                  locale === "zh"
-                    ? "知识索引存在失败任务"
-                    : "Knowledge indexing has failed jobs"
-                }
+      {!editingAgent && !editingSkill && advancedSection === "providers" ? (
+        <div data-pattern="settings-composition" className="contents">
+          <SudoGate
+            title="模型连接与密钥保护"
+            description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
+            actionLabel="解锁以管理模型连接"
+          >
+            <div className="flex flex-col gap-5">
+              <input
+                ref={providerFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                hidden
+                onChange={(event) => void onImportProviders(event)}
+              />
+              <TabPanelLead
                 description={
                   locale === "zh"
-                    ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
-                    : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
+                    ? "管理模型连接、密钥状态以及文本与图片生成的默认用途。"
+                    : "Manage model connections, credential state, and default usage for text and image generation."
+                }
+                actions={
+                  <>
+                    <Button
+                      size="small"
+                      variant="outline"
+                      type="button"
+                      onClick={() => void onExportProviders()}
+                      icon={<Download />}
+                    >
+                      {labels.exportProviders}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outline"
+                      type="button"
+                      onClick={() => providerFileInputRef.current?.click()}
+                      icon={<Upload />}
+                    >
+                      {labels.importProviders}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="solid"
+                      color="primary"
+                      onClick={() => onEditProvider("new")}
+                      icon={<Plus />}
+                    >
+                      {locale === "zh" ? "添加模型连接" : labels.createProvider}
+                    </Button>
+                  </>
                 }
               />
-            ) : null}
-            {embeddingProfiles.length === 0 ? (
               <Card padding="base">
-                <Empty
-                  description={
-                    locale === "zh"
-                      ? "还没有嵌入配置。"
-                      : "No embedding profiles configured."
-                  }
-                />
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <Heading level={2} className="text-base">
+                      {locale === "zh" ? "默认用途" : "Default Purposes"}
+                    </Heading>
+                    <Text size="sm" tone="muted">
+                      {locale === "zh"
+                        ? "决定编辑器、运营分析与图片生成默认使用的模型。"
+                        : "Choose the default models used for editing, operations analysis, and image generation."}
+                    </Text>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="flex flex-col gap-2">
+                      <Text size="sm">
+                        {locale === "zh" ? "文本模型" : "Text Model"}
+                      </Text>
+                      <Select
+                        value={String(
+                          providers.find((item) => item.is_default_writing)
+                            ?.id || "",
+                        )}
+                        onChange={(value) => {
+                          const id = value ? Number(value) : 0;
+                          void onSetDefaultProvider(id, "writing");
+                        }}
+                      >
+                        <option value="">
+                          {locale === "zh"
+                            ? "未设置 (取消选择)"
+                            : "Not set (Clear default)"}
+                        </option>
+                        {providers
+                          .filter((item) => item.enabled)
+                          .map((item) => (
+                            <option key={item.id} value={String(item.id)}>
+                              {item.name} · {item.model}
+                            </option>
+                          ))}
+                      </Select>
+                    </label>
+                    <label className="flex flex-col gap-2">
+                      <Text size="sm">
+                        {locale === "zh" ? "图片生成" : "Image Generation"}
+                      </Text>
+                      <Select
+                        value={String(
+                          providers.find((item) => item.is_default_image)?.id ||
+                            "",
+                        )}
+                        onChange={(value) => {
+                          const id = value ? Number(value) : 0;
+                          void onSetDefaultProvider(id, "image");
+                        }}
+                      >
+                        <option value="">
+                          {locale === "zh"
+                            ? "未设置 (取消选择)"
+                            : "Not set (Clear default)"}
+                        </option>
+                        {providers
+                          .filter((item) => item.enabled)
+                          .map((item) => (
+                            <option key={item.id} value={String(item.id)}>
+                              {item.name} · {item.model}
+                            </option>
+                          ))}
+                      </Select>
+                    </label>
+                  </div>
+                </div>
               </Card>
-            ) : (
-              <Card padding="none" className="overflow-hidden">
-                <CardContent className="divide-y p-0">
-                  {embeddingProfiles.map((profile) => {
+              {providers.length === 0 ? (
+                <Card padding="base">
+                  <Empty description={labels.noProviders} />
+                </Card>
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {providers.map((provider) => {
                     const testing = testingConnections.includes(
-                      `embedding:${profile.id}`,
+                      `provider:${provider.id}`,
                     );
                     return (
-                      <div
-                        key={profile.id}
-                        className="flex flex-col gap-4 p-6 xl:flex-row xl:items-center xl:justify-between"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <strong>{profile.name}</strong>
+                      <Card key={provider.id} padding="base">
+                        <div className="flex h-full flex-col gap-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <strong>{provider.name}</strong>
+                              <Text size="xs" tone="muted">
+                                {provider.provider_type} · {provider.model}
+                              </Text>
+                            </div>
                             <Tag
-                              color={profile.enabled ? "success" : "default"}
+                              color={provider.enabled ? "success" : "default"}
                             >
-                              {profile.enabled ? labels.active : labels.paused}
+                              {provider.enabled ? labels.active : labels.paused}
                             </Tag>
                           </div>
-                          <Text size="xs" tone="muted">
-                            {profile.model} · {profile.dimensions} dimensions
-                          </Text>
                           <Text size="xs" tone="muted" className="break-all">
-                            {profile.base_url} · API Key ••••{" "}
-                            {profile.api_key_last4}
+                            {provider.base_url}
                           </Text>
-                        </div>
-                        <div className="flex min-w-max flex-nowrap items-center gap-1">
-                          <IconButton
-                            label={
-                              testing
+                          <Text size="xs" tone="muted">
+                            API Key •••• {provider.api_key_last4} ·{" "}
+                            {labels.keyStored}
+                          </Text>
+                          <div className="flex flex-wrap gap-2">
+                            {provider.is_default_writing ? (
+                              <Tag color="primary">
+                                {locale === "zh"
+                                  ? "默认文本模型"
+                                  : "Default Text Model"}
+                              </Tag>
+                            ) : null}
+                            {provider.is_default_image ? (
+                              <Tag color="primary">
+                                {locale === "zh"
+                                  ? "默认图片模型"
+                                  : "Default Image Model"}
+                              </Tag>
+                            ) : null}
+                          </div>
+                          <div className="mt-auto flex flex-wrap gap-2 border-t pt-4">
+                            <Button
+                              size="small"
+                              variant="ghost"
+                              icon={
+                                <RefreshCw
+                                  className={
+                                    testing
+                                      ? "agent-row-actions__spinner"
+                                      : undefined
+                                  }
+                                />
+                              }
+                              aria-busy={testing}
+                              disabled={testing}
+                              onClick={() =>
+                                void onTestConnection(
+                                  "provider",
+                                  provider.id,
+                                  provider.name,
+                                )
+                              }
+                            >
+                              {testing
                                 ? locale === "zh"
                                   ? "正在测试连接"
                                   : "Testing connection"
-                                : labels.test
-                            }
-                            aria-busy={testing}
-                            disabled={testing}
-                            icon={
-                              <RefreshCw
-                                className={
-                                  testing
-                                    ? "agent-row-actions__spinner"
-                                    : undefined
-                                }
-                              />
-                            }
-                            variant="ghost"
-                            onClick={() =>
-                              void onTestConnection(
-                                "embedding",
-                                profile.id,
-                                profile.name,
-                              )
-                            }
-                          />
-                          <IconButton
-                            label={labels.edit}
-                            icon={<Edit2 />}
-                            variant="ghost"
-                            onClick={() => onEditEmbedding(profile)}
-                          />
-                          <IconButton
-                            label={labels.delete}
-                            icon={<Trash2 />}
-                            variant="ghost"
-                            color="error"
-                            onClick={() =>
-                              onDeleteTarget({
-                                kind: "embedding",
-                                value: profile,
-                              })
-                            }
-                          />
+                                : labels.test}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="ghost"
+                              icon={<Edit2 />}
+                              onClick={() => onEditProvider(provider)}
+                            >
+                              {labels.edit}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="ghost"
+                              color="error"
+                              icon={<Trash2 />}
+                              onClick={() =>
+                                onDeleteTarget({
+                                  kind: "provider",
+                                  value: provider,
+                                })
+                              }
+                            >
+                              {labels.delete}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      </Card>
                     );
                   })}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </SudoGate>
+                </div>
+              )}
+            </div>
+          </SudoGate>
+        </div>
       ) : null}
+
+      {!editingAgent && !editingSkill && advancedSection === "connectors" ? (
+        <div data-pattern="settings-composition" className="contents">
+          <ConnectorWorkspace locale={locale} onRefresh={onRefresh} />
+        </div>
+      ) : null}
+
+      {!editingAgent && !editingSkill && advancedSection === "knowledge" ? (
+        <div data-pattern="settings-composition" className="contents">
+          <SudoGate
+            title="知识库与向量模型保护"
+            description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"
+            actionLabel="解锁以管理知识库"
+          >
+            <div className="flex flex-col gap-5">
+              <TabPanelLead
+                description={
+                  locale === "zh"
+                    ? "仅索引已发布文章；Embedding Profile 负责把内容转换为可检索知识库。"
+                    : "Only published content is indexed; Embedding Profiles convert content into a searchable knowledge base."
+                }
+                actions={
+                  <>
+                    <Button
+                      size="small"
+                      variant="outline"
+                      type="button"
+                      onClick={() => void onRetryIndex()}
+                      icon={<RefreshCw />}
+                    >
+                      {locale === "zh" ? "重试失败任务" : "Retry failed"}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outline"
+                      type="button"
+                      onClick={() => void onRebuildIndex()}
+                      icon={<RefreshCw />}
+                    >
+                      {locale === "zh" ? "全量重建" : "Rebuild all"}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="solid"
+                      color="primary"
+                      type="button"
+                      onClick={() => onEditEmbedding("new")}
+                      icon={<Plus />}
+                    >
+                      {locale === "zh"
+                        ? "添加 Embedding 模型"
+                        : "Add embedding profile"}
+                    </Button>
+                  </>
+                }
+              />
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Card padding="base">
+                  <Text size="xs" tone="muted">
+                    {locale === "zh" ? "分段" : "Chunks"}
+                  </Text>
+                  <Heading level={2}>{indexStatus.chunks}</Heading>
+                </Card>
+                <Card padding="base">
+                  <Text size="xs" tone="muted">
+                    {locale === "zh" ? "队列" : "Queued"}
+                  </Text>
+                  <Heading level={2}>{indexStatus.queued}</Heading>
+                </Card>
+                <Card padding="base">
+                  <Text size="xs" tone="muted">
+                    {locale === "zh" ? "失败" : "Failed"}
+                  </Text>
+                  <Heading level={2}>{indexStatus.failed}</Heading>
+                </Card>
+              </div>
+              {indexStatus.failed > 0 ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  title={
+                    locale === "zh"
+                      ? "知识索引存在失败任务"
+                      : "Knowledge indexing has failed jobs"
+                  }
+                  description={
+                    locale === "zh"
+                      ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
+                      : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
+                  }
+                />
+              ) : null}
+              {embeddingProfiles.length === 0 ? (
+                <Card padding="base">
+                  <Empty
+                    description={
+                      locale === "zh"
+                        ? "还没有嵌入配置。"
+                        : "No embedding profiles configured."
+                    }
+                  />
+                </Card>
+              ) : (
+                <Card padding="none" className="overflow-hidden">
+                  <CardContent className="divide-y p-0">
+                    {embeddingProfiles.map((profile) => {
+                      const testing = testingConnections.includes(
+                        `embedding:${profile.id}`,
+                      );
+                      return (
+                        <div
+                          key={profile.id}
+                          className="flex flex-col gap-4 p-6 xl:flex-row xl:items-center xl:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong>{profile.name}</strong>
+                              <Tag
+                                color={profile.enabled ? "success" : "default"}
+                              >
+                                {profile.enabled
+                                  ? labels.active
+                                  : labels.paused}
+                              </Tag>
+                            </div>
+                            <Text size="xs" tone="muted">
+                              {profile.model} · {profile.dimensions} dimensions
+                            </Text>
+                            <Text size="xs" tone="muted" className="break-all">
+                              {profile.base_url} · API Key ••••{" "}
+                              {profile.api_key_last4}
+                            </Text>
+                          </div>
+                          <div className="flex min-w-max flex-nowrap items-center gap-1">
+                            <IconButton
+                              label={
+                                testing
+                                  ? locale === "zh"
+                                    ? "正在测试连接"
+                                    : "Testing connection"
+                                  : labels.test
+                              }
+                              aria-busy={testing}
+                              disabled={testing}
+                              icon={
+                                <RefreshCw
+                                  className={
+                                    testing
+                                      ? "agent-row-actions__spinner"
+                                      : undefined
+                                  }
+                                />
+                              }
+                              variant="ghost"
+                              onClick={() =>
+                                void onTestConnection(
+                                  "embedding",
+                                  profile.id,
+                                  profile.name,
+                                )
+                              }
+                            />
+                            <IconButton
+                              label={labels.edit}
+                              icon={<Edit2 />}
+                              variant="ghost"
+                              onClick={() => onEditEmbedding(profile)}
+                            />
+                            <IconButton
+                              label={labels.delete}
+                              icon={<Trash2 />}
+                              variant="ghost"
+                              color="error"
+                              onClick={() =>
+                                onDeleteTarget({
+                                  kind: "embedding",
+                                  value: profile,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </SudoGate>
+        </div>
+      ) : null}
+      <Drawer
+        open={advancedSection === "providers" && editingProvider !== null}
+        title={
+          editingProvider === "new"
+            ? locale === "zh"
+              ? "添加模型连接"
+              : "Add model connection"
+            : locale === "zh"
+              ? `编辑模型连接：${editingProvider?.name || ""}`
+              : `Edit model connection: ${editingProvider?.name || ""}`
+        }
+        description={
+          locale === "zh"
+            ? "在当前模型连接列表上下文中编辑连接身份、端点、模型与凭据。"
+            : "Edit connection identity, endpoint, model, and credentials without leaving the provider collection."
+        }
+        width={720}
+        onClose={() => onEditProvider(null)}
+        footer={
+          editingProvider ? (
+            <>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => onEditProvider(null)}
+              >
+                {labels.cancel}
+              </Button>
+              <Button
+                form="ai-settings-provider-editor"
+                type="submit"
+                variant="solid"
+                color="primary"
+              >
+                {labels.saveProvider}
+              </Button>
+            </>
+          ) : null
+        }
+      >
+        {editingProvider ? (
+          <div data-pattern="contextual-list-editor">
+            <ProviderForm
+              key={editingProvider === "new" ? "new" : editingProvider.id}
+              initial={editingProvider === "new" ? undefined : editingProvider}
+              labels={labels}
+              onSave={onSaveProvider}
+              onCancel={() => onEditProvider(null)}
+              surface="drawer"
+            />
+          </div>
+        ) : null}
+      </Drawer>
+
+      <Drawer
+        open={advancedSection === "knowledge" && editingEmbedding !== null}
+        title={
+          editingEmbedding === "new"
+            ? locale === "zh"
+              ? "添加 Embedding 模型"
+              : "Add embedding profile"
+            : locale === "zh"
+              ? `编辑 Embedding：${editingEmbedding?.name || ""}`
+              : `Edit embedding: ${editingEmbedding?.name || ""}`
+        }
+        description={
+          locale === "zh"
+            ? "在知识库上下文中调整索引模型、维度、端点与凭据。"
+            : "Adjust index model, dimensions, endpoint, and credentials in the knowledge context."
+        }
+        width={720}
+        onClose={() => onEditEmbedding(null)}
+        footer={
+          editingEmbedding ? (
+            <>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => onEditEmbedding(null)}
+              >
+                {locale === "zh" ? "取消" : "Cancel"}
+              </Button>
+              <Button
+                form="ai-settings-embedding-editor"
+                type="submit"
+                variant="solid"
+                color="primary"
+              >
+                {locale === "zh" ? "保存 Embedding" : "Save Embedding"}
+              </Button>
+            </>
+          ) : null
+        }
+      >
+        {editingEmbedding ? (
+          <div data-pattern="contextual-list-editor">
+            <EmbeddingForm
+              key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
+              initial={
+                editingEmbedding === "new" ? undefined : editingEmbedding
+              }
+              locale={locale}
+              onSave={onSaveEmbedding}
+              onCancel={() => onEditEmbedding(null)}
+              surface="drawer"
+            />
+          </div>
+        ) : null}
+      </Drawer>
     </>
   );
 }

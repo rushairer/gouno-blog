@@ -557,6 +557,7 @@ export function DecisionInboxWorkspace({
 
       <div
         data-slot="ops-master-detail"
+        data-pattern="master-detail-composition"
         className="grid min-w-0 items-stretch overflow-hidden rounded-lg border bg-background xl:grid-cols-[22rem_minmax(0,1fr)]"
       >
         <aside

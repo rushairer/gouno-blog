@@ -120,16 +120,16 @@ Automated checks do not replace authenticated browser regression. Entries remain
 | blog:App.tsx |  | migrated | verified |
 | blog:components/ErrorBoundary.tsx |  | migrated | verified |
 | blog:components/MarkdownRenderer.tsx |  | migrated | verified |
-| blog-admin:components/agent/AdvancedWorkspace.tsx | /admin/ai-ops | not-started | not-run |
+| blog-admin:components/agent/AdvancedWorkspace.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:components/agent/AgentForm.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/AgentRunRecords.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:components/agent/ArticlePreviewModal.tsx | /admin/ai-ops | not-started | not-run |
-| connector:components/agent/ConnectorWorkspace.tsx | /admin/ai-ops | not-started | not-run |
-| blog-admin:components/agent/EmbeddingForm.tsx | /admin/ai-ops | not-started | not-run |
+| connector:components/agent/ConnectorWorkspace.tsx | /admin/ai-ops | migrated | verified |
+| blog-admin:components/agent/EmbeddingForm.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:components/agent/InboxWorkspace.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:components/agent/OperationsWorkspace.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/ProposalPreview.tsx | /admin/ai-ops | not-started | not-run |
-| blog-admin:components/agent/ProviderForm.tsx | /admin/ai-ops | not-started | not-run |
+| blog-admin:components/agent/ProviderForm.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:components/agent/SkillForm.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/StatusPill.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/WorkflowInputForm.tsx | /admin/ai-ops | not-started | not-run |
@@ -220,11 +220,11 @@ Automated checks do not replace authenticated browser regression. Entries remain
 | blog-admin:ai-workspaces:overview | /admin/ai-ops / overview | not-started | not-run |
 | blog-admin:ai-workspaces:inbox | /admin/ai-ops / inbox | not-started | not-run |
 | blog-admin:ai-workspaces:automation | /admin/ai-ops / automation | not-started | not-run |
-| blog-admin:ai-workspaces:records:agent | /admin/ai-ops / records:agent | not-started | not-run |
-| blog-admin:ai-workspaces:records:workflow | /admin/ai-ops / records:workflow | not-started | not-run |
-| blog-admin:ai-workspaces:advanced:agents | /admin/ai-ops / advanced:agents | not-started | not-run |
-| blog-admin:ai-workspaces:advanced:skills | /admin/ai-ops / advanced:skills | not-started | not-run |
-| blog-admin:ai-workspaces:advanced:tools | /admin/ai-ops / advanced:tools | not-started | not-run |
-| blog-admin:ai-workspaces:advanced:knowledge | /admin/ai-ops / advanced:knowledge | not-started | not-run |
-| blog-admin:ai-workspaces:advanced:providers | /admin/ai-ops / advanced:providers | not-started | not-run |
-| blog-admin:ai-workspaces:advanced:connectors | /admin/ai-ops / advanced:connectors | not-started | not-run |
+| blog-admin:ai-workspaces:records:agent | /admin/ai-ops / records:agent | migrated | verified |
+| blog-admin:ai-workspaces:records:workflow | /admin/ai-ops / records:workflow | migrated | verified |
+| blog-admin:ai-workspaces:advanced:agents | /admin/ai-ops / advanced:agents | migrated | verified |
+| blog-admin:ai-workspaces:advanced:skills | /admin/ai-ops / advanced:skills | migrated | verified |
+| blog-admin:ai-workspaces:advanced:tools | /admin/ai-ops / advanced:tools | migrated | verified |
+| blog-admin:ai-workspaces:advanced:knowledge | /admin/ai-ops / advanced:knowledge | migrated | verified |
+| blog-admin:ai-workspaces:advanced:providers | /admin/ai-ops / advanced:providers | migrated | verified |
+| blog-admin:ai-workspaces:advanced:connectors | /admin/ai-ops / advanced:connectors | migrated | verified |

@@ -33,11 +33,13 @@ export function EmbeddingForm({
   locale,
   onSave,
   onCancel,
+  surface = "page",
 }: {
   initial?: EmbeddingProfile;
   locale: "en" | "zh";
   onSave: (value: EmbeddingFormValue) => Promise<void>;
   onCancel: () => void;
+  surface?: "page" | "drawer";
 }) {
   const labels =
     locale === "zh"
@@ -112,17 +114,22 @@ export function EmbeddingForm({
   };
 
   return (
-    <FormLayout onSubmit={submit}>
-      <div className="flex flex-col gap-5">
-        <AISettingsEditorHeader
-          title={initial ? `${labels.title}：${initial.name}` : labels.title}
-          description={
-            locale === "zh"
-              ? "Embedding 配置决定知识索引使用的模型、维度与连接凭据；索引状态和重建操作仍留在知识库工作区。"
-              : "Embedding profiles define the model, dimensions, and credentials used by the knowledge index. Index status and rebuild actions remain in the knowledge workspace."
-          }
-          icon={<DatabaseZap />}
-        />
+    <FormLayout id="ai-settings-embedding-editor" onSubmit={submit}>
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
+        {surface === "page" ? (
+          <AISettingsEditorHeader
+            title={initial ? `${labels.title}：${initial.name}` : labels.title}
+            description={
+              locale === "zh"
+                ? "Embedding 配置决定知识索引使用的模型、维度与连接凭据；索引状态和重建操作仍留在知识库工作区。"
+                : "Embedding profiles define the model, dimensions, and credentials used by the knowledge index. Index status and rebuild actions remain in the knowledge workspace."
+            }
+            icon={<DatabaseZap />}
+          />
+        ) : null}
 
         <div className="grid gap-5 xl:grid-cols-2">
           <AISettingsEditorSection
@@ -252,20 +259,22 @@ export function EmbeddingForm({
           </AISettingsEditorSection>
         </div>
 
-        <FormActions>
-          <Button variant="outline" type="button" onClick={handleCancel}>
-            {labels.cancel}
-          </Button>
-          <Button
-            variant="solid"
-            color="primary"
-            type="submit"
-            loading={saving}
-            icon={<Save />}
-          >
-            {saving ? labels.saving : labels.save}
-          </Button>
-        </FormActions>
+        {surface === "page" ? (
+          <FormActions>
+            <Button variant="outline" type="button" onClick={handleCancel}>
+              {labels.cancel}
+            </Button>
+            <Button
+              variant="solid"
+              color="primary"
+              type="submit"
+              loading={saving}
+              icon={<Save />}
+            >
+              {saving ? labels.saving : labels.save}
+            </Button>
+          </FormActions>
+        ) : null}
       </div>
     </FormLayout>
   );
