@@ -60,6 +60,18 @@ jobs:
           npm install --no-save --ignore-scripts @playwright/test@${PLAYWRIGHT_VERSION}
           npx playwright install --with-deps chromium
 
+      - name: Verify AI Settings source parity contract
+        working-directory: blog-frontend
+        env:
+          GOUNO_UI_CANONICAL_ROOT: ../upstream-gouno-ui
+        run: node scripts/check-ai-settings-showcase-parity.mjs
+
+      - name: Verify AI Operations source parity contract
+        working-directory: blog-frontend
+        env:
+          GOUNO_UI_CANONICAL_ROOT: ../upstream-gouno-ui
+        run: node scripts/check-ai-ops-showcase-parity.mjs
+
       - name: Compare canonical rendered styles
         working-directory: blog-frontend
         run: npx playwright test --config=e2e/showcase-parity.config.mjs
