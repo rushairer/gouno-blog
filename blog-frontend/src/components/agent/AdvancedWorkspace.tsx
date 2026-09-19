@@ -1034,6 +1034,7 @@ export function AdvancedWorkspace({
 
       <Drawer
         open={advancedSection === "providers" && editingProvider !== null}
+        width={720}
         title={
           editingProvider && editingProvider !== "new"
             ? `${labels.editProvider}：${editingProvider.name}`
@@ -1045,21 +1046,41 @@ export function AdvancedWorkspace({
             : "Configure the model protocol, endpoint, credential state, and availability."
         }
         onClose={() => onEditProvider(null)}
+        footer={
+          editingProvider ? (
+            <>
+              <Button type="button" onClick={() => onEditProvider(null)}>
+                {labels.cancel}
+              </Button>
+              <Button
+                form="ai-settings-provider-editor"
+                type="submit"
+                variant="solid"
+                color="primary"
+              >
+                {labels.saveProvider}
+              </Button>
+            </>
+          ) : null
+        }
       >
         {editingProvider ? (
-          <ProviderForm
-            key={editingProvider === "new" ? "new" : editingProvider.id}
-            initial={editingProvider === "new" ? undefined : editingProvider}
-            labels={labels}
-            onSave={onSaveProvider}
-            onCancel={() => onEditProvider(null)}
-            surface="drawer"
-          />
+          <div data-pattern="contextual-list-editor">
+            <ProviderForm
+              key={editingProvider === "new" ? "new" : editingProvider.id}
+              initial={editingProvider === "new" ? undefined : editingProvider}
+              labels={labels}
+              onSave={onSaveProvider}
+              onCancel={() => onEditProvider(null)}
+              surface="drawer"
+            />
+          </div>
         ) : null}
       </Drawer>
 
       <Drawer
         open={advancedSection === "knowledge" && editingEmbedding !== null}
+        width={720}
         title={
           editingEmbedding && editingEmbedding !== "new"
             ? `${locale === "zh" ? "编辑 Embedding" : "Edit Embedding"}：${editingEmbedding.name}`
@@ -1073,16 +1094,35 @@ export function AdvancedWorkspace({
             : "Configure the model, endpoint, vector dimensions, and credentials used by the knowledge index."
         }
         onClose={() => onEditEmbedding(null)}
+        footer={
+          editingEmbedding ? (
+            <>
+              <Button type="button" onClick={() => onEditEmbedding(null)}>
+                {locale === "zh" ? "取消" : "Cancel"}
+              </Button>
+              <Button
+                form="ai-settings-embedding-editor"
+                type="submit"
+                variant="solid"
+                color="primary"
+              >
+                {locale === "zh" ? "保存 Embedding" : "Save embedding"}
+              </Button>
+            </>
+          ) : null
+        }
       >
         {editingEmbedding ? (
-          <EmbeddingForm
-            key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
-            initial={editingEmbedding === "new" ? undefined : editingEmbedding}
-            locale={locale}
-            onSave={onSaveEmbedding}
-            onCancel={() => onEditEmbedding(null)}
-            surface="drawer"
-          />
+          <div data-pattern="contextual-list-editor">
+            <EmbeddingForm
+              key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
+              initial={editingEmbedding === "new" ? undefined : editingEmbedding}
+              locale={locale}
+              onSave={onSaveEmbedding}
+              onCancel={() => onEditEmbedding(null)}
+              surface="drawer"
+            />
+          </div>
         ) : null}
       </Drawer>
     </>
