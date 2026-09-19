@@ -27,6 +27,8 @@ import {
   Card,
   Empty,
   Field,
+  Heading,
+  Text,
   Input,
   Modal,
   Result,
@@ -111,14 +113,14 @@ function CommentItem({
   return (
     <div id={`comment-${comment.id}`} className="space-y-3">
       <Card padding="sm" className="gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <strong className="text-sm text-foreground">{comment.author}</strong>
+        <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
+          <strong className="type-body-sm text-foreground">{comment.author}</strong>
           <Tag>
             {comment.author_type === "user" ? t("signedIn") : t("guest")}
           </Tag>
           <span>{formatDateTime(comment.created_at)}</span>
         </div>
-        <p className="whitespace-pre-wrap text-sm leading-7 text-foreground">
+        <p className="whitespace-pre-wrap type-reading-sm text-foreground">
           {comment.content}
         </p>
         <div className="flex flex-wrap gap-1">
@@ -540,7 +542,7 @@ export default function PostDetail() {
             ) : null}
             <div className="space-y-8 p-6 sm:p-8">
               <PageHeader title={post.title} description={post.summary} />
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-y py-4 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-y py-4 type-body-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <Calendar size={15} aria-hidden="true" />
                   {formatDate(post.created_at, {
@@ -575,7 +577,7 @@ export default function PostDetail() {
           {tocItems.length > 0 ? (
             <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
               <Card variant="subtle" padding="sm" className="gap-3">
-                <div className="text-sm font-semibold">
+                <div className="type-body-sm type-weight-semibold">
                   {t("tableOfContents")}
                 </div>
                 <Anchor aria-label={t("tableOfContents")} items={tocItems} />
@@ -590,12 +592,9 @@ export default function PostDetail() {
             className="mx-auto w-full max-w-[900px]"
           >
             <div className="border-b pb-3">
-              <h2
-                id="related-reading"
-                className="text-xl font-semibold tracking-tight"
-              >
+              <Heading id="related-reading" level={2} variant="section">
                 {t("relatedPosts")}
-              </h2>
+              </Heading>
             </div>
             {relatedPosts.map((item) => (
               <ArticleTeaser key={item.id} post={item} compact />
@@ -609,12 +608,9 @@ export default function PostDetail() {
         >
           <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
             <div>
-              <h2
-                id="article-community"
-                className="text-xl font-semibold tracking-tight"
-              >
+              <Heading id="article-community" level={2} variant="section">
                 {t("discussion", { count: comments.length })}
-              </h2>
+              </Heading>
             </div>
             <Button
               variant={liked ? "solid" : "outline"}
@@ -683,12 +679,12 @@ export default function PostDetail() {
             aria-labelledby="comment-form-title"
           >
             <div>
-              <h3 id="comment-form-title" className="text-base font-semibold">
+              <Heading id="comment-form-title" level={3} variant="compact">
                 {t("leaveComment")}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+              </Heading>
+              <Text as="p" size="sm" tone="muted" className="mt-1">
                 {session.loggedIn ? t("signedInComment") : t("typeComment")}
-              </p>
+              </Text>
             </div>
 
             {replyingTo ? (
