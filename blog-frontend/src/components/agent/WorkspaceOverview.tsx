@@ -145,7 +145,6 @@ export function WorkspaceOverview({
       aria-label={zh ? "AI 运营概览" : "AI operations overview"}
     >
       <OperationsPanelLead
-        title={zh ? "今天需要关注什么" : "What needs attention today"}
         description={
           zh
             ? "先处理失败与等待人工的运行，再决定建议、候选和后续编辑任务；AI 不会绕过人工边界直接发布内容。"
