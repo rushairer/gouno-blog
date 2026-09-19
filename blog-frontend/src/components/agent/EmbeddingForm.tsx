@@ -114,7 +114,7 @@ export function EmbeddingForm({
   };
 
   return (
-    <FormLayout onSubmit={submit}>
+    <FormLayout id="ai-settings-embedding-editor" onSubmit={submit}>
       <div
         data-pattern="editor-form-composition"
         className="flex flex-col gap-5"
@@ -259,20 +259,22 @@ export function EmbeddingForm({
           </AISettingsEditorSection>
         </div>
 
-        <FormActions>
-          <Button variant="outline" type="button" onClick={handleCancel}>
-            {labels.cancel}
-          </Button>
-          <Button
-            variant="solid"
-            color="primary"
-            type="submit"
-            loading={saving}
-            icon={<Save />}
-          >
-            {saving ? labels.saving : labels.save}
-          </Button>
-        </FormActions>
+        {surface === "page" ? (
+          <FormActions>
+            <Button variant="outline" type="button" onClick={handleCancel}>
+              {labels.cancel}
+            </Button>
+            <Button
+              variant="solid"
+              color="primary"
+              type="submit"
+              loading={saving}
+              icon={<Save />}
+            >
+              {saving ? labels.saving : labels.save}
+            </Button>
+          </FormActions>
+        ) : null}
       </div>
     </FormLayout>
   );
