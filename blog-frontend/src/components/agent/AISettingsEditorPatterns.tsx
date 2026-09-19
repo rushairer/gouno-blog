@@ -50,7 +50,11 @@ export function AISettingsPanelLead({
   );
 }
 
-export function AISettingsPanelFeedback({ children }: { children?: ReactNode }) {
+export function AISettingsPanelFeedback({
+  children,
+}: {
+  children?: ReactNode;
+}) {
   if (!children) return null;
   return (
     <div
