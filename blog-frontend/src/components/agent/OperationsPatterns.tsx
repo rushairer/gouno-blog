@@ -35,6 +35,7 @@ export function OperationsObjectRow({
   signals,
   leading,
   selected = false,
+  disabled = false,
   onClick,
   ariaLabel,
 }: {
