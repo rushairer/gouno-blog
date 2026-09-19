@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { CodeBlock } from "@gouno/ui/core";
+import { CodeBlock, Heading } from "@gouno/ui/core";
 import { useI18n } from "../i18n";
 import { markdownHeadingID } from "../utils/markdown";
 
@@ -52,28 +52,37 @@ function MarkdownHeading({
   const id = markdownHeadingID(textContent(children));
   if (level === 1) {
     return (
-      <h2
+      <Heading
         id={id}
-        className="mt-12 scroll-mt-24 border-l-4 border-primary pl-4 text-2xl font-semibold tracking-tight"
+        level={2}
+        variant="section-lg"
+        className="mt-12 scroll-mt-24"
       >
         {children}
-      </h2>
+      </Heading>
     );
   }
   if (level === 2) {
     return (
-      <h3
+      <Heading
         id={id}
-        className="mt-10 scroll-mt-24 text-xl font-semibold tracking-tight text-primary"
+        level={3}
+        variant="section"
+        className="mt-10 scroll-mt-24"
       >
         {children}
-      </h3>
+      </Heading>
     );
   }
   return (
-    <h4 id={id} className="mt-8 scroll-mt-24 text-lg font-semibold">
+    <Heading
+      id={id}
+      level={4}
+      variant="subsection"
+      className="mt-8 scroll-mt-24"
+    >
       {children}
-    </h4>
+    </Heading>
   );
 }
 
@@ -87,7 +96,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
             href={href}
             target={external ? "_blank" : undefined}
             rel={external ? "noreferrer" : undefined}
-            className="font-medium text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary"
+            className="type-weight-medium text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary"
           >
             {children}
           </a>
@@ -142,13 +151,13 @@ export function MarkdownRenderer({ content }: { content: string }) {
       ),
       table: ({ children }) => (
         <div className="my-7 max-w-full overflow-x-auto rounded-lg border">
-          <table className="w-full min-w-[36rem] border-collapse text-sm">
+          <table className="w-full min-w-[36rem] border-collapse type-body-sm">
             {children}
           </table>
         </div>
       ),
       th: ({ children }) => (
-        <th className="border-b border-r bg-muted px-3 py-2 text-left font-semibold last:border-r-0">
+        <th className="border-b border-r bg-muted px-3 py-2 text-left type-weight-semibold last:border-r-0">
           {children}
         </th>
       ),
@@ -171,7 +180,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
   );
 
   return (
-    <div className="min-w-0 break-words text-base leading-8 text-foreground sm:text-lg sm:leading-9 [&>:first-child]:mt-0 [&>:last-child]:mb-0">
+    <div className="min-w-0 break-words type-reading-body text-foreground [&>:first-child]:mt-0 [&>:last-child]:mb-0">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
