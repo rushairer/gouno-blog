@@ -107,6 +107,7 @@ export function OperationsObjectRow({
   selected = false,
   onClick,
   ariaLabel,
+  disabled = false,
 }: {
   title: ReactNode;
   status?: ReactNode;
@@ -117,6 +118,7 @@ export function OperationsObjectRow({
   selected?: boolean;
   onClick?: () => void;
   ariaLabel?: string;
+  disabled?: boolean;
 }) {
   return (
     <Button
@@ -124,6 +126,7 @@ export function OperationsObjectRow({
       block
       aria-label={ariaLabel}
       aria-pressed={selected}
+      disabled={disabled}
       className={[
         "group relative h-auto items-stretch justify-start whitespace-normal rounded-none border-b edge-s-emphasis px-4 py-4 text-left transition-colors last:border-b-0",
         "focus-visible:ring-inset",
