@@ -61,6 +61,7 @@ import {
   OperationsRegionHeading,
   OperationsSummaryStrip,
 } from "./OperationsPatterns";
+import { DedicatedEditorLead } from "./DedicatedEditorPatterns";
 
 type WorkflowValue = {
   id?: number;
@@ -192,6 +193,7 @@ function EditorPanel({
   onClose,
   children,
   className,
+  surface = "panel",
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -200,7 +202,11 @@ function EditorPanel({
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  surface?: "panel" | "dedicated";
 }) {
+  if (surface === "dedicated") {
+    return <div className={className}>{children}</div>;
+  }
   return (
     <Card
       padding="none"
@@ -297,6 +303,15 @@ export function WorkflowWorkspace({
   const [statusFilter, setStatusFilter] = useState<
     "all" | "enabled" | "disabled"
   >("all");
+
+  useEffect(() => {
+    if (!editing) return;
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editing]);
   const labels =
     locale === "zh"
       ? {
@@ -538,22 +553,32 @@ export function WorkflowWorkspace({
   };
   if (editing)
     return (
-      <div className="flex flex-col gap-5">
-        <OperationsPanelLead
+      <div data-pattern="dedicated-list-editor" className="flex flex-col gap-5">
+        <DedicatedEditorLead
           title={
             editing === "new"
               ? locale === "zh"
-                ? "创建自动化"
-                : "Create automation"
+                ? "创建 Workflow"
+                : "Create Workflow"
               : locale === "zh"
-                ? "编辑自动化"
-                : "Edit automation"
+                ? `编辑 Workflow：${editing.name}`
+                : `Edit Workflow: ${editing.name}`
           }
           description={
             locale === "zh"
-              ? "编辑 Workflow 的输入契约、流程定义、执行计划与运行边界；保存形成新版本，运行证据继续进入运行中心。"
-              : "Edit the Workflow input contract, flow definition, schedule, and execution boundaries. Saving creates a new version while evidence remains in the run center."
+              ? "编辑 Workflow 是独立的资产配置任务：定义输入契约、流程步骤、执行计划与运行边界；保存形成新版本，运行证据继续进入运行中心。"
+              : "Workflow editing is a dedicated asset configuration task for input contracts, steps, schedules, and execution boundaries. Saving creates a new version while evidence remains in the run center."
           }
+          backLabel={
+            editing === "new"
+              ? locale === "zh"
+                ? "返回 Workflow 列表"
+                : "Back to Workflow list"
+              : locale === "zh"
+                ? "返回 Workflow 详情"
+                : "Back to Workflow detail"
+          }
+          onBack={() => setEditing(null)}
         />
         <WorkflowEditor
           initial={editing === "new" ? undefined : editing}
@@ -562,6 +587,7 @@ export function WorkflowWorkspace({
           tools={tools}
           locale={locale}
           onCancel={() => setEditing(null)}
+          surface="dedicated"
           onSave={async (value) => {
             await onSave(value);
             setEditing(null);
@@ -2563,9 +2589,11 @@ function WorkflowEditor({
       icon={<GitBranch />}
       closeLabel={labels.cancel}
       onClose={onCancel}
+      surface={surface}
     >
       <FormLayout
         data-slot="workflow-editor-form"
+        data-pattern="editor-form-composition"
         className="workflow-editor-form"
         onSubmit={submit}
       >
