@@ -358,7 +358,7 @@ export function ConnectorWorkspace({
                         : "No credential"}
                   </Text>
                 </div>
-                <div className="flex min-w-max items-center gap-1">
+                <div className="flex min-w-max flex-nowrap items-center gap-1">
                   <IconButton
                     variant="ghost"
                     size="small"
