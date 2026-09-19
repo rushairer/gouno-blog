@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectorWorkspace } from "../ConnectorWorkspace";
@@ -131,11 +131,24 @@ describe("ConnectorWorkspace", () => {
 
     await screen.findAllByText("Primary newsletter");
 
-    await user.click(screen.getByRole("combobox", { name: "Kind" }));
+    await user.click(
+      screen.getByRole("button", { name: "Add Connector Profile" }),
+    );
+    const connectorDrawer = screen.getByRole("dialog", {
+      name: "Add Connector Profile",
+    });
+    await user.click(
+      within(connectorDrawer).getByRole("combobox", { name: "Kind" }),
+    );
     await user.click(screen.getByRole("option", { name: "Search Console" }));
     expect(
-      screen.getByText("Sandbox (uncheck for read-only Google OAuth)"),
+      within(connectorDrawer).getByText(
+        "Sandbox (uncheck for read-only Google OAuth)",
+      ),
     ).toBeInTheDocument();
+    await user.click(
+      within(connectorDrawer).getByRole("button", { name: "Cancel" }),
+    );
 
     const queueButton = screen.getByRole("button", {
       name: "Queue Outbox item",
