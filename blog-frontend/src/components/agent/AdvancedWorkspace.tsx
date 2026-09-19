@@ -34,6 +34,7 @@ import type { EmbeddingFormValue } from "./EmbeddingForm";
 import { ConnectorWorkspace } from "./ConnectorWorkspace";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { SudoGate } from "../auth/SudoGate";
+import { AISettingsPanelLead } from "./AISettingsEditorPatterns";
 import {
   Alert,
   Button,
