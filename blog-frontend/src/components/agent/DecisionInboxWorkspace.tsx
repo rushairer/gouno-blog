@@ -511,7 +511,6 @@ export function DecisionInboxWorkspace({
       aria-label={zh ? "待我处理" : "Review queue"}
     >
       <OperationsPanelLead
-        title={zh ? "人工决策队列" : "Human decision queue"}
         description={
           zh
             ? "把审批、选择、确认、运营建议和后续编辑任务放进同一人工决策队列；完成后回到原来的 Run 或业务流程。"
