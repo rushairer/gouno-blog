@@ -1,4 +1,4 @@
-import { KeyRound, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { ProviderProfile, ProviderType } from "../../types/agent";
@@ -7,14 +7,14 @@ import { useFormDraft } from "../../hooks/useFormDraft";
 import {
   Button,
   Checkbox,
-  Field,
-  FormActions,
+  Field
   FormGrid,
   FormLayout,
   Input,
   Select,
 } from "@gouno/ui/core";
 import {
+  AISettingsEditorActions,
   AISettingsEditorHeader,
   AISettingsEditorSection,
 } from "./AISettingsEditorPatterns";
@@ -38,11 +38,13 @@ export function ProviderForm({
   labels,
   onSave,
   onCancel,
+  surface = "page",
 }: {
   initial?: ProviderProfile;
   labels: Record<string, string>;
   onSave: (value: ProviderFormValue) => Promise<void>;
   onCancel: () => void;
+  surface?: "page" | "drawer";
 }) {
   const [value, setValue] = useState<ProviderFormValue>(() =>
     initial
@@ -229,16 +231,22 @@ export function ProviderForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div className="flex flex-col gap-5">
-        <AISettingsEditorHeader
-          title={
-            initial
-              ? `${labels.editProvider}：${initial.name}`
-              : labels.createProvider
-          }
-          description="模型连接把供应商身份、协议、端点、模型和凭据收敛到一个可测试、可切换的连接配置。"
-          icon={<KeyRound />}
-        />
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
+        {surface === "page" ? (
+          <AISettingsEditorHeader
+            title={
+              initial
+                ? `${labels.editProvider}：${initial.name}`
+                : labels.createProvider
+            }
+            description="模型连接把供应商身份、协议、端点、模型和凭据收敛到一个可测试、可切换的连接配置。"
+            backLabel="返回模型连接列表"
+            onBack={handleCancel}
+          />
+        ) : null}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.82fr)_minmax(0,1.18fr)]">
           <div className="flex min-w-0 flex-col gap-5">
@@ -391,7 +399,7 @@ export function ProviderForm({
           </AISettingsEditorSection>
         </div>
 
-        <FormActions>
+        <AISettingsEditorActions>
           <Button variant="outline" type="button" onClick={handleCancel}>
             {labels.cancel}
           </Button>
@@ -404,7 +412,7 @@ export function ProviderForm({
           >
             {saving ? labels.saving : labels.saveProvider}
           </Button>
-        </FormActions>
+        </AISettingsEditorActions>
       </div>
     </FormLayout>
   );
