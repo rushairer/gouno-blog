@@ -115,16 +115,19 @@ export function EmbeddingForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div data-pattern="editor-form-composition" className="flex flex-col gap-5">
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
         {surface === "page" ? (
           <AISettingsEditorHeader
-          title={initial ? `${labels.title}：${initial.name}` : labels.title}
-          description={
-            locale === "zh"
-              ? "Embedding 配置决定知识索引使用的模型、维度与连接凭据；索引状态和重建操作仍留在知识库工作区。"
-              : "Embedding profiles define the model, dimensions, and credentials used by the knowledge index. Index status and rebuild actions remain in the knowledge workspace."
-          }
-          icon={<DatabaseZap />}
+            title={initial ? `${labels.title}：${initial.name}` : labels.title}
+            description={
+              locale === "zh"
+                ? "Embedding 配置决定知识索引使用的模型、维度与连接凭据；索引状态和重建操作仍留在知识库工作区。"
+                : "Embedding profiles define the model, dimensions, and credentials used by the knowledge index. Index status and rebuild actions remain in the knowledge workspace."
+            }
+            icon={<DatabaseZap />}
           />
         ) : null}
 
