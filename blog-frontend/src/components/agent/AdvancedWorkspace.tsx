@@ -198,7 +198,11 @@ export function AdvancedWorkspace({
     if (!editingAgent && !editingSkill) return;
     const frame = window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-      document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.scrollingElement?.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [editingAgent, editingSkill]);
@@ -1144,7 +1148,9 @@ export function AdvancedWorkspace({
           <div data-pattern="contextual-list-editor">
             <ProviderForm
               key={editingProvider === "new" ? "new" : editingProvider.id}
-              initial={editingProvider === "new" ? undefined : editingProvider}
+              initial={
+                editingProvider === "new" ? undefined : editingProvider
+              }
               labels={labels}
               onSave={onSaveProvider}
               onCancel={() => onEditProvider(null)}
@@ -1177,7 +1183,9 @@ export function AdvancedWorkspace({
           <div data-pattern="contextual-list-editor">
             <EmbeddingForm
               key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
-              initial={editingEmbedding === "new" ? undefined : editingEmbedding}
+              initial={
+                editingEmbedding === "new" ? undefined : editingEmbedding
+              }
               locale={locale}
               onSave={onSaveEmbedding}
               onCancel={() => onEditEmbedding(null)}
