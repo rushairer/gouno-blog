@@ -182,7 +182,9 @@ describe("AISettings", () => {
   it("opens Provider management from the dedicated settings section", async () => {
     const user = userEvent.setup();
     renderSettings();
-    await user.click(await screen.findByRole("tab", { name: "Model connections" }));
+    await user.click(
+      await screen.findByRole("tab", { name: "Model connections" }),
+    );
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
@@ -240,11 +242,12 @@ describe("AISettings", () => {
     const user = userEvent.setup();
     renderSettings();
 
-    await user.click(await screen.findByRole("tab", { name: "Model connections" }));
-    expect(screen.getByRole("tab", { name: "Model connections" })).toHaveAttribute(
-      "aria-selected",
-      "true",
+    await user.click(
+      await screen.findByRole("tab", { name: "Model connections" }),
     );
+    expect(
+      screen.getByRole("tab", { name: "Model connections" }),
+    ).toHaveAttribute("aria-selected", "true");
     expect(
       screen.queryByRole("heading", { name: "Model connections" }),
     ).not.toBeInTheDocument();
