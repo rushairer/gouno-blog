@@ -15,6 +15,7 @@ function requirePattern(text, pattern, message) {
   if (!pattern.test(text)) failures.push(message);
 }
 
+const sharedLead = await source("src/components/patterns/TabPanelLead.tsx");
 const patterns = await source("src/components/agent/OperationsPatterns.tsx");
 requireText(
   patterns,
@@ -23,8 +24,18 @@ requireText(
 );
 requireText(
   patterns,
+  "../patterns/TabPanelLead",
+  "AI Operations panel lead must reuse the shared Blog Admin pattern",
+);
+requireText(
+  sharedLead,
   'data-pattern="tab-panel-lead"',
-  "AI Operations panel lead must expose the shared semantic pattern marker",
+  "Shared TabPanelLead must expose the semantic pattern marker",
+);
+requireText(
+  sharedLead,
+  "flex min-h-9 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+  "Shared TabPanelLead must preserve the canonical minimum-height rhythm",
 );
 
 const objectRowOverflowGuards =
@@ -60,6 +71,20 @@ for (const path of panelConsumers) {
     `${path}: top-level tab title/subtitle must use OperationsPanelLead`,
   );
 }
+
+const inboxWorkspace = await source(
+  "src/components/agent/DecisionInboxWorkspace.tsx",
+);
+requireText(
+  inboxWorkspace,
+  "xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.55fr)]",
+  "Decision Inbox must preserve the canonical master-detail geometry",
+);
+requireText(
+  inboxWorkspace,
+  "type-body-sm type-weight-semibold",
+  "Decision Inbox rail header must use canonical typography tokens",
+);
 
 const railFiles = [
   "src/components/agent/WorkflowRunRecords.tsx",
@@ -103,6 +128,27 @@ for (const path of railFiles) {
 const workflowWorkspace = await source(
   "src/components/agent/WorkflowWorkspace.tsx",
 );
+requireText(
+  workflowWorkspace,
+  'data-slot="workflow-list-toolbar"',
+  "Workflow list must preserve the canonical toolbar boundary",
+);
+requireText(
+  workflowWorkspace,
+  "xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem]",
+  "Workflow list must preserve the canonical five-column asset anatomy",
+);
+requireText(
+  workflowWorkspace,
+  "WorkflowMetricCard",
+  "Workflow detail must use canonical metric cards rather than a generic summary strip",
+);
+requireText(
+  workflowWorkspace,
+  "ScheduleFact",
+  "Workflow detail must use the canonical schedule fact row",
+);
+
 requireText(
   workflowWorkspace,
   'data-slot="workflow-detail"',
