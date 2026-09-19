@@ -4,6 +4,7 @@ import {
   Inbox,
   KeyRound,
   Play,
+  Plus,
   RotateCcw,
   ShieldOff,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import {
   Card,
   CardContent,
   Checkbox,
+  Drawer,
   Empty,
   Field,
   FormGrid,
@@ -29,6 +31,11 @@ import {
   Text,
   Textarea,
 } from "@gouno/ui/core";
+import {
+  AISettingsEditorSection,
+  AISettingsPanelFeedback,
+  AISettingsPanelLead,
+} from "./AISettingsEditorPatterns";
 
 type Locale = "en" | "zh";
 
@@ -70,6 +77,7 @@ export function ConnectorWorkspace({
 }) {
   const zh = locale === "zh";
   const [profiles, setProfiles] = useState<ConnectorProfile[]>([]);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [outbox, setOutbox] = useState<ConnectorOutboxItem[]>([]);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<ConnectorKind>("newsletter");
@@ -168,6 +176,7 @@ export function ConnectorWorkspace({
       );
       setName("");
       setCredential("");
+      setProfileEditorOpen(false);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Request failed");
     }
@@ -231,134 +240,178 @@ export function ConnectorWorkspace({
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Text size="sm" tone="muted" className="max-w-3xl leading-relaxed">
-          {zh
-            ? "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。"
-            : "Manage Sandbox external capabilities available to Agents, OAuth boundaries, and the Outbox approval path."}
-        </Text>
-      </div>
-
-      <Alert
-        type="info"
-        showIcon
-        title={zh ? "Sandbox connector 边界" : "Sandbox connector boundary"}
+      <AISettingsPanelLead
         description={
           zh
-            ? "Search Console 可使用只读 Google OAuth；其余连接器保持 Sandbox Mock。Outbox 必须先审批，再进行不可外发的 Mock 投递。"
-            : "Search Console may use read-only Google OAuth. Other connectors remain Sandbox mocks. Outbox items require approval before non-network Mock delivery."
+            ? "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。"
+            : "Manage Sandbox external capabilities available to Agents, OAuth boundaries, and the Outbox approval path."
+        }
+        actions={
+          <Button
+            size="small"
+            variant="solid"
+            color="primary"
+            icon={<Plus />}
+            onClick={() => setProfileEditorOpen(true)}
+          >
+            {zh ? "添加 Connector Profile" : "Add Connector Profile"}
+          </Button>
         }
       />
 
-      {error ? (
-        <Alert type="error" showIcon>
-          {error}
-        </Alert>
-      ) : null}
-      {message ? (
-        <Alert type="success" showIcon role="status">
-          {message}
-        </Alert>
-      ) : null}
+      <AISettingsPanelFeedback>
+        <Alert
+          type="info"
+          showIcon
+          title={zh ? "Sandbox connector 边界" : "Sandbox connector boundary"}
+          description={
+            zh
+              ? "Search Console 可使用只读 Google OAuth；其余连接器保持 Sandbox Mock。Outbox 必须先审批，再进行不可外发的 Mock 投递。"
+              : "Search Console may use read-only Google OAuth. Other connectors remain Sandbox mocks. Outbox items require approval before non-network Mock delivery."
+          }
+        />
+        {error ? (
+          <Alert type="error" showIcon>
+            {error}
+          </Alert>
+        ) : null}
+        {message ? (
+          <Alert type="success" showIcon role="status">
+            {message}
+          </Alert>
+        ) : null}
+      </AISettingsPanelFeedback>
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.15fr)]">
-        <Card padding="base">
-          <div className="flex flex-col gap-5">
-            <div>
-              <strong className="text-base">
-                {zh ? "新建 Connector Profile" : "New Connector Profile"}
-              </strong>
-              <Text size="xs" tone="muted" className="mt-1">
-                {zh
-                  ? "先定义连接身份，再设置运行配置与凭据。"
-                  : "Define the connection identity first, then its runtime configuration and credentials."}
-              </Text>
-            </div>
-
-            <FormGrid columns={2}>
-              <Field label={zh ? "名称" : "Name"}>
-                <Input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="search-console"
-                />
-              </Field>
-              <Field label={zh ? "类型" : "Kind"}>
-                <Select
-                  aria-label={zh ? "类型" : "Kind"}
-                  value={kind}
-                  onChange={(value) => {
-                    const next = selectValue(value) as ConnectorKind;
-                    setKind(next);
-                    if (next !== "search_console") setSandbox(true);
-                  }}
-                >
-                  {kinds.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {zh ? item.zh : item.en}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </FormGrid>
-
-            {kind === "search_console" ? (
-              <Field label={zh ? "连接模式" : "Connection mode"}>
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={sandbox}
-                    onChange={(event) => setSandbox(event.target.checked)}
-                  />
-                  {zh
-                    ? "Sandbox（取消以启用只读 Google OAuth）"
-                    : "Sandbox (uncheck for read-only Google OAuth)"}
-                </label>
-              </Field>
-            ) : null}
-
-            <Field label={zh ? "配置 JSON" : "Config JSON"}>
-              <Textarea
-                className="font-mono"
-                value={config}
-                onChange={(event) => setConfig(event.target.value)}
-                rows={4}
-                placeholder='{"client_id":"...","redirect_uri":"https://...","site_url":"sc-domain:example.com"}'
-              />
-            </Field>
-
-            <Field
-              label={
-                sandbox
-                  ? zh
-                    ? "凭据（Sandbox 可选）"
-                    : "Credential (optional for Sandbox)"
-                  : zh
-                    ? "Google OAuth Client Secret（加密保存）"
-                    : "Google OAuth client secret (encrypted)"
-              }
-            >
-              <Input
-                type="password"
-                value={credential}
-                onChange={(event) => setCredential(event.target.value)}
-                autoComplete="new-password"
-              />
-            </Field>
-
-            <div className="flex justify-end border-t pt-4">
+      <div className="flex min-w-0 flex-col gap-5">
+        <Drawer
+          open={profileEditorOpen}
+          width={720}
+          title={zh ? "添加 Connector Profile" : "Add Connector Profile"}
+          description={
+            zh
+              ? "定义 Connector 的产品身份、运行边界与凭据状态；OAuth 和 Outbox 仍由列表与下方工作区承载。"
+              : "Define the Connector identity, runtime boundary, and credential state. OAuth and Outbox remain in their dedicated workspaces."
+          }
+          onClose={() => setProfileEditorOpen(false)}
+          footer={
+            <>
+              <Button type="button" onClick={() => setProfileEditorOpen(false)}>
+                {zh ? "取消" : "Cancel"}
+              </Button>
               <Button
+                form="ai-settings-connector-editor"
+                type="submit"
                 variant="solid"
                 color="primary"
-                type="button"
                 disabled={!name.trim() || (!sandbox && !credential.trim())}
-                onClick={() => void saveProfile()}
-                icon={<KeyRound />}
               >
                 {zh ? "保存 Profile" : "Save profile"}
               </Button>
-            </div>
+            </>
+          }
+        >
+          <div data-pattern="contextual-list-editor">
+            <form
+              id="ai-settings-connector-editor"
+              data-pattern="editor-form-composition"
+              className="flex flex-col gap-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveProfile();
+              }}
+            >
+              <AISettingsEditorSection
+                title={zh ? "连接身份" : "Connection identity"}
+                description={
+                  zh
+                    ? "定义 Connector 的产品名称、类型与连接模式。"
+                    : "Define the Connector product name, type, and connection mode."
+                }
+              >
+                <div className="flex flex-col gap-5">
+                  <FormGrid columns={2}>
+                    <Field label={zh ? "名称" : "Name"}>
+                      <Input
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        placeholder="search-console"
+                      />
+                    </Field>
+                    <Field label={zh ? "类型" : "Kind"}>
+                      <Select
+                        aria-label={zh ? "类型" : "Kind"}
+                        value={kind}
+                        onChange={(value) => {
+                          const next = selectValue(value) as ConnectorKind;
+                          setKind(next);
+                          if (next !== "search_console") setSandbox(true);
+                        }}
+                      >
+                        {kinds.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {zh ? item.zh : item.en}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </FormGrid>
+                  {kind === "search_console" ? (
+                    <Field label={zh ? "连接模式" : "Connection mode"}>
+                      <label className="inline-flex items-center gap-2 type-body-sm">
+                        <Checkbox
+                          checked={sandbox}
+                          onChange={(event) => setSandbox(event.target.checked)}
+                        />
+                        {zh
+                          ? "Sandbox（取消以启用只读 Google OAuth）"
+                          : "Sandbox (uncheck for read-only Google OAuth)"}
+                      </label>
+                    </Field>
+                  ) : null}
+                </div>
+              </AISettingsEditorSection>
+
+              <AISettingsEditorSection
+                title={zh ? "运行与凭据" : "Runtime and credentials"}
+                description={
+                  zh
+                    ? "配置 JSON 与凭据只定义连接行为，不改变 OAuth / Outbox 的人工边界。"
+                    : "Configuration JSON and credentials define connectivity without changing the human boundaries around OAuth and Outbox."
+                }
+              >
+                <div className="flex flex-col gap-5">
+                  <Field label={zh ? "配置 JSON" : "Config JSON"}>
+                    <Textarea
+                      className="font-mono"
+                      value={config}
+                      onChange={(event) => setConfig(event.target.value)}
+                      rows={4}
+                      placeholder='{"client_id":"...","redirect_uri":"https://...","site_url":"sc-domain:example.com"}'
+                    />
+                  </Field>
+                  <Field
+                    label={
+                      sandbox
+                        ? zh
+                          ? "凭据（Sandbox 可选）"
+                          : "Credential (optional for Sandbox)"
+                        : zh
+                          ? "Google OAuth Client Secret（加密保存）"
+                          : "Google OAuth client secret (encrypted)"
+                    }
+                  >
+                    <Input
+                      type="password"
+                      value={credential}
+                      onChange={(event) => setCredential(event.target.value)}
+                      autoComplete="new-password"
+                    />
+                  </Field>
+                </div>
+              </AISettingsEditorSection>
+            </form>
           </div>
-        </Card>
+        </Drawer>
 
         <Card padding="none" className="overflow-hidden">
           <div className="border-b px-6 py-5">
