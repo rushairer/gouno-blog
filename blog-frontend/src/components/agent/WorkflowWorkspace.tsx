@@ -1,5 +1,6 @@
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   CirclePause,
   Database,
@@ -608,33 +609,23 @@ export function WorkflowWorkspace({
   return (
     <div className="workflow-workspace flex flex-col gap-6">
       <OperationsPanelLead
-        title={locale === "zh" ? "自动化资产" : "Automation assets"}
         description={
-          locale === "zh"
-            ? "Workflow 是持续运行的版本化自动化资产。先从列表判断状态与最近结果，再进入独立详情查看健康度、调度、定义与人工执行。"
-            : "Workflows are versioned automation assets. Start from the list, then enter a dedicated detail view for health, scheduling, definition, and manual execution."
+          selectedWorkflow
+            ? locale === "zh"
+              ? "查看当前 Workflow 的健康度、调度、最近运行、流程定义、运行边界与人工执行；需要切换资产时返回 Workflow 列表。"
+              : "Inspect the current Workflow's health, schedule, recent runs, definition, boundaries, and manual execution. Return to the Workflow list to switch assets."
+            : locale === "zh"
+              ? "Workflow 是持续运行的版本化自动化资产。先从列表判断状态与最近结果，再进入定义、边界和人工执行。"
+              : "Workflows are versioned automation assets. Start from the list, then open one to inspect its definition, boundaries, and manual execution."
         }
         actions={
-          <Button
-            variant="solid"
-            color="primary"
-            type="button"
-            onClick={() => setEditing("new")}
-            icon={<Plus />}
-          >
-            {labels.add}
-          </Button>
-        }
-      />
-
-      {selectedWorkflow ? (
-        <div data-slot="workflow-detail" className="min-w-0">
-          <div className="workflow-detail-view min-w-0">
-            <div className="mb-5">
+          <>
+            {selectedWorkflow ? (
               <Button
-                type="button"
                 size="small"
-                variant="ghost"
+                variant="outline"
+                type="button"
+                icon={<ArrowLeft />}
                 onClick={() => {
                   setSelectedWorkflowID(null);
                   const url = new URL(window.location.href);
@@ -647,7 +638,28 @@ export function WorkflowWorkspace({
                   ? "返回 Workflow 列表"
                   : "Back to Workflow list"}
               </Button>
-            </div>
+            ) : null}
+            <Button
+              size="small"
+              variant="solid"
+              color="primary"
+              type="button"
+              onClick={() => setEditing("new")}
+              icon={<Plus />}
+            >
+              {labels.add}
+            </Button>
+          </>
+        }
+      />
+
+      {selectedWorkflow ? (
+        <div
+          data-slot="workflow-detail"
+          data-pattern="record-detail-composition"
+          className="min-w-0"
+        >
+          <div className="workflow-detail-view min-w-0">
             {(() => {
               const workflow = selectedWorkflow;
               const metric = metricMap.get(workflow.id);
