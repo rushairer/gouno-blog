@@ -1542,7 +1542,7 @@ export function WorkflowWorkspace({
             })()}
           </div>
         </div>
-      ) : (
+      ) : workflows.length ? (
         <div className="flex flex-col gap-5">
           <OperationsSummaryStrip
             ariaLabel={
@@ -1742,6 +1742,14 @@ export function WorkflowWorkspace({
             </div>
           </Card>
         </div>
+      ) : (
+        <Card padding="base">
+          <Text tone="muted">
+            {locale === "zh"
+              ? "还没有 Workflow，请先创建一项自动化。"
+              : "No Workflows yet. Create an automation first."}
+          </Text>
+        </Card>
       )}
       <Modal
         open={deleteTarget !== null}
