@@ -1143,6 +1143,27 @@ export function AdvancedWorkspace({
         }
         width={720}
         onClose={() => onEditProvider(null)}
+        footer={
+          editingProvider ? (
+            <>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => onEditProvider(null)}
+              >
+                {labels.cancel}
+              </Button>
+              <Button
+                form="ai-settings-provider-editor"
+                type="submit"
+                variant="solid"
+                color="primary"
+              >
+                {labels.saveProvider}
+              </Button>
+            </>
+          ) : null
+        }
       >
         {editingProvider ? (
           <div data-pattern="contextual-list-editor">
@@ -1176,6 +1197,27 @@ export function AdvancedWorkspace({
         }
         width={720}
         onClose={() => onEditEmbedding(null)}
+        footer={
+          editingEmbedding ? (
+            <>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => onEditEmbedding(null)}
+              >
+                {locale === "zh" ? "取消" : "Cancel"}
+              </Button>
+              <Button
+                form="ai-settings-embedding-editor"
+                type="submit"
+                variant="solid"
+                color="primary"
+              >
+                {locale === "zh" ? "保存 Embedding" : "Save Embedding"}
+              </Button>
+            </>
+          ) : null
+        }
       >
         {editingEmbedding ? (
           <div data-pattern="contextual-list-editor">
