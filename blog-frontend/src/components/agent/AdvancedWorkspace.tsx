@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import {
   Bot,
   CirclePause,
@@ -49,6 +49,10 @@ import {
   Text,
 } from "@gouno/ui/core";
 import { DedicatedEditorLead } from "./DedicatedEditorPatterns";
+import {
+  TabPanelFeedback,
+  TabPanelLead,
+} from "../patterns/TabPanelLead";
 
 export type AdvancedSection =
   | "agents"
@@ -66,33 +70,6 @@ export type DeleteTarget =
 
 function formatCapability(value: string) {
   return value.replace(".", " / ").replaceAll("_", " ");
-}
-
-function TabPanelLead({
-  description,
-  actions,
-}: {
-  description?: ReactNode;
-  actions?: ReactNode;
-}) {
-  if (!description && !actions) return null;
-
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        {description ? (
-          <Text tone="muted" size="sm" className="max-w-3xl leading-relaxed">
-            {description}
-          </Text>
-        ) : null}
-      </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {actions}
-        </div>
-      ) : null}
-    </div>
-  );
 }
 
 interface AdvancedWorkspaceProps {
@@ -348,7 +325,9 @@ export function AdvancedWorkspace({
                     className="grid gap-3 p-6 md:grid-cols-[minmax(0,1fr)_minmax(8rem,0.3fr)_auto] md:items-center"
                   >
                     <div className="min-w-0">
-                      <strong className="font-mono text-sm">{tool.name}</strong>
+                      <strong className="type-family-mono type-body-sm type-weight-semibold">
+                        {tool.name}
+                      </strong>
                       <Text size="xs" tone="muted">
                         {locale === "zh"
                           ? tool.description_zh || tool.description
@@ -452,7 +431,7 @@ export function AdvancedWorkspace({
                       key={agent.id}
                       className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
                     >
-                      <div className="min-w-0 space-y-3">
+                      <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <strong>{agent.name}</strong>
                           <Tag color={agent.enabled ? "success" : "default"}>
@@ -754,7 +733,7 @@ export function AdvancedWorkspace({
               <Card padding="base">
                 <div className="flex flex-col gap-4">
                   <div>
-                    <Heading level={2} className="text-base">
+                    <Heading level={2} variant="compact">
                       {locale === "zh" ? "默认用途" : "Default Purposes"}
                     </Heading>
                     <Text size="sm" tone="muted">
