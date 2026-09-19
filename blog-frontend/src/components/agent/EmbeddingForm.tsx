@@ -33,11 +33,13 @@ export function EmbeddingForm({
   locale,
   onSave,
   onCancel,
+  surface = "page",
 }: {
   initial?: EmbeddingProfile;
   locale: "en" | "zh";
   onSave: (value: EmbeddingFormValue) => Promise<void>;
   onCancel: () => void;
+  surface?: "page" | "drawer";
 }) {
   const labels =
     locale === "zh"
@@ -113,8 +115,9 @@ export function EmbeddingForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div className="flex flex-col gap-5">
-        <AISettingsEditorHeader
+      <div data-pattern="editor-form-composition" className="flex flex-col gap-5">
+        {surface === "page" ? (
+          <AISettingsEditorHeader
           title={initial ? `${labels.title}：${initial.name}` : labels.title}
           description={
             locale === "zh"
@@ -122,7 +125,8 @@ export function EmbeddingForm({
               : "Embedding profiles define the model, dimensions, and credentials used by the knowledge index. Index status and rebuild actions remain in the knowledge workspace."
           }
           icon={<DatabaseZap />}
-        />
+          />
+        ) : null}
 
         <div className="grid gap-5 xl:grid-cols-2">
           <AISettingsEditorSection
