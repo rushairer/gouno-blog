@@ -309,8 +309,8 @@ export function AdvancedWorkspace({
         </div>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === "tools" ? (
-        <div className="flex flex-col gap-5">
+      {!editingAgent && !editingSkill && advancedSection === "tools" ? (
+        <div data-pattern="settings-composition" className="flex flex-col gap-5">
           <TabPanelLead
             description={
               locale === "zh"
@@ -350,8 +350,8 @@ export function AdvancedWorkspace({
         </div>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === "agents" ? (
-        <div className="flex flex-col gap-5">
+      {!editingAgent && !editingSkill && advancedSection === "agents" ? (
+        <div data-pattern="settings-composition" className="flex flex-col gap-5">
           <TabPanelLead
             description={
               locale === "zh"
@@ -543,7 +543,7 @@ export function AdvancedWorkspace({
       !editingProvider &&
       !editingSkill &&
       advancedSection === "skills" ? (
-        <div className="flex flex-col gap-5">
+        <div data-pattern="settings-composition" className="flex flex-col gap-5">
           <input
             ref={skillFileInputRef}
             type="file"
@@ -676,6 +676,7 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent && !editingSkill && advancedSection === "providers" ? (
+        <div data-pattern="settings-composition" className="contents">
         <SudoGate
           title="模型连接与密钥保护"
           description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
@@ -906,17 +907,21 @@ export function AdvancedWorkspace({
             )}
           </div>
         </SudoGate>
+        </div>
       ) : null}
 
       {!editingAgent &&
       !editingSkill &&
       advancedSection === "connectors" ? (
-        <ConnectorWorkspace locale={locale} onRefresh={onRefresh} />
+        <div data-pattern="settings-composition" className="contents">
+          <ConnectorWorkspace locale={locale} onRefresh={onRefresh} />
+        </div>
       ) : null}
 
       {!editingAgent &&
       !editingSkill &&
       advancedSection === "knowledge" ? (
+        <div data-pattern="settings-composition" className="contents">
         <SudoGate
           title="知识库与向量模型保护"
           description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"
@@ -1095,6 +1100,7 @@ export function AdvancedWorkspace({
             )}
           </div>
         </SudoGate>
+        </div>
       ) : null}
       <Drawer
         open={advancedSection === "providers" && editingProvider !== null}
