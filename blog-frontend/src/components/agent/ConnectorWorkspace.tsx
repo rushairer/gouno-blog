@@ -310,20 +310,6 @@ export function ConnectorWorkspace({
       </TabPanelFeedback>
 
       <Card padding="none" className="overflow-hidden">
-        <div className="border-b px-6 py-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <strong className="text-base">Connector Profiles</strong>
-              <Text size="xs" tone="muted" className="mt-1">
-                {zh
-                  ? "查看连接模式、凭据状态并发起对应的 OAuth 流程；配置修改在上下文 Drawer 中完成。"
-                  : "Review connection mode and credential state, start OAuth when needed, and edit configuration in the contextual Drawer."}
-              </Text>
-            </div>
-            <Tag>{profiles.length}</Tag>
-          </div>
-        </div>
-
         {profiles.length === 0 ? (
           <CardContent className="p-6">
             <Empty
@@ -357,10 +343,12 @@ export function ConnectorWorkspace({
                           ? "已停用"
                           : "Disabled"}
                     </Tag>
-                    <Tag>{profile.sandbox ? "Sandbox" : "Read-only OAuth"}</Tag>
                   </div>
-                  <Text size="xs" tone="muted" className="mt-2">
+                  <Text size="xs" tone="muted">
                     {profile.kind} ·{" "}
+                    {profile.sandbox ? "sandbox" : "read-only OAuth"}
+                  </Text>
+                  <Text size="xs" tone="muted">
                     {profile.has_credential
                       ? zh
                         ? `凭据 •••• ${profile.credential_last4 || ""}`
@@ -371,21 +359,21 @@ export function ConnectorWorkspace({
                   </Text>
                 </div>
                 <div className="flex min-w-max items-center gap-1">
-                  <Button
-                    variant="outline"
+                  <IconButton
+                    variant="ghost"
                     size="small"
-                    type="button"
-                    onClick={() => void startOAuth(profile.id)}
+                    label={
+                      profile.kind === "search_console" && !profile.sandbox
+                        ? zh
+                          ? "连接 Google"
+                          : "Connect Google"
+                        : zh
+                          ? "开始 Mock OAuth"
+                          : "Start mock OAuth"
+                    }
                     icon={<KeyRound />}
-                  >
-                    {profile.kind === "search_console" && !profile.sandbox
-                      ? zh
-                        ? "连接 Google"
-                        : "Connect Google"
-                      : zh
-                        ? "开始 Mock OAuth"
-                        : "Start mock OAuth"}
-                  </Button>
+                    onClick={() => void startOAuth(profile.id)}
+                  />
                   <IconButton
                     variant="ghost"
                     size="small"
