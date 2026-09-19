@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import {
   Bot,
   CirclePause,
@@ -39,6 +39,7 @@ import {
   Button,
   Card,
   CardContent,
+  Drawer,
   Empty,
   Heading,
   IconButton,
@@ -64,33 +65,6 @@ export type DeleteTarget =
 
 function formatCapability(value: string) {
   return value.replace(".", " / ").replaceAll("_", " ");
-}
-
-function TabPanelLead({
-  description,
-  actions,
-}: {
-  description?: ReactNode;
-  actions?: ReactNode;
-}) {
-  if (!description && !actions) return null;
-
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        {description ? (
-          <Text tone="muted" size="sm" className="max-w-3xl leading-relaxed">
-            {description}
-          </Text>
-        ) : null}
-      </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {actions}
-        </div>
-      ) : null}
-    </div>
-  );
 }
 
 interface AdvancedWorkspaceProps {
@@ -192,6 +166,12 @@ export function AdvancedWorkspace({
   const skillFileInputRef = useRef<HTMLInputElement>(null);
   const providerMap = new Map(providers.map((item) => [item.id, item]));
 
+  useEffect(() => {
+    if (!editingAgent && !editingSkill) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [editingAgent, editingSkill]);
+
   return (
     <>
       <Tabs<AdvancedSection>
@@ -232,27 +212,8 @@ export function AdvancedWorkspace({
         ]}
       />
 
-      {advancedSection === "providers" && editingProvider ? (
-        <ProviderForm
-          key={editingProvider === "new" ? "new" : editingProvider.id}
-          initial={editingProvider === "new" ? undefined : editingProvider}
-          labels={labels}
-          onSave={onSaveProvider}
-          onCancel={() => onEditProvider(null)}
-        />
-      ) : null}
-
-      {advancedSection === "knowledge" && editingEmbedding ? (
-        <EmbeddingForm
-          key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
-          initial={editingEmbedding === "new" ? undefined : editingEmbedding}
-          locale={locale}
-          onSave={onSaveEmbedding}
-          onCancel={() => onEditEmbedding(null)}
-        />
-      ) : null}
-
       {advancedSection === "agents" && editingAgent ? (
+        <div data-pattern="dedicated-list-editor" className="contents">
         <AgentForm
           key={editingAgent === "new" ? "new" : editingAgent.id}
           initial={editingAgent === "new" ? undefined : editingAgent}
@@ -263,9 +224,11 @@ export function AdvancedWorkspace({
           onSave={onSaveAgent}
           onCancel={() => onEditAgent(null)}
         />
+        </div>
       ) : null}
 
       {advancedSection === "skills" && editingSkill ? (
+        <div data-pattern="dedicated-list-editor" className="contents">
         <SkillForm
           key={editingSkill === "new" ? "new" : editingSkill.id}
           initial={editingSkill === "new" ? undefined : editingSkill}
@@ -274,11 +237,15 @@ export function AdvancedWorkspace({
           onSave={onSaveSkill}
           onCancel={() => onEditSkill(null)}
         />
+        </div>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === "tools" ? (
+      {!editingAgent && !editingSkill ? (
+        <div data-pattern="settings-composition" className="contents">
+
+      {!editingAgent && advancedSection === "tools" ? (
         <div className="flex flex-col gap-5">
-          <TabPanelLead
+          <AISettingsPanelLead
             description={
               locale === "zh"
                 ? "由代码发布的受控能力目录；Workflow 不直接调用 Tool，必须经过 Skill/Agent 授权。"
@@ -319,7 +286,7 @@ export function AdvancedWorkspace({
 
       {!editingAgent && !editingProvider && advancedSection === "agents" ? (
         <div className="flex flex-col gap-5">
-          <TabPanelLead
+          <AISettingsPanelLead
             description={
               locale === "zh"
                 ? "Skill Version + 模型连接 + 运行计划组成可审计的执行单元。"
@@ -507,7 +474,6 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent &&
-      !editingProvider &&
       !editingSkill &&
       advancedSection === "skills" ? (
         <div className="flex flex-col gap-5">
@@ -518,7 +484,7 @@ export function AdvancedWorkspace({
             hidden
             onChange={(event) => void onImportSkill(event)}
           />
-          <TabPanelLead
+          <AISettingsPanelLead
             description={
               locale === "zh"
                 ? "管理可复用、可版本化的 AI 能力定义；系统 Skill 与团队副本保持清晰边界。"
@@ -642,7 +608,7 @@ export function AdvancedWorkspace({
         </div>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === "providers" ? (
+      {!editingAgent && advancedSection === "providers" ? (
         <SudoGate
           title="模型连接与密钥保护"
           description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
@@ -656,7 +622,7 @@ export function AdvancedWorkspace({
               hidden
               onChange={(event) => void onImportProviders(event)}
             />
-            <TabPanelLead
+            <AISettingsPanelLead
               description={
                 locale === "zh"
                   ? "管理模型连接、密钥状态以及文本与图片生成的默认用途。"
@@ -876,15 +842,12 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent &&
-      !editingProvider &&
       !editingEmbedding &&
       advancedSection === "connectors" ? (
         <ConnectorWorkspace locale={locale} onRefresh={onRefresh} />
       ) : null}
 
       {!editingAgent &&
-      !editingProvider &&
-      !editingEmbedding &&
       advancedSection === "knowledge" ? (
         <SudoGate
           title="知识库与向量模型保护"
@@ -892,7 +855,7 @@ export function AdvancedWorkspace({
           actionLabel="解锁以管理知识库"
         >
           <div className="flex flex-col gap-5">
-            <TabPanelLead
+            <AISettingsPanelLead
               description={
                 locale === "zh"
                   ? "仅索引已发布文章；Embedding Profile 负责把内容转换为可检索知识库。"
@@ -1065,6 +1028,62 @@ export function AdvancedWorkspace({
           </div>
         </SudoGate>
       ) : null}
+        </div>
+      ) : null}
+
+      <Drawer
+        open={advancedSection === "providers" && editingProvider !== null}
+        title={
+          editingProvider && editingProvider !== "new"
+            ? `${labels.editProvider}：${editingProvider.name}`
+            : labels.createProvider
+        }
+        description={
+          locale === "zh"
+            ? "配置模型协议、端点、凭据状态与启停状态。"
+            : "Configure the model protocol, endpoint, credential state, and availability."
+        }
+        onClose={() => onEditProvider(null)}
+      >
+        {editingProvider ? (
+          <ProviderForm
+            key={editingProvider === "new" ? "new" : editingProvider.id}
+            initial={editingProvider === "new" ? undefined : editingProvider}
+            labels={labels}
+            onSave={onSaveProvider}
+            onCancel={() => onEditProvider(null)}
+            surface="drawer"
+          />
+        ) : null}
+      </Drawer>
+
+      <Drawer
+        open={advancedSection === "knowledge" && editingEmbedding !== null}
+        title={
+          editingEmbedding && editingEmbedding !== "new"
+            ? `${locale === "zh" ? "编辑 Embedding" : "Edit Embedding"}：${editingEmbedding.name}`
+            : locale === "zh"
+              ? "添加 Embedding 模型"
+              : "Add embedding profile"
+        }
+        description={
+          locale === "zh"
+            ? "配置知识索引使用的模型、端点、向量维度与凭据状态。"
+            : "Configure the model, endpoint, vector dimensions, and credentials used by the knowledge index."
+        }
+        onClose={() => onEditEmbedding(null)}
+      >
+        {editingEmbedding ? (
+          <EmbeddingForm
+            key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
+            initial={editingEmbedding === "new" ? undefined : editingEmbedding}
+            locale={locale}
+            onSave={onSaveEmbedding}
+            onCancel={() => onEditEmbedding(null)}
+            surface="drawer"
+          />
+        ) : null}
+      </Drawer>
     </>
   );
 }
