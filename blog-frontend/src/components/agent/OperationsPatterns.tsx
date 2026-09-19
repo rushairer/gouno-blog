@@ -45,6 +45,7 @@ export function OperationsObjectRow({
   signals?: ReactNode;
   leading?: ReactNode;
   selected?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
   ariaLabel?: string;
 }) {
@@ -54,6 +55,7 @@ export function OperationsObjectRow({
       block
       aria-label={ariaLabel}
       aria-pressed={selected}
+      disabled={disabled}
       className={[
         "group relative h-auto items-stretch justify-start whitespace-normal rounded-none border-b edge-s-emphasis px-4 py-4 text-left transition-colors last:border-b-0",
         "focus-visible:ring-inset",
