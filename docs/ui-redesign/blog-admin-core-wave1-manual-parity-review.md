@@ -10,6 +10,8 @@ Scope:
 - Posts — `/admin/posts`
 - Pages — `/admin/pages`
 
+Certification-rule baseline: `rushairer/gouno-blog@a64dcd1036f74e3146bed7ce79f17ce2c5ac7c75`
+
 Canonical reference: `rushairer/gouno-ui@a752c16e5f3f2d85215a04ea9ef7d33c56b733ee`
 
 Product baseline before this review: `rushairer/gouno-blog@9484fc80fceeee7bbdc3cce920c9a575ecde453e`
