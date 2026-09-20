@@ -239,6 +239,26 @@ if (!dashboard.includes("<IconButtonLink") || !dashboard.includes('variant="ghos
   );
 }
 
+for (const marker of [
+  "flex w-full items-start justify-between gap-4 p-4 text-left",
+  "flex min-w-0 items-start gap-3",
+  "mt-1 line-clamp-1",
+]) {
+  if (!dashboard.includes(marker)) {
+    failures.push(
+      `Dashboard.tsx: manually reviewed AI alert row anatomy drifted from Showcase: ${marker}`,
+    );
+  }
+}
+if (
+  dashboard.includes("group-hover:translate-x-0.5") ||
+  dashboard.includes("mt-0.5 flex size-9")
+) {
+  failures.push(
+    "Dashboard.tsx: page-local AI alert alignment/hover compensation must not replace canonical row anatomy",
+  );
+}
+
 const reviewedTypographyContracts = new Map([
   [
     "Dashboard.tsx",
