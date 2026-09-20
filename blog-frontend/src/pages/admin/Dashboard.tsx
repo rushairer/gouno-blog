@@ -460,7 +460,7 @@ export default function Dashboard() {
                       className="flex w-full items-start justify-between gap-4 p-4 text-left transition-colors hover:bg-muted/40 sm:p-6"
                     >
                       <div className="flex min-w-0 items-start gap-3">
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
+                        <span\n                          className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground"\n                        >
                           {presentation.icon}
                         </span>
                         <div className="min-w-0">
