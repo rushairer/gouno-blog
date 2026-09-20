@@ -211,7 +211,11 @@ export default function Tags() {
             setAIOpen(false);
           }}
         >
-          <Button size="small" icon={<Sparkles />} onClick={() => setAIOpen(true)}>
+          <Button
+            size="small"
+            icon={<Sparkles />}
+            onClick={() => setAIOpen(true)}
+          >
             交给 AI
           </Button>
           <Button
