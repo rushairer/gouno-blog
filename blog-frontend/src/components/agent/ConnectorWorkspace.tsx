@@ -149,8 +149,8 @@ export function ConnectorWorkspace({
       connectorApi.getProfiles(),
       connectorApi.getOutbox(),
     ]);
-    setProfiles(profileData);
-    setOutbox(outboxData);
+    setProfiles(Array.isArray(profileData) ? profileData : []);
+    setOutbox(Array.isArray(outboxData) ? outboxData : []);
   }, []);
 
   useEffect(() => {
