@@ -314,7 +314,8 @@ describe("AISettings", () => {
                 post_id: 10,
                 title: "OAuth PKCE",
                 slug: "oauth-pkce",
-                snippet: "PKCE binds the authorization request to the token exchange.",
+                snippet:
+                  "PKCE binds the authorization request to the token exchange.",
                 start_offset: 0,
                 end_offset: 67,
                 lexical_score: 0.7,
