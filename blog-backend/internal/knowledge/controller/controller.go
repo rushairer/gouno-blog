@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -156,12 +157,17 @@ func (ctrl *Controller) SearchIndex(c *gin.Context) {
 		}
 		limit = value
 	}
+	started := time.Now()
 	items, err := ctrl.service.Search(c.Request.Context(), query, limit, 0)
 	if err != nil {
 		controllerutil.WriteDomainError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"query": query, "results": items}))
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
+		"query": query,
+		"latency_ms": time.Since(started).Milliseconds(),
+		"results": items,
+	}))
 }
 
 func (ctrl *Controller) RebuildIndex(c *gin.Context) {
