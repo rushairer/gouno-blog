@@ -308,7 +308,7 @@ export default function Categories() {
         : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-pattern="collection-composition" className="flex flex-col gap-6">
       <PageHeader
         title="分类"
         description="建立长期稳定的内容脉络与主题结构。"
@@ -570,7 +570,7 @@ export default function Categories() {
           </>
         }
       >
-        <div className="flex flex-col gap-5">
+        <div data-pattern="editor-form-composition" className="flex flex-col gap-5">
           <FormField label="分类名称" required>
             <Input
               aria-label="分类名称"
@@ -592,9 +592,10 @@ export default function Categories() {
             hint="用于分类 URL，建议使用稳定的英文短语。"
           >
             <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Input
                   aria-label="Slug 标识"
+                  className="min-w-0 flex-1 font-mono"
                   required
                   value={draft.slug}
                   onChange={(event) => {
