@@ -84,6 +84,7 @@ for (const entry of entries) {
       "reviewedRefs",
       "gounoUiPackageVersion",
       "stateCoverage",
+      "reviewDimensions",
       "ownedPaths",
       "canonicalPaths",
       "browserEvidence",
@@ -101,6 +102,20 @@ for (const entry of entries) {
       [...coverage].some((value) => value.includes(name)),
     )) {
       fail(`${entry.id}: verified stateCoverage needs a detail/editor/drawer state.`);
+    }
+
+    const dimensions = new Set(entry.reviewDimensions ?? []);
+    for (const required of [
+      "composition",
+      "typography",
+      "spacing",
+      "feedback",
+      "interaction",
+      "responsive",
+    ]) {
+      if (!dimensions.has(required)) {
+        fail(`${entry.id}: verified reviewDimensions must include ${required}.`);
+      }
     }
 
     if (!entry.reviewedRefs?.blog || !entry.reviewedRefs?.gounoUi) {
