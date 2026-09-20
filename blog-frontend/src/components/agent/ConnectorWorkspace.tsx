@@ -442,7 +442,7 @@ export function ConnectorWorkspace({
               data-pattern="editor-form-composition"
               onSubmit={saveProfile}
             >
-              <div className="flex flex-col gap-5">
+              <div className="grid gap-5 xl:grid-cols-2">
                 <AISettingsEditorSection
                   title={zh ? "连接身份" : "Connection identity"}
                   description={
@@ -480,7 +480,7 @@ export function ConnectorWorkspace({
                       </Field>
                     </FormGrid>
                     <Field label={zh ? "状态" : "Status"}>
-                      <label className="inline-flex items-center gap-2 text-sm">
+                      <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
                         <Checkbox
                           checked={enabled}
                           onChange={(event) => setEnabled(event.target.checked)}
@@ -502,7 +502,7 @@ export function ConnectorWorkspace({
                   <div className="flex flex-col gap-5">
                     {kind === "search_console" ? (
                       <Field label={zh ? "连接模式" : "Connection mode"}>
-                        <label className="inline-flex items-center gap-2 text-sm">
+                        <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
                           <Checkbox
                             checked={sandbox}
                             onChange={(event) =>
