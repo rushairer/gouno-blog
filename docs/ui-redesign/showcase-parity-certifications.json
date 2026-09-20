@@ -188,6 +188,14 @@
         "Analytics values, dates, counts, list lengths and concrete fixture copy may differ while the reviewed composition contract remains the same.",
         "Dashboard AI alerts use real Product alert/run data while preserving the canonical object-row presentation."
       ]
+    },
+    {
+      "id": "blog-admin-core-wave2",
+      "scope": "Blog Admin Categories + Tags + Comments",
+      "status": "needs-manual-recertification",
+      "reviewMethod": "manual-first",
+      "manualReview": "docs/ui-redesign/blog-admin-core-wave2-manual-parity-review.md",
+      "reason": "Manual review and implementation are complete; paired browser evidence is pending."
     }
   ]
 }
