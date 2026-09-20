@@ -79,6 +79,14 @@
       "intentionalDivergences": [
         "Connector OAuth/credential/Outbox input and delivery behavior remains real-product behavior.",
         "Agent and Workflow run evidence may contain real audit/suggestion/evidence sections not represented by the Fixture."
+      ],
+      "reviewDimensions": [
+        "composition",
+        "typography",
+        "spacing",
+        "feedback",
+        "interaction",
+        "responsive"
       ]
     },
     {
