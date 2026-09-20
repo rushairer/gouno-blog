@@ -1614,6 +1614,7 @@ export function WorkflowWorkspace({
             >
               <div className="min-w-0 flex-1">
                 <Input
+                  type="search"
                   aria-label={
                     locale === "zh" ? "搜索 Workflow" : "Search workflows"
                   }
