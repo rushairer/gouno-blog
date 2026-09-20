@@ -201,7 +201,7 @@ export function AgentForm({
                   />
                 </Field>
                 <Field label={locale === "zh" ? "状态" : "Status"}>
-                  <label className="inline-flex items-center gap-2 text-sm">
+                  <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
                     <Checkbox
                       checked={value.enabled}
                       onChange={(event) =>
