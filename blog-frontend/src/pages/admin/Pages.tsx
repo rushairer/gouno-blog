@@ -230,7 +230,7 @@ export default function AdminPages() {
         : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-pattern="collection-composition" className="flex flex-col gap-6">
       <PageHeader
         title="单页"
         description="管理关于我、友情链接、隐私政策等独立单页。"
