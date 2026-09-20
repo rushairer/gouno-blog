@@ -174,7 +174,7 @@ export default function AdminComments() {
     : "确认永久删除这条评论？此操作无法撤销。";
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-pattern="collection-composition" className="flex flex-col gap-6">
       <PageHeader
         title="评论"
         description="审核讨论、处理举报，并维护高质量的交流空间。"
@@ -294,7 +294,7 @@ export default function AdminComments() {
                           text={`被举报 ${comment.report_count} 次`}
                         />
                       ) : null}
-                      <span className="font-mono text-xs text-muted-foreground">
+                      <span className="type-family-mono type-caption text-muted-foreground">
                         文章 #{comment.post_id}
                       </span>
                     </div>
