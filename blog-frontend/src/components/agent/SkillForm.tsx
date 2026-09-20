@@ -1,5 +1,5 @@
 import { ListChecks, Save } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import type {
   AgentSkill,
@@ -10,7 +10,6 @@ import type {
 import {
   Button,
   Checkbox,
-  CheckboxField,
   Field,
   FormGrid,
   FormLayout,
@@ -111,15 +110,6 @@ export function SkillForm({
           save: "Save Skill",
           saving: "Saving…",
         };
-  const groupedTools = useMemo(() => {
-    const groups = new Map<string, ToolDefinition[]>();
-    for (const item of tools) {
-      const group = item.name.split(".")[0];
-      groups.set(group, [...(groups.get(group) || []), item]);
-    }
-    return [...groups.entries()];
-  }, [tools]);
-
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -154,325 +144,382 @@ export function SkillForm({
         <DedicatedEditorLayout
           primary={
             <>
-          <DedicatedEditorSection
-            title={locale === "zh" ? "能力定义" : "Capability definition"}
-            description={
-              locale === "zh"
-                ? "定义这个 Skill 做什么、如何判断任务，以及输入需要满足什么结构。"
-                : "Define what this Skill does, how it reasons about work, and the shape of accepted input."
-            }
-          >
-            <div className="flex flex-col gap-5">
-              <Field label={labels.name}>
-                <Input
-                  required
-                  value={value.name}
-                  onChange={(event) =>
-                    setValue((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                />
-              </Field>
-              <Field label={labels.description}>
-                <Textarea
-                  rows={3}
-                  value={value.description}
-                  onChange={(event) =>
-                    setValue((current) => ({
-                      ...current,
-                      description: event.target.value,
-                    }))
-                  }
-                />
-              </Field>
-              <Field label={labels.prompt}>
-                <Textarea
-                  className="font-mono"
-                  rows={8}
-                  required
-                  value={value.system_prompt}
-                  onChange={(event) =>
-                    setValue((current) => ({
-                      ...current,
-                      system_prompt: event.target.value,
-                    }))
-                  }
-                />
-              </Field>
-              <FormGrid columns={2}>
-                <Field label={labels.mode}>
-                  <Select
-                    value={value.execution_mode}
-                    onChange={(nextValue) => {
-                      const mode = String(nextValue) as ExecutionMode;
-                      setValue((current) => ({
-                        ...current,
-                        execution_mode: mode,
-                        capabilities:
-                          mode === "advisory"
-                            ? current.capabilities.filter(
-                                (name) =>
-                                  tools.find((item) => item.name === name)
-                                    ?.risk_level === "read",
-                              )
-                            : current.capabilities,
-                      }));
-                    }}
+              <DedicatedEditorSection
+                title={locale === "zh" ? "能力定义" : "Capability definition"}
+                description={
+                  locale === "zh"
+                    ? "先定义职责和固定指令，再决定允许它调用哪些 Tool。"
+                    : "Define responsibility and fixed instructions before choosing which Tools the Skill may invoke."
+                }
+              >
+                <div className="flex flex-col gap-5">
+                  <Field label={labels.name}>
+                    <Input
+                      required
+                      value={value.name}
+                      onChange={(event) =>
+                        setValue((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                  <Field label={labels.description}>
+                    <Textarea
+                      rows={3}
+                      value={value.description}
+                      onChange={(event) =>
+                        setValue((current) => ({
+                          ...current,
+                          description: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label={labels.prompt}
+                    hint={
+                      locale === "zh"
+                        ? "固定在 Skill Version 中；Agent 不能覆盖。"
+                        : "Fixed in the Skill Version; Agents cannot override it."
+                    }
                   >
-                    <option value="advisory">{labels.advisory}</option>
-                    <option value="approval">{labels.approval}</option>
-                  </Select>
-                </Field>
+                    <Textarea
+                      className="font-mono"
+                      rows={7}
+                      required
+                      value={value.system_prompt}
+                      onChange={(event) =>
+                        setValue((current) => ({
+                          ...current,
+                          system_prompt: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                </div>
+              </DedicatedEditorSection>
+
+              <DedicatedEditorSection
+                title={locale === "zh" ? "Tool 授权" : "Tool authorization"}
+                description={
+                  locale === "zh"
+                    ? "只授权这项能力真正需要的 Tool；建议模式不会放开写入型能力。"
+                    : "Authorize only the Tools this capability needs; advisory mode does not permit write-capable Tools."
+                }
+              >
+                <div className="flex flex-col gap-5">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {tools.map((item) => (
+                      <label
+                        key={item.name}
+                        className="flex items-start gap-3 rounded-md border p-4"
+                      >
+                        <Checkbox
+                          disabled={
+                            value.execution_mode === "advisory" &&
+                            item.risk_level !== "read"
+                          }
+                          checked={value.capabilities.includes(item.name)}
+                          onChange={(event) =>
+                            setValue((current) => ({
+                              ...current,
+                              capabilities: event.target.checked
+                                ? [...current.capabilities, item.name]
+                                : current.capabilities.filter(
+                                    (name) => name !== item.name,
+                                  ),
+                            }))
+                          }
+                        />
+                        <span className="min-w-0">
+                          <strong className="block type-family-mono type-body-sm type-weight-semibold">
+                            {item.name}
+                          </strong>
+                          <Text size="xs" tone="muted">
+                            {locale === "zh"
+                              ? item.description_zh || item.description
+                              : item.description}
+                          </Text>
+                          <span className="mt-2 block">
+                            <RiskPill
+                              risk={item.risk_level}
+                              locale={locale}
+                            />
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="border-t pt-5">
+                    <ToolBindingsEditor
+                      capabilities={value.capabilities}
+                      tools={tools}
+                      toolBindings={value.tool_bindings}
+                      onChange={(bindings) =>
+                        setValue((current) => ({
+                          ...current,
+                          tool_bindings: bindings,
+                        }))
+                      }
+                      locale={locale}
+                    />
+                  </div>
+                </div>
+              </DedicatedEditorSection>
+
+              <DedicatedEditorSection
+                title={locale === "zh" ? "输入契约" : "Input contract"}
+                description={
+                  locale === "zh"
+                    ? "输入 Schema 是 Skill Version 的一部分，用来约束 Workflow 或人工运行传入的数据。"
+                    : "The input schema is part of the Skill Version and constrains data supplied by Workflows or manual runs."
+                }
+              >
                 <Field
                   label={
                     locale === "zh"
-                      ? "内容发布策略"
-                      : "Content publication policy"
-                  }
-                  hint={
-                    locale === "zh"
-                      ? "由此 Skill Version 固定，Agent 不能覆盖。"
-                      : "Fixed by this Skill Version; Agents cannot override it."
+                      ? "输入 JSON Schema（Draft 2020-12）"
+                      : "Input JSON Schema (Draft 2020-12)"
                   }
                 >
-                  <Select
-                    value={value.content_publish_mode}
-                    onChange={(nextValue) =>
-                      setValue((current) => ({
-                        ...current,
-                        content_publish_mode: String(
-                          nextValue,
-                        ) as ContentPublishMode,
-                      }))
-                    }
-                  >
-                    <option value="approval">
-                      {locale === "zh" ? "审批后创建" : "Approval required"}
-                    </option>
-                    <option value="draft">
-                      {locale === "zh" ? "创建草稿" : "Create draft"}
-                    </option>
-                    <option value="publish">
-                      {locale === "zh"
-                        ? "显式自动发布"
-                        : "Explicit auto-publish"}
-                    </option>
-                  </Select>
+                  <Textarea
+                    className="font-mono"
+                    rows={7}
+                    required
+                    value={schemaText}
+                    onChange={(event) => setSchemaText(event.target.value)}
+                  />
                 </Field>
-              </FormGrid>
-              <Field
-                label={
-                  locale === "zh"
-                    ? "输入 JSON Schema（Draft 2020-12）"
-                    : "Input JSON Schema (Draft 2020-12)"
-                }
-              >
-                <Textarea
-                  className="font-mono"
-                  rows={7}
-                  required
-                  value={schemaText}
-                  onChange={(event) => setSchemaText(event.target.value)}
-                />
-              </Field>
-            </div>
-          </DedicatedEditorSection>
+              </DedicatedEditorSection>
             </>
           }
           secondary={
             <>
               <DedicatedEditorSection
-            title={locale === "zh" ? "执行边界" : "Execution boundary"}
-            description={
-              locale === "zh"
-                ? "允许的触发方式、Tool 能力和默认额度共同组成 Skill Version 的运行安全边界。"
-                : "Allowed triggers, Tool capabilities, and default limits form the runtime safety boundary of the Skill Version."
-            }
-          >
-            <div className="flex flex-col gap-6">
-              <fieldset className="rounded-md border p-4">
-                <legend className="px-1 text-sm font-medium">
-                  {labels.triggers}
-                </legend>
-                <div className="mt-1 flex flex-wrap gap-4">
-                  {(["manual", "cron"] as const).map((trigger) => (
-                    <CheckboxField key={trigger}>
-                      <Checkbox
-                        checked={value.allowed_triggers.includes(trigger)}
+                title={
+                  locale === "zh"
+                    ? "执行与发布边界"
+                    : "Execution and publication boundary"
+                }
+                description={
+                  locale === "zh"
+                    ? "执行模式、发布策略与允许触发器属于 Skill Version，不由 Agent 临时放宽。"
+                    : "Execution mode, publication policy, and allowed triggers belong to the Skill Version and cannot be loosened by an Agent."
+                }
+              >
+                <div className="flex flex-col gap-5">
+                  <Field label={labels.mode}>
+                    <Select
+                      value={value.execution_mode}
+                      onChange={(nextValue) => {
+                        const mode = String(nextValue) as ExecutionMode;
+                        setValue((current) => ({
+                          ...current,
+                          execution_mode: mode,
+                          capabilities:
+                            mode === "advisory"
+                              ? current.capabilities.filter(
+                                  (name) =>
+                                    tools.find((item) => item.name === name)
+                                      ?.risk_level === "read",
+                                )
+                              : current.capabilities,
+                        }));
+                      }}
+                    >
+                      <option value="advisory">{labels.advisory}</option>
+                      <option value="approval">{labels.approval}</option>
+                    </Select>
+                  </Field>
+
+                  <Field
+                    label={
+                      locale === "zh"
+                        ? "内容发布策略"
+                        : "Content publication policy"
+                    }
+                    hint={
+                      locale === "zh"
+                        ? "由此 Skill Version 固定，Agent 不能覆盖。"
+                        : "Fixed by this Skill Version; Agents cannot override it."
+                    }
+                  >
+                    <Select
+                      value={value.content_publish_mode}
+                      onChange={(nextValue) =>
+                        setValue((current) => ({
+                          ...current,
+                          content_publish_mode: String(
+                            nextValue,
+                          ) as ContentPublishMode,
+                        }))
+                      }
+                    >
+                      <option value="approval">
+                        {locale === "zh"
+                          ? "审批后创建"
+                          : "Approval required"}
+                      </option>
+                      <option value="draft">
+                        {locale === "zh" ? "创建草稿" : "Create draft"}
+                      </option>
+                      <option value="publish">
+                        {locale === "zh"
+                          ? "显式自动发布"
+                          : "Explicit auto-publish"}
+                      </option>
+                    </Select>
+                  </Field>
+
+                  <div className="border-t pt-5">
+                    <Text size="sm">{labels.triggers}</Text>
+                    <div className="mt-3 flex flex-col gap-3">
+                      {(["manual", "cron"] as const).map((trigger) => (
+                        <label
+                          key={trigger}
+                          className="inline-flex items-center gap-2 type-body-sm type-weight-semibold"
+                        >
+                          <Checkbox
+                            checked={value.allowed_triggers.includes(trigger)}
+                            onChange={(event) =>
+                              setValue((current) => ({
+                                ...current,
+                                allowed_triggers: event.target.checked
+                                  ? [...current.allowed_triggers, trigger]
+                                  : current.allowed_triggers.filter(
+                                      (item) => item !== trigger,
+                                    ),
+                              }))
+                            }
+                          />
+                          {labels[trigger]}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {initial ? (
+                    <div className="grid grid-cols-2 gap-4 border-t pt-5">
+                      <div>
+                        <Text size="xs" tone="muted">
+                          {locale === "zh" ? "当前版本" : "Current version"}
+                        </Text>
+                        <strong className="mt-1 block type-body-sm type-weight-semibold">
+                          v{initial.version}
+                        </strong>
+                      </div>
+                      <div>
+                        <Text size="xs" tone="muted">
+                          {locale === "zh" ? "最近更新" : "Last updated"}
+                        </Text>
+                        <strong className="mt-1 block type-body-sm type-weight-semibold">
+                          {initial.updated_at}
+                        </strong>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </DedicatedEditorSection>
+
+              <DedicatedEditorSection
+                title={
+                  locale === "zh"
+                    ? "默认治理限制"
+                    : "Default governance limits"
+                }
+                description={
+                  locale === "zh"
+                    ? "这些是 Skill 的安全与成本上限；Agent 只能继承或进一步调低，不能放宽。"
+                    : "These are Skill safety and cost ceilings; Agents may inherit or tighten them, never loosen them."
+                }
+              >
+                <div className="flex flex-col gap-5">
+                  <FormGrid columns={2}>
+                    <Field label="Max steps">
+                      <Input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={value.max_steps}
                         onChange={(event) =>
                           setValue((current) => ({
                             ...current,
-                            allowed_triggers: event.target.checked
-                              ? [...current.allowed_triggers, trigger]
-                              : current.allowed_triggers.filter(
-                                  (item) => item !== trigger,
-                                ),
+                            max_steps: Number(event.target.value),
                           }))
                         }
                       />
-                      <span>{labels[trigger]}</span>
-                    </CheckboxField>
-                  ))}
+                    </Field>
+                    <Field
+                      label={
+                        locale === "zh"
+                          ? "默认日运行上限"
+                          : "Default daily limit"
+                      }
+                    >
+                      <Input
+                        type="number"
+                        min="1"
+                        value={value.default_daily_run_limit}
+                        onChange={(event) =>
+                          setValue((current) => ({
+                            ...current,
+                            default_daily_run_limit: Number(event.target.value),
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Max input tokens">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={value.max_input_tokens}
+                        onChange={(event) =>
+                          setValue((current) => ({
+                            ...current,
+                            max_input_tokens: Number(event.target.value),
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Max output tokens">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={value.max_output_tokens}
+                        onChange={(event) =>
+                          setValue((current) => ({
+                            ...current,
+                            max_output_tokens: Number(event.target.value),
+                          }))
+                        }
+                      />
+                    </Field>
+                  </FormGrid>
+                  <Field
+                    label={
+                      locale === "zh"
+                        ? "默认月 Token 预算"
+                        : "Default monthly token budget"
+                    }
+                  >
+                    <Input
+                      type="number"
+                      min="1"
+                      value={value.default_monthly_token_budget}
+                      onChange={(event) =>
+                        setValue((current) => ({
+                          ...current,
+                          default_monthly_token_budget: Number(
+                            event.target.value,
+                          ),
+                        }))
+                      }
+                    />
+                  </Field>
                 </div>
-              </fieldset>
-
-              <fieldset className="rounded-md border p-4">
-                <legend className="px-1 text-sm font-medium">
-                  {labels.capabilities}
-                </legend>
-                <div className="mt-2 flex flex-col gap-5">
-                  {groupedTools.map(([group, items]) => (
-                    <div key={group} className="flex flex-col gap-2">
-                      <strong className="text-sm">{group}</strong>
-                      <div className="divide-y rounded-md border">
-                        {items.map((item) => (
-                          <label
-                            key={item.name}
-                            className="grid cursor-pointer gap-3 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-start"
-                          >
-                            <Checkbox
-                              disabled={
-                                value.execution_mode === "advisory" &&
-                                item.risk_level !== "read"
-                              }
-                              checked={value.capabilities.includes(item.name)}
-                              onChange={(event) =>
-                                setValue((current) => ({
-                                  ...current,
-                                  capabilities: event.target.checked
-                                    ? [...current.capabilities, item.name]
-                                    : current.capabilities.filter(
-                                        (name) => name !== item.name,
-                                      ),
-                                }))
-                              }
-                            />
-                            <span className="min-w-0">
-                              <b className="block font-mono text-sm">
-                                {item.name}
-                              </b>
-                              <Text size="xs" tone="muted">
-                                {locale === "zh"
-                                  ? item.description_zh || item.description
-                                  : item.description}
-                              </Text>
-                            </span>
-                            <RiskPill risk={item.risk_level} locale={locale} />
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </fieldset>
-
-              <ToolBindingsEditor
-                capabilities={value.capabilities}
-                tools={tools}
-                toolBindings={value.tool_bindings}
-                onChange={(bindings) =>
-                  setValue((current) => ({
-                    ...current,
-                    tool_bindings: bindings,
-                  }))
-                }
-                locale={locale}
-              />
-
-              <div className="border-t pt-5">
-                <Text size="xs" tone="muted">
-                  {locale === "zh" ? "默认治理限制" : "Governance defaults"}
-                </Text>
-                <Text size="xs" tone="muted" className="mt-1">
-                  {locale === "zh"
-                    ? "这些值是新 Agent 的默认上限；Agent 只能进一步收紧，不能放宽。"
-                    : "These values are inherited by new Agents as upper bounds; Agents may tighten them but cannot loosen them."}
-                </Text>
-              </div>
-
-              <FormGrid columns={2}>
-                <Field label="Max steps">
-                  <Input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={value.max_steps}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        max_steps: Number(event.target.value),
-                      }))
-                    }
-                  />
-                </Field>
-                <Field
-                  label={
-                    locale === "zh" ? "默认日运行上限" : "Default daily limit"
-                  }
-                >
-                  <Input
-                    type="number"
-                    min="1"
-                    value={value.default_daily_run_limit}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        default_daily_run_limit: Number(event.target.value),
-                      }))
-                    }
-                  />
-                </Field>
-                <Field label="Max input tokens">
-                  <Input
-                    type="number"
-                    min="1"
-                    value={value.max_input_tokens}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        max_input_tokens: Number(event.target.value),
-                      }))
-                    }
-                  />
-                </Field>
-                <Field label="Max output tokens">
-                  <Input
-                    type="number"
-                    min="1"
-                    value={value.max_output_tokens}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        max_output_tokens: Number(event.target.value),
-                      }))
-                    }
-                  />
-                </Field>
-                <Field
-                  label={
-                    locale === "zh"
-                      ? "默认月 Token 预算"
-                      : "Default monthly token budget"
-                  }
-                >
-                  <Input
-                    type="number"
-                    min="1"
-                    value={value.default_monthly_token_budget}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        default_monthly_token_budget: Number(
-                          event.target.value,
-                        ),
-                      }))
-                    }
-                  />
-                </Field>
-              </FormGrid>
-            </div>
               </DedicatedEditorSection>
             </>
           }
