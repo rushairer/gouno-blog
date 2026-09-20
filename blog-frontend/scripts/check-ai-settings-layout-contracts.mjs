@@ -17,6 +17,9 @@ function requireCount(text, marker, count, message) {
 
 const sharedLead = await source("src/components/patterns/TabPanelLead.tsx");
 const workspace = await source("src/components/agent/AdvancedWorkspace.tsx");
+const editorPatterns = await source(
+  "src/components/agent/AISettingsEditorPatterns.tsx",
+);
 const connectorWorkspace = await source(
   "src/components/agent/ConnectorWorkspace.tsx",
 );
@@ -120,6 +123,54 @@ requireText(
   'form="ai-settings-connector-editor"',
   "Connector Drawer footer must own the submit action",
 );
+
+requireText(
+  editorPatterns,
+  'data-pattern="editor-form-section"',
+  "Contextual AI Settings editors must expose the canonical editor-form-section grammar",
+);
+requireText(
+  editorPatterns,
+  'variant="subsection"',
+  "Contextual AI Settings editor headers must use the canonical subsection typography variant",
+);
+
+for (const [path, minimumSections] of [
+  ["src/components/agent/AgentForm.tsx", 4],
+  ["src/components/agent/SkillForm.tsx", 5],
+]) {
+  const text = await source(path);
+  for (const marker of [
+    "DedicatedEditorLayout",
+    "DedicatedEditorSection",
+    "DedicatedEditorActions",
+  ]) {
+    requireText(
+      text,
+      marker,
+      `${path}: Dedicated Editor body must use ${marker}`,
+    );
+  }
+  requireCount(
+    text,
+    "<DedicatedEditorSection",
+    minimumSections,
+    `${path}: Dedicated Editor semantic sections drifted from the manually reviewed Showcase anatomy`,
+  );
+}
+
+for (const path of [
+  "src/components/agent/ProviderForm.tsx",
+  "src/components/agent/EmbeddingForm.tsx",
+  "src/components/agent/ConnectorWorkspace.tsx",
+]) {
+  const text = await source(path);
+  requireText(
+    text,
+    "grid gap-5 xl:grid-cols-2",
+    `${path}: contextual editor must preserve the canonical two-column section layout`,
+  );
+}
 
 for (const path of [
   "src/components/agent/AgentForm.tsx",
