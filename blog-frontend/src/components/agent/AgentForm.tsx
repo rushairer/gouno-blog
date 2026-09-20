@@ -13,7 +13,6 @@ import {
   Button,
   Checkbox,
   Field,
-  FormActions,
   FormGrid,
   FormLayout,
   Input,
@@ -21,10 +20,12 @@ import {
   Text,
   Textarea,
 } from "@gouno/ui/core";
+import { AISettingsEditorHeader } from "./AISettingsEditorPatterns";
 import {
-  AISettingsEditorHeader,
-  AISettingsEditorSection,
-} from "./AISettingsEditorPatterns";
+  DedicatedEditorActions,
+  DedicatedEditorLayout,
+  DedicatedEditorSection,
+} from "./DedicatedEditorPatterns";
 
 type AgentFormValue = Omit<
   Agent,
@@ -163,9 +164,10 @@ export function AgentForm({
           />
         ) : null}
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)]">
-          <div className="flex min-w-0 flex-col gap-5">
-            <AISettingsEditorSection
+        <DedicatedEditorLayout
+          primary={
+            <>
+            <DedicatedEditorSection
               title={locale === "zh" ? "基础信息" : "Identity"}
               description={
                 locale === "zh"
@@ -213,9 +215,9 @@ export function AgentForm({
                   </label>
                 </Field>
               </div>
-            </AISettingsEditorSection>
+            </DedicatedEditorSection>
 
-            <AISettingsEditorSection
+            <DedicatedEditorSection
               title={locale === "zh" ? "能力绑定" : "Capability binding"}
               description={
                 locale === "zh"
@@ -362,11 +364,12 @@ export function AgentForm({
                   </div>
                 ) : null}
               </div>
-            </AISettingsEditorSection>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-5">
-            <AISettingsEditorSection
+            </DedicatedEditorSection>
+            </>
+          }
+          secondary={
+            <>
+            <DedicatedEditorSection
               title={locale === "zh" ? "运行计划" : "Run schedule"}
               description={
                 locale === "zh"
@@ -427,9 +430,9 @@ export function AgentForm({
                   </Text>
                 )}
               </div>
-            </AISettingsEditorSection>
+            </DedicatedEditorSection>
 
-            <AISettingsEditorSection
+            <DedicatedEditorSection
               title={locale === "zh" ? "运行治理" : "Runtime governance"}
               description={
                 locale === "zh"
@@ -541,11 +544,12 @@ export function AgentForm({
                   </Field>
                 </FormGrid>
               </div>
-            </AISettingsEditorSection>
-          </div>
-        </div>
+            </DedicatedEditorSection>
+            </>
+          }
+        />
 
-        <FormActions>
+        <DedicatedEditorActions>
           <Button variant="outline" type="button" onClick={handleCancel}>
             {labels.cancel}
           </Button>
@@ -559,7 +563,7 @@ export function AgentForm({
           >
             {saving ? labels.saving : labels.saveAgent}
           </Button>
-        </FormActions>
+        </DedicatedEditorActions>
       </div>
     </FormLayout>
   );
