@@ -167,16 +167,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Show PR-local Prettier diff
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/blog-admin-manual-parity-pass-20260920'
-        run: |
-          npx prettier --write \
-            src/components/agent/WorkflowRunDetail.tsx \
-            src/components/agent/WorkflowWorkspace.tsx
-          git diff -- \
-            src/components/agent/WorkflowRunDetail.tsx \
-            src/components/agent/WorkflowWorkspace.tsx
-
       - name: Verify Gouno UI registry release
         run: |
           node --input-type=module <<'EOF'
