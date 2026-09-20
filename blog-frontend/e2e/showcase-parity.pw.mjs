@@ -46,6 +46,24 @@ async function typographyFingerprint(locator) {
   });
 }
 
+async function objectRowFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      display: style.display,
+      alignItems: style.alignItems,
+      justifyContent: style.justifyContent,
+      gap: style.gap,
+      paddingTop: style.paddingTop,
+      paddingRight: style.paddingRight,
+      paddingBottom: style.paddingBottom,
+      paddingLeft: style.paddingLeft,
+      textAlign: style.textAlign,
+    };
+  });
+}
+
 async function tabPanelLeadFingerprint(locator) {
   await expect(locator).toBeVisible();
   return locator.evaluate((element) => {
@@ -315,8 +333,8 @@ for (const theme of ["light", "dark"]) {
       .locator('[data-slot="card-content"]')
       .getByRole("link")
       .first();
-    expect(await styleFingerprint(productAlertRow)).toEqual(
-      await styleFingerprint(showcaseAlertRow),
+    expect(await objectRowFingerprint(productAlertRow)).toEqual(
+      await objectRowFingerprint(showcaseAlertRow),
     );
     expect(
       await typographyFingerprint(productAlertRow.locator("strong").first()),
@@ -369,7 +387,7 @@ for (const theme of ["light", "dark"]) {
     const showcasePostRow = showcase.getByRole("row").nth(1);
     const productPostRow = product.getByRole("row").nth(1);
     for (const selector of [
-      "td:nth-child(2) span:first-child",
+      "td:nth-child(2) .type-weight-semibold",
       "td:nth-child(2) code",
       "td:nth-child(4) time",
       "td:nth-child(5)",
