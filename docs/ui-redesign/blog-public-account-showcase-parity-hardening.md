@@ -1,8 +1,8 @@
 # Gouno Blog Public & Account Showcase Parity Hardening
 
-Status: **Complete / accepted.**
+Status: **Legacy hardening complete; manual-first recertification pending.**
 
-Accepted on 2026-09-16 (Asia/Shanghai). This document records the final engineering evidence for the Public Blog + Blog Account Showcase Parity Hardening pass. Historical migration reports are background only; the accepted source of truth is the GitHub `main` state and the CI evidence recorded below.
+Accepted under the 2026-09-16 hardening criteria (Asia/Shanghai). This document preserves that engineering evidence, but it does not by itself establish current manual-first Showcase certification. Current certification status is owned by `showcase-parity-certifications.json` and the protocol in `SHOWCASE_PARITY_PROTOCOL.md`.
 
 ## 1. Baseline and accepted refs
 
