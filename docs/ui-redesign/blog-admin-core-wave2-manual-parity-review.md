@@ -10,7 +10,7 @@ Scope:
 - Tags — `/admin/tags`
 - Comments — `/admin/comments`
 
-Current Product baseline for this recertification: `rushairer/gouno-blog@d01b01c249b058642b95bcb476ba03294a76ec60`
+Current Product baseline for this recertification: `rushairer/gouno-blog@3db8672deb6ae883aa8812d1bae9614acba9e0e7`
 
 Canonical reference: `rushairer/gouno-ui@c64c19f1a045545f54d988609a6ad2e80f2dfe6c`
 
@@ -51,7 +51,7 @@ These differences must not be removed merely to make Product source literal-copy
 
 ## Final Wave 2 implementation
 
-Starting from `d01b01c2`:
+Starting from `3db8672d`:
 
 - Categories root exposes `data-pattern="collection-composition"`.
 - Categories Drawer exposes `data-pattern="editor-form-composition"`.
