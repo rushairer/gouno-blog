@@ -11,6 +11,8 @@ import {
   connectorProfiles,
   embeddingProfile,
   indexStatus,
+  indexedKnowledgeContent,
+  knowledgeSearchResponse,
   suggestions,
   workflowInteractions,
   workflowMetrics,
@@ -68,6 +70,13 @@ export async function installAiFixtures(page) {
     if (path === "/api/admin/ai-connectors") return respond(connectorProfiles);
     if (path === "/api/admin/ai-connector-outbox") return respond(connectorOutbox);
     if (path === "/api/admin/ai-index/status") return respond(indexStatus);
+    if (path === "/api/admin/ai-index/content") return respond(indexedKnowledgeContent);
+    if (path === "/api/admin/ai-index/search") {
+      return respond({
+        ...knowledgeSearchResponse,
+        query: url.searchParams.get("q") || knowledgeSearchResponse.query,
+      });
+    }
 
     if (path === "/api/admin/agent-runs") return respond({ list: agentRuns });
     if (/^\/api\/admin\/agent-runs\/\d+$/.test(path)) {
