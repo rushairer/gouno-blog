@@ -68,17 +68,46 @@ visual parity. The order for AI parity work is now:
 
 ## Final verification evidence
 
-The implementation state reviewed above was merged from PR #266 after all evidence
-below passed on head `42b00d787cc14e6039744d74356343bca0b3e336`.
+The AI Settings / AI Operations family was re-certified after the Knowledge Workspace
+redesign and reverse migration. The reviewed real-product head is
+`29451582d5c812642402d19c16dff3ed535b0ef1`; the reviewed canonical Gouno UI
+head is `c64c19f1a045545f54d988609a6ad2e80f2dfe6c`.
 
-- Manual paired screenshot review: Tools, Sandbox Connectors and AI Operations / Run Center were visually re-checked after the automated comparison passed. Data-count and real-business differences were not treated as layout drift.
-- CI run `35481882455`: **success** — frontend format/lint/UI contracts/typecheck/coverage/build plus backend, seed, integration, dependency and compose gates.
-- Images run `35481882453`: **success** — frontend, backend and seed image builds.
-- Blog Showcase Parity run `35481882452`: **success** — AI Settings source contract, AI Operations source contract and canonical rendered-style comparison all passed.
-- Paired Showcase artifact `10595808968`: `sha256:6420ec85e4e602d24da76788b0bbc30dadf74ff55cac6d83fe61f4868ff273b2`.
-- UI Browser Acceptance run `35481882457`: **success** — full rendered acceptance completed.
-- Browser evidence artifact `10596108871`: `sha256:5f5a1c111970a5c25a071e42546796ebed6722a57ef69b43698ed57b2528e404`.
-- Merge commit: `aea170da25e4499efe77f302f2cce43ad1db60e2`.
+The final manual pass re-read both current implementations before updating the
+certification ledger. It confirmed:
+
+- the six AI Settings tabs still have the same canonical ownership and order;
+- Agent and Skill remain Dedicated Editor tasks;
+- Provider, Embedding and Connector remain contextual Drawer tasks;
+- Tools retains canonical lead, row typography and risk semantics;
+- Knowledge owns its own Workspace while preserving canonical lead, feedback,
+  index overview, indexed content, retrieval verification and Embedding layers;
+- Provider and Knowledge high-privilege policy copy is owned by the surface that
+  renders the corresponding SudoGate;
+- Connector keeps the canonical collection/Outbox composition while preserving
+  the real read-only OAuth and real-product input differences;
+- no product-only behavior was removed merely to satisfy visual parity.
+
+Fresh verification evidence for that reviewed state:
+
+- CI run `35486707395`: **success** — frontend formatting, lint, UI/CSS
+  contracts, typecheck, coverage and build; backend quality/race/vulnerability
+  gates; seed, integration and compose checks all passed.
+- Blog Showcase Parity run `35486707373`: **success** — certification ledger,
+  AI Settings source contract, AI Operations source contract and paired rendered
+  style comparison all passed.
+- Paired Showcase artifact `10597571973`:
+  `sha256:77ac5621bd47f21326bb899bfcc52eace9b6c9339aae2c890eaf72faeb521375`.
+- UI Browser Acceptance run `35486707428`: **success** — full rendered product
+  acceptance passed.
+- Browser evidence artifact `10598310684`:
+  `sha256:d574cebeae52fdf71bc77f0ab19eea59202a80b87df5d6ae84aab7069a76ed9e`.
+- Reciprocal Gouno UI Blog Consumer Parity run `35486806069`: **success** on
+  canonical head `c64c19f1a045545f54d988609a6ad2e80f2dfe6c`.
+- Reciprocal parity artifact `10597542294`:
+  `sha256:5751fe1b628f99f10878e0e2490e175f5c25cb177ee132d1060d1d838829683d`.
+- Gouno UI CI `35486806060` and GitHub Pages publish `35486806062` both
+  succeeded on the same canonical head.
 
 This evidence records the result; it does not replace the manual reasoning that
 preceded the implementation and the contracts.

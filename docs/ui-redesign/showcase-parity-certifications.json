@@ -12,14 +12,14 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-20",
       "manualReview": "docs/ui-redesign/blog-admin-ai-manual-parity-review.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
-        "blog": "aea170da25e4499efe77f302f2cce43ad1db60e2",
-        "gounoUi": "a752c16e5f3f2d85215a04ea9ef7d33c56b733ee"
+        "blog": "29451582d5c812642402d19c16dff3ed535b0ef1",
+        "gounoUi": "c64c19f1a045545f54d988609a6ad2e80f2dfe6c"
       },
       "gounoUiPackageVersion": "0.4.8",
       "stateCoverage": [
@@ -46,33 +46,37 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 35481882452,
+            "id": 35486707373,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35481882457,
+            "id": 35486707428,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 35481882455,
+            "id": 35486707395,
             "result": "success"
           },
           {
-            "name": "Images",
-            "id": 35481882453,
+            "name": "Gouno UI Blog Consumer Parity",
+            "id": 35486806069,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10595808968,
-            "sha256": "6420ec85e4e602d24da76788b0bbc30dadf74ff55cac6d83fe61f4868ff273b2"
+            "id": 10597571973,
+            "sha256": "77ac5621bd47f21326bb899bfcc52eace9b6c9339aae2c890eaf72faeb521375"
           },
           {
-            "id": 10596108871,
-            "sha256": "5f5a1c111970a5c25a071e42546796ebed6722a57ef69b43698ed57b2528e404"
+            "id": 10598310684,
+            "sha256": "d574cebeae52fdf71bc77f0ab19eea59202a80b87df5d6ae84aab7069a76ed9e"
+          },
+          {
+            "id": 10597542294,
+            "sha256": "5751fe1b628f99f10878e0e2490e175f5c25cb177ee132d1060d1d838829683d"
           }
         ]
       },
@@ -87,8 +91,7 @@
         "feedback",
         "interaction",
         "responsive"
-      ],
-      "reason": "Knowledge Workspace canonical composition and Blog Admin real-data bindings changed on 2026-09-20; fresh manual-first source, rendered parity, browser, and CI evidence is required before restoring verified status."
+      ]
     },
     {
       "id": "blog-admin-core-support",
