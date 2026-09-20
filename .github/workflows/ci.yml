@@ -167,6 +167,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Show Support Prettier diff
+        if: github.event_name == 'pull_request' && github.head_ref == 'diagnostics/support-prettier-20260920'
+        run: |
+          npx prettier --write \
+            src/pages/admin/Notifications.tsx \
+            src/pages/admin/Users.tsx
+          git diff -- \
+            src/pages/admin/Notifications.tsx \
+            src/pages/admin/Users.tsx
+
       - name: Verify Gouno UI registry release
         run: |
           node --input-type=module <<'EOF'
