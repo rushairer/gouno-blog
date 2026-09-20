@@ -254,6 +254,8 @@ const reviewedTypographyContracts = new Map([
         "text-sm font-semibold",
         "text-xs font-medium",
         "font-mono text-xs",
+        "text-[10px]",
+        "text-[11px]",
       ],
     },
   ],
