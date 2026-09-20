@@ -712,11 +712,6 @@ export function WorkflowRunRecords({
                     selected={selected?.run.id === run.id}
                     disabled={loadingID === run.id}
                     onClick={() => void inspect(run)}
-                    ariaLabel={
-                      zh
-                        ? `查看 Workflow Run #${run.id}`
-                        : `Inspect Workflow Run #${run.id}`
-                    }
                   />
                 </div>
               );
