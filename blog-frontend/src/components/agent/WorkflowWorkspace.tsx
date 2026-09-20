@@ -850,7 +850,7 @@ export function WorkflowWorkspace({
         <div
           data-slot="workflow-detail"
           data-pattern="record-detail-composition"
-          className="min-w-0"
+          className="flex min-w-0 flex-col gap-5"
         >
           <div className="workflow-detail-view min-w-0">
             {(() => {
