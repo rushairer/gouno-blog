@@ -112,10 +112,82 @@
     {
       "id": "blog-admin-core-wave1",
       "scope": "Blog Admin Dashboard + Posts + Pages",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
+      "reviewDate": "2026-09-20",
       "manualReview": "docs/ui-redesign/blog-admin-core-wave1-manual-parity-review.md",
-      "reason": "Manual implementation review is complete; paired browser evidence is pending."
+      "reviewedRefs": {
+        "blog": "87800efa1d80a2f698a3d4e279b2825b4361188a",
+        "gounoUi": "c64c19f1a045545f54d988609a6ad2e80f2dfe6c"
+      },
+      "gounoUiPackageVersion": "0.4.8",
+      "stateCoverage": [
+        "default",
+        "feedback",
+        "selection-bulk",
+        "destructive-modal",
+        "responsive"
+      ],
+      "reviewDimensions": [
+        "composition",
+        "typography",
+        "spacing",
+        "feedback",
+        "interaction",
+        "responsive"
+      ],
+      "ownedPaths": [
+        "blog-frontend/src/pages/admin/Dashboard.tsx",
+        "blog-frontend/src/pages/admin/Posts.tsx",
+        "blog-frontend/src/pages/admin/Pages.tsx"
+      ],
+      "canonicalPaths": [
+        "showcase/demos/products/blog-admin/dashboard.tsx",
+        "showcase/demos/products/blog-admin/posts.tsx",
+        "showcase/demos/products/blog-admin/pages.tsx",
+        "showcase/components/patterns/admin-data-composition.tsx"
+      ],
+      "browserEvidence": {
+        "runs": [
+          {
+            "name": "Blog Showcase Parity",
+            "id": 35488456854,
+            "result": "success"
+          },
+          {
+            "name": "UI Browser Acceptance",
+            "id": 35488456853,
+            "result": "success"
+          },
+          {
+            "name": "CI",
+            "id": 35488456855,
+            "result": "success"
+          },
+          {
+            "name": "Images",
+            "id": 35488456865,
+            "result": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10598047486,
+            "name": "blog-showcase-parity-35488456854",
+            "sha256": "92e8bf79a65317cf07077f300356f23ee1a8222552ab0d110325a06a94dbe720"
+          },
+          {
+            "id": 10597529814,
+            "name": "blog-browser-acceptance-35488456853",
+            "sha256": "3ebfd10be2104d2996717f4ec8224d9539b027b31f1434d5a154235fc128a45c"
+          }
+        ]
+      },
+      "intentionalDivergences": [
+        "Real permissions, API data, router links, clipboard/delete behavior and AI workflow launching remain Product-owned behavior.",
+        "Analytics values, dates, counts, list lengths and concrete fixture copy may differ while the reviewed composition contract remains the same.",
+        "Dashboard AI alerts use real Product alert/run data while preserving the canonical object-row presentation."
+      ]
     }
   ]
 }
