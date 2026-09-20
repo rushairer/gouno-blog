@@ -18,6 +18,8 @@ Product baseline before this review: `rushairer/gouno-blog@9484fc80fceeee7bbdc3c
 
 This is the first non-AI recertification wave under `SHOWCASE_PARITY_PROTOCOL.md`. Historical parity hardening and green browser suites were treated as background evidence only.
 
+Validation is evaluated against the PR merge result with the current `main`. Concurrent unrelated `main` work is not copied into this wave or reimplemented here; if `main` moves, the wave is revalidated against that newer merge result.
+
 ## Manual review method
 
 The current Showcase and real Product source were read side-by-side before changing the Product. The review covered:
