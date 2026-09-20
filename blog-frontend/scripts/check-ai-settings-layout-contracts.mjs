@@ -23,6 +23,9 @@ const editorPatterns = await source(
 const connectorWorkspace = await source(
   "src/components/agent/ConnectorWorkspace.tsx",
 );
+const knowledgeWorkspace = await source(
+  "src/components/agent/KnowledgeWorkspace.tsx",
+);
 requireText(
   sharedLead,
   'data-pattern="tab-panel-lead"',
@@ -47,6 +50,24 @@ requireText(
   "Connector collection must consume the shared TabPanelLead pattern",
 );
 
+for (const [marker, label] of [
+  ["<TabPanelLead", "shared panel lead"],
+  ["<TabPanelFeedback>", "panel feedback ordering"],
+  ['id="knowledge-overview-title"', "index overview section"],
+  ['id="knowledge-content-title"', "indexed content section"],
+  ['id="knowledge-retrieval-title"', "retrieval validation section"],
+  ['id="knowledge-embedding-title"', "Embedding configuration section"],
+  ["citation_id", "citation evidence rendering"],
+  ["semantic_score", "semantic score rendering"],
+  ["lexical_score", "lexical score rendering"],
+]) {
+  requireText(
+    knowledgeWorkspace,
+    marker,
+    `Knowledge workspace must preserve canonical ${label}`,
+  );
+}
+
 requireText(
   workspace,
   "DedicatedEditorLead",
@@ -61,8 +82,13 @@ requireCount(
 requireCount(
   workspace,
   'data-pattern="settings-composition"',
-  6,
-  "Every AI Settings collection section must expose the settings composition boundary",
+  5,
+  "AdvancedWorkspace-owned AI Settings collections must expose the settings composition boundary",
+);
+requireText(
+  knowledgeWorkspace,
+  'data-pattern="settings-composition"',
+  "Knowledge workspace must expose the settings composition boundary",
 );
 requireCount(
   workspace,
