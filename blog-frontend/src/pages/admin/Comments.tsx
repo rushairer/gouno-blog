@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bot, Check, EyeOff, Trash2 } from "lucide-react";
+import { Check, EyeOff, Sparkles, Trash2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { commentsApi } from "../../api/comments";
 import {
@@ -214,7 +214,7 @@ export default function AdminComments() {
           onCancel={() => setSelected([])}
           cancelLabel="清除选择"
         >
-          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+          <Button size="small" icon={<Sparkles />} onClick={() => setAIOpen(true)}>
             交给 AI
           </Button>
           <Button
