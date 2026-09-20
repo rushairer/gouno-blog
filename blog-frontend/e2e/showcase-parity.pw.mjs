@@ -27,6 +27,12 @@ async function styleFingerprint(locator) {
       backgroundColor: style.backgroundColor,
       boxShadow: style.boxShadow,
       opacity: style.opacity,
+      color: style.color,
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+      fontWeight: style.fontWeight,
+      lineHeight: style.lineHeight,
+      letterSpacing: style.letterSpacing,
     };
   });
 }
