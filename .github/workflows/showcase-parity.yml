@@ -36,6 +36,8 @@ jobs:
     steps:
       - name: Checkout Blog
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Checkout current Gouno UI main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,6 +45,7 @@ jobs:
           repository: rushairer/gouno-ui
           ref: main
           path: upstream-gouno-ui
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -73,6 +76,7 @@ jobs:
         env:
           GOUNO_UI_CANONICAL_ROOT: ../upstream-gouno-ui
           PARITY_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          PARITY_STRICT_HISTORY: "1"
         run: node scripts/check-showcase-parity-certifications.mjs
 
       - name: Verify AI Settings source parity contract
