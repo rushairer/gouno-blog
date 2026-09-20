@@ -747,6 +747,26 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
   ]);
   expect(productRecentBox?.width).toBe(showcaseRecentBox?.width);
 
+  const showcaseWorkflowDetail = showcase.locator(
+    '[data-slot="workflow-detail"]',
+  );
+  const productWorkflowDetail = product.locator(
+    '[data-slot="workflow-detail"]',
+  );
+  expect(await styleFingerprint(productWorkflowDetail)).toEqual(
+    await styleFingerprint(showcaseWorkflowDetail),
+  );
+
+  const showcaseWorkflowOverview = showcaseWorkflowDetail
+    .locator('[data-slot="card"]')
+    .first();
+  const productWorkflowOverview = productWorkflowDetail
+    .locator('[data-slot="card"]')
+    .first();
+  expect(await styleFingerprint(productWorkflowOverview)).toEqual(
+    await styleFingerprint(showcaseWorkflowOverview),
+  );
+
   await showcase.getByRole("tab", { name: /待我处理/ }).click();
   await product.getByRole("tab", { name: /待我处理/ }).click();
 
@@ -789,6 +809,32 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
     productRail.boundingBox(),
   ]);
   expect(productRailBox?.width).toBe(showcaseRailBox?.width);
+
+  const showcaseWorkflowRunDetail = showcase
+    .locator('[data-pattern="record-detail-composition"]')
+    .first();
+  const productWorkflowRunDetail = product
+    .locator('[data-pattern="record-detail-composition"]')
+    .first();
+  expect(await styleFingerprint(productWorkflowRunDetail)).toEqual(
+    await styleFingerprint(showcaseWorkflowRunDetail),
+  );
+
+  for (const regionName of ["执行过程", "运行资源", "人工交互"]) {
+    const showcaseRegion = showcase.getByRole("region", {
+      name: regionName,
+      exact: true,
+    });
+    const productRegion = product.getByRole("region", {
+      name: regionName,
+      exact: true,
+    });
+    await expect(showcaseRegion).toBeVisible();
+    await expect(productRegion).toBeVisible();
+    expect(await styleFingerprint(productRegion)).toEqual(
+      await styleFingerprint(showcaseRegion),
+    );
+  }
 
   await showcase.getByRole("button", { name: /Agent 运行/ }).click();
   await product.getByRole("button", { name: /Agent 运行/ }).click();
