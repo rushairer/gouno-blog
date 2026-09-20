@@ -1,8 +1,8 @@
 # Blog Admin Showcase Parity Hardening
 
-Status: **Completed on main.**
+Status: **Legacy hardening complete; manual-first recertification pending for non-AI routes.**
 
-This document is the live parity contract for the hardening pass started from GitHub `main` on 2026-09-15. Historical migration reports are background only; current source, contracts, rendered tests and CI are the acceptance evidence for this pass.
+This document records the legacy parity-hardening pass started from GitHub `main` on 2026-09-15. It remains valuable regression evidence, but it is not the authority for current manual-first Showcase certification. Current certification status is owned by `showcase-parity-certifications.json` and the protocol in `SHOWCASE_PARITY_PROTOCOL.md`.
 
 ## Baseline and verified reference
 

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "policy": "manual-first-v1",
+  "authority": "Showcase parity certification only; migration implementation status remains separate.",
+  "statuses": [
+    "legacy-hardening-complete",
+    "needs-manual-recertification",
+    "verified",
+    "blocked"
+  ],
+  "certifications": [
+    {
+      "id": "blog-admin-ai",
+      "scope": "Blog Admin AI Settings + AI Operations",
+      "status": "verified",
+      "reviewMethod": "manual-first",
+      "reviewDate": "2026-09-20",
+      "manualReview": "docs/ui-redesign/blog-admin-ai-manual-parity-review.md",
+      "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
+      "reviewedRefs": {
+        "blog": "aea170da25e4499efe77f302f2cce43ad1db60e2",
+        "gounoUi": "a752c16e5f3f2d85215a04ea9ef7d33c56b733ee"
+      },
+      "gounoUiPackageVersion": "0.4.8",
+      "stateCoverage": [
+        "default",
+        "feedback",
+        "detail",
+        "dedicated-editor",
+        "drawer",
+        "responsive"
+      ],
+      "ownedPaths": [
+        "blog-frontend/src/pages/admin/AISettings.tsx",
+        "blog-frontend/src/pages/admin/AIOperations.tsx",
+        "blog-frontend/src/components/agent/",
+        "blog-frontend/src/components/patterns/TabPanelLead.tsx"
+      ],
+      "canonicalPaths": [
+        "showcase/demos/products/blog-admin/ai/",
+        "showcase/components/tab-panel-lead.tsx",
+        "showcase/components/patterns/dedicated-editor.tsx",
+        "showcase/components/patterns/editor-form-composition.tsx"
+      ],
+      "browserEvidence": {
+        "runs": [
+          {
+            "name": "Blog Showcase Parity",
+            "id": 35481882452,
+            "result": "success"
+          },
+          {
+            "name": "UI Browser Acceptance",
+            "id": 35481882457,
+            "result": "success"
+          },
+          {
+            "name": "CI",
+            "id": 35481882455,
+            "result": "success"
+          },
+          {
+            "name": "Images",
+            "id": 35481882453,
+            "result": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10595808968,
+            "sha256": "6420ec85e4e602d24da76788b0bbc30dadf74ff55cac6d83fe61f4868ff273b2"
+          },
+          {
+            "id": 10596108871,
+            "sha256": "5f5a1c111970a5c25a071e42546796ebed6722a57ef69b43698ed57b2528e404"
+          }
+        ]
+      },
+      "intentionalDivergences": [
+        "Connector OAuth/credential/Outbox input and delivery behavior remains real-product behavior.",
+        "Agent and Workflow run evidence may contain real audit/suggestion/evidence sections not represented by the Fixture."
+      ],
+      "reviewDimensions": [
+        "composition",
+        "typography",
+        "spacing",
+        "feedback",
+        "interaction",
+        "responsive"
+      ]
+    },
+    {
+      "id": "blog-admin-core-support",
+      "scope": "Blog Admin non-AI core/support routes",
+      "status": "needs-manual-recertification",
+      "reviewMethod": "manual-first",
+      "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
+      "reason": "Historical hardening predates the manual-first certification protocol."
+    },
+    {
+      "id": "blog-public-account",
+      "scope": "Public Blog + Blog Account",
+      "status": "needs-manual-recertification",
+      "reviewMethod": "manual-first",
+      "legacyHardeningDoc": "docs/ui-redesign/blog-public-account-showcase-parity-hardening.md",
+      "reason": "Historical hardening predates the manual-first certification protocol."
+    }
+  ]
+}

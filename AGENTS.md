@@ -80,6 +80,8 @@ This document defines the **immutable architectural rules, security baselines, a
 - A green parity gate proves only the contracts it actually checks. Never infer whole-page visual parity, migration completion, or `verified` status from CI/markers alone.
 - Do not mark a page or migration row `verified` until the relevant visible states have been manually compared and browser evidence has confirmed the resulting implementation.
 - Prefer one shared local composition helper for Showcase-owned patterns that are not public `@gouno/ui` APIs; do not maintain multiple page-private copies of the same canonical pattern.
+- `docs/ui-redesign/showcase-parity-certifications.json` is the only authority for current Showcase parity certification status. Historical migration ledgers and hardening reports are evidence only.
+- Any change to a `verified` certification's product-owned paths, canonical Showcase paths, or consumed `@gouno/ui` baseline invalidates that certification until a fresh manual review and browser evidence are recorded. Never auto-promote certification from CI.
 - Continue within the user's authorized scope without pausing for confirmation after every internal implementation step.
 - Preserve uncommitted work, authentication boundaries, the Connector hold, and canonical UI integrity rules.
 
