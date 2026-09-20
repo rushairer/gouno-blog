@@ -47,7 +47,7 @@ Existing automated parity failures were not used as the starting point.
 
 The previous direct Showcase/Product `styleFingerprint` intentionally checked layout, surface, border and geometry but did not inspect typography. Static Admin parity contracts likewise guarded composition, feedback and primitive ownership, but not the semantic typography roles of these collection pages.
 
-That left a blind spot where a Product could continue to pass parity while using raw `text-*` / `font-*` utilities after the canonical Showcase had migrated to `type-*` roles. The collection pages also matched the visible root rhythm without exposing the canonical `collection-composition` marker, so the structure could not be bound to the named composition contract.
+That left a blind spot where a Product could continue to pass parity while using raw `text-*` / `font-*` utilities after the canonical Showcase had migrated to `type-*` roles. The collection pages also matched the visible root rhythm without exposing the canonical `collection-composition` marker, so the structure could not be bound to the named composition contract. A first manual review of the paired artifact also exposed a harness defect: normal `openPair()` comparisons inherited the CI browser's en-US locale while the canonical Blog Admin Fixture rendered zh-CN, producing English `Please select` component copy inside an otherwise Chinese Product screenshot. AI parity already pinned zh-CN. The general Blog Admin parity harness now pins the same Product locale before navigation and directly compares the three visible Posts Select values.
 
 ## Fixes extracted from the manual review
 
@@ -75,7 +75,8 @@ The conclusions are being encoded only after manual classification:
 
 1. `check-admin-parity-contracts.mjs` rejects the reviewed raw typography regressions, requires the semantic roles, and locks the Posts/Pages Collection Composition markers.
 2. A dedicated `typographyFingerprint` compares computed font/color properties only on this reviewed wave. It is deliberately not folded into the global layout fingerprint yet, so unreviewed surface families are not accidentally certified or blocked by a rule derived without manual review.
-3. The aggregate non-AI Admin certification remains `needs-manual-recertification`; this wave receives its own certification entry and can be promoted independently after paired browser evidence passes.
+3. The general paired harness pins Product locale to zh-CN before navigation and compares visible Posts Select copy, so locale-context mismatch cannot hide behind geometry-only parity.
+4. The aggregate non-AI Admin certification remains `needs-manual-recertification`; this wave receives its own certification entry and can be promoted independently after paired browser evidence passes.
 
 ## Intentional product divergences retained
 
