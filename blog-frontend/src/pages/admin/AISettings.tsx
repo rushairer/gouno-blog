@@ -7,6 +7,9 @@ import type {
   AgentRun,
   AgentSkill,
   EmbeddingProfile,
+  KnowledgeIndexedContent,
+  KnowledgeIndexStatus,
+  KnowledgeSearchResponse,
   ProviderProfile,
   ToolDefinition,
 } from "../../types/agent";
@@ -72,11 +75,20 @@ function AISettingsContent() {
   const [embeddingProfiles, setEmbeddingProfiles] = useState<
     EmbeddingProfile[]
   >([]);
-  const [indexStatus, setIndexStatus] = useState({
+  const [indexStatus, setIndexStatus] = useState<KnowledgeIndexStatus>({
+    indexed_posts: 0,
     queued: 0,
     failed: 0,
     chunks: 0,
+    oldest_job_age_ms: null,
+    retrieval_p95_ms_24h: null,
   });
+  const [indexedContent, setIndexedContent] = useState<KnowledgeIndexedContent[]>(
+    [],
+  );
+  const [knowledgeSearchResult, setKnowledgeSearchResult] =
+    useState<KnowledgeSearchResponse | null>(null);
+  const [searchingKnowledge, setSearchingKnowledge] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [tools, setTools] = useState<ToolDefinition[]>([]);
@@ -107,6 +119,7 @@ function AISettingsContent() {
       providerData,
       embeddingData,
       indexData,
+      indexedContentData,
       agentData,
       runData,
       toolData,
@@ -115,6 +128,7 @@ function AISettingsContent() {
       agentApi.getProviderProfiles(),
       agentApi.getEmbeddingProfiles(),
       agentApi.getIndexStatus(),
+      agentApi.getIndexContent(),
       agentApi.getAgents(),
       agentApi.getAgentRuns(100),
       agentApi.getToolCatalog(),
@@ -123,6 +137,7 @@ function AISettingsContent() {
     setProviders(providerData);
     setEmbeddingProfiles(embeddingData);
     setIndexStatus(indexData);
+    setIndexedContent(indexedContentData);
     setAgents(agentData);
     setRuns(runData || []);
     setTools(toolData);
@@ -350,6 +365,18 @@ function AISettingsContent() {
     }
   };
 
+  const searchKnowledge = async (query: string) => {
+    setSearchingKnowledge(true);
+    setError("");
+    try {
+      setKnowledgeSearchResult(await agentApi.searchIndex(query));
+    } catch (reason) {
+      setError(requestError(reason, fallbackError));
+    } finally {
+      setSearchingKnowledge(false);
+    }
+  };
+
   const testConnection = async (
     kind: "provider" | "embedding",
     id: number,
@@ -462,6 +489,9 @@ function AISettingsContent() {
         embeddingProfiles={embeddingProfiles}
         runs={runs}
         indexStatus={indexStatus}
+        indexedContent={indexedContent}
+        knowledgeSearchResult={knowledgeSearchResult}
+        searchingKnowledge={searchingKnowledge}
         editingAgent={editingAgent}
         editingProvider={editingProvider}
         editingEmbedding={editingEmbedding}
@@ -534,6 +564,7 @@ function AISettingsContent() {
             setError(requestError(reason, fallbackError));
           }
         }}
+        onSearchKnowledge={searchKnowledge}
         onDeleteTarget={setDeleteTarget}
         onError={setError}
         onRefresh={refresh}
