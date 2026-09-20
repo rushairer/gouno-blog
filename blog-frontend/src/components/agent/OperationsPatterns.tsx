@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Button, Text } from "@gouno/ui/core";
+import { Button, Heading, Text } from "@gouno/ui/core";
 import { TabPanelLead } from "../patterns/TabPanelLead";
 
 export type OperationsSummaryItem = {
