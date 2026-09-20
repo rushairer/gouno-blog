@@ -347,14 +347,14 @@ export function WorkflowRunDetail({
         />
       ) : null}
 
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)]">
+      <div className="flex min-w-0 flex-col gap-6">
         <section
           className="overflow-hidden rounded-lg border bg-background"
           aria-label={zh ? "执行过程" : "Execution process"}
         >
-          <div className="border-b px-6 py-4">
+          <div className="border-b px-5 py-4">
             <OperationsRegionHeading
-              title={zh ? "执行过程" : "Execution process"}
+              title={zh ? "执行过程" : "Execution process"
               description={
                 zh
                   ? "按实际执行顺序查看每一步结果；失败的批处理步骤可以从证据现场重试。"
@@ -394,7 +394,7 @@ export function WorkflowRunDetail({
                   className="group"
                   open={step.status === "failed"}
                 >
-                  <summary className="flex cursor-pointer list-none items-start gap-4 px-6 py-4 hover:bg-muted/30">
+                  <summary className="flex cursor-pointer list-none items-start gap-4 px-5 py-4 hover:bg-muted/30">
                     <span className="flex size-7 shrink-0 items-center justify-center rounded-full border type-caption type-weight-semibold">
                       {index + 1}
                     </span>
@@ -417,7 +417,7 @@ export function WorkflowRunDetail({
                       ) : null}
                     </span>
                   </summary>
-                  <div className="border-t bg-muted/[0.12] px-6 py-5">
+                  <div className="border-t bg-muted/[0.12] px-5 py-5">
                     <div className="grid gap-5 md:grid-cols-2">
                       <div className="min-w-0">
                         <Text size="xs" tone="muted">
@@ -597,9 +597,9 @@ export function WorkflowRunDetail({
             className="overflow-hidden rounded-lg border bg-background"
             aria-label={zh ? "运行事件" : "Run events"}
           >
-            <div className="border-b px-6 py-4">
+            <div className="border-b px-5 py-4">
               <OperationsRegionHeading
-                title={zh ? "事件" : "Events"}
+                title={zh ? "事件" : "Events"
                 description={
                   zh
                     ? "保留交互、生成、应用和状态变化等已持久化事件。"
@@ -610,7 +610,7 @@ export function WorkflowRunDetail({
             {selected.events.length ? (
               <div className="divide-y">
                 {newestFirst(selected.events).map((event) => (
-                  <details key={event.id} className="px-6 py-4">
+                  <details key={event.id} className="px-5 py-4">
                     <summary className="cursor-pointer list-none">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
