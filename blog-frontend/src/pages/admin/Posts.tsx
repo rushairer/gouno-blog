@@ -528,7 +528,9 @@ export default function AdminPosts() {
                           <span className="type-weight-semibold">
                             {post.title}
                           </span>
-                          <span className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
+                          <span
+                            className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground"
+                          >
                             <code className="type-family-mono">/{post.slug}</code>
                             {post.category ? (
                               <Tag bordered={false}>{post.category.name}</Tag>
