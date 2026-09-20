@@ -245,6 +245,14 @@ export function WorkflowRunDetail({
                 ? "一次 Run 就是一份可追溯证据：执行步骤、资源、人工交互、事件和输出都保留在这里。"
                 : "Each Run is traceable evidence: execution steps, resources, human interactions, events, and output are preserved here."}
             </Text>
+            <Text size="xs" tone="muted" className="mt-1">
+              Workflow v{selected.run.workflow_version_id}
+              {selected.run.triggered_by
+                ? ` · ${zh ? "触发" : "Triggered by"}：${selected.run.triggered_by}`
+                : selected.run.schedule_key
+                  ? ` · ${selected.run.schedule_key}`
+                  : ""}
+            </Text>
           </div>
           <div className="flex flex-wrap gap-2">
             {active ? (
@@ -292,41 +300,47 @@ export function WorkflowRunDetail({
               value: selected.run.started_at
                 ? formatDateTime(selected.run.started_at)
                 : "—",
+              detail: selected.run.finished_at
+                ? `${zh ? "结束" : "Finished"} ${formatDateTime(selected.run.finished_at)}`
+                : zh
+                  ? "仍在执行 / 等待"
+                  : "Still running / waiting",
             },
             {
-              label: zh ? "结束时间" : "Finished",
-              value: selected.run.finished_at
-                ? formatDateTime(selected.run.finished_at)
-                : zh
-                  ? "仍在运行"
-                  : "Still running",
-              detail: duration(
+              label: zh ? "总耗时" : "Duration",
+              value: duration(
                 selected.run.started_at,
                 selected.run.finished_at,
               ),
+              detail: selected.run.dry_run
+                ? "Dry-run"
+                : zh
+                  ? "正式运行"
+                  : "Live run",
             },
             {
               label: "Token",
               value: totalTokens.toLocaleString(),
-              detail: `${selected.run.input_tokens || 0} in · ${selected.run.output_tokens || 0} out`,
+              detail: `${selected.run.input_tokens || 0} in / ${selected.run.output_tokens || 0} out`,
             },
             {
               label: zh ? "执行步骤" : "Execution steps",
               value: selected.steps.length,
-              detail: `Workflow v${selected.run.workflow_version_id}`,
+              detail: `${selected.resources.length} ${zh ? "个资源" : "resources"} · ${selected.interactions.length} ${zh ? "个人工交互" : "human interactions"}`,
             },
           ]}
         />
 
-        {selected.run.error_message ? (
-          <Alert
-            type="error"
-            showIcon
-            title={zh ? "运行失败" : "Run failed"}
-            description={`${selected.run.error_message}${selected.run.error_code ? ` · ${selected.run.error_code}` : ""}`}
-          />
-        ) : null}
       </section>
+
+      {selected.run.error_message ? (
+        <Alert
+          type="error"
+          showIcon
+          title={zh ? "运行失败" : "Run failed"}
+          description={`${selected.run.error_message}${selected.run.error_code ? ` · ${selected.run.error_code}` : ""}`}
+        />
+      ) : null}
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)]">
         <section
