@@ -12,7 +12,7 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-20",
       "manualReview": "docs/ui-redesign/blog-admin-ai-manual-parity-review.md",
@@ -87,7 +87,8 @@
         "feedback",
         "interaction",
         "responsive"
-      ]
+      ],
+      "reason": "Knowledge Workspace canonical composition and Blog Admin real-data bindings changed on 2026-09-20; fresh manual-first source, rendered parity, browser, and CI evidence is required before restoring verified status."
     },
     {
       "id": "blog-admin-core-support",
