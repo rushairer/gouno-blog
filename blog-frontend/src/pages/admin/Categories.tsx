@@ -429,26 +429,26 @@ export default function Categories() {
                       />
                     </TableCell>
                     <TableCell>
-                      <span className="font-mono text-xs text-muted-foreground">
+                      <span className="type-family-mono type-caption text-muted-foreground">
                         {category.sort_order ?? 0}
                       </span>
                     </TableCell>
                     <TableCell className="min-w-72 whitespace-normal">
                       <div className="flex flex-col gap-1">
-                        <strong className="text-sm font-semibold text-foreground">
+                        <strong className="type-body-sm type-weight-semibold text-foreground">
                           {category.name}
                         </strong>
-                        <span className="text-xs leading-relaxed text-muted-foreground">
+                        <span className="type-caption type-leading-relaxed text-muted-foreground">
                           {category.description || "暂无描述"}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                      <code className="rounded bg-muted px-1.5 py-0.5 type-family-mono type-caption text-muted-foreground">
                         {category.slug}
                       </code>
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                    <TableCell className="text-right type-family-mono type-caption text-muted-foreground">
                       {category.post_count ?? 0}
                     </TableCell>
                     <TableCell>
@@ -492,24 +492,24 @@ export default function Categories() {
                       }
                     />
                     <div className="min-w-0 flex-1">
-                      <strong className="block text-sm font-semibold text-foreground">
+                      <strong className="block type-body-sm type-weight-semibold text-foreground">
                         {category.name}
                       </strong>
                       <Text
                         size="xs"
                         tone="muted"
-                        className="mt-1 leading-relaxed"
+                        className="mt-1 type-leading-relaxed"
                       >
                         {category.description || "暂无描述"}
                       </Text>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 rounded-md bg-muted/35 p-3 text-xs">
+                  <div className="grid grid-cols-2 gap-3 rounded-md bg-muted/35 p-3 type-caption">
                     <div>
                       <Text as="div" size="xs" tone="muted">
                         排序
                       </Text>
-                      <span className="mt-1 block font-mono text-foreground">
+                      <span className="mt-1 block type-family-mono text-foreground">
                         {category.sort_order ?? 0}
                       </span>
                     </div>
@@ -525,7 +525,7 @@ export default function Categories() {
                       <Text as="div" size="xs" tone="muted">
                         Slug 标识
                       </Text>
-                      <code className="mt-1 block break-all font-mono text-xs text-foreground">
+                      <code className="mt-1 block break-all type-family-mono type-caption text-foreground">
                         {category.slug}
                       </code>
                     </div>
