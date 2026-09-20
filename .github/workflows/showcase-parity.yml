@@ -4,11 +4,19 @@ on:
   pull_request:
     paths:
       - "blog-frontend/**"
+      - "docs/ui-redesign/SHOWCASE_PARITY_PROTOCOL.md"
+      - "docs/ui-redesign/showcase-parity-certifications.json"
+      - "docs/ui-redesign/*showcase-parity-hardening.md"
+      - "AGENTS.md"
       - ".github/workflows/showcase-parity.yml"
   push:
     branches: [main]
     paths:
       - "blog-frontend/**"
+      - "docs/ui-redesign/SHOWCASE_PARITY_PROTOCOL.md"
+      - "docs/ui-redesign/showcase-parity-certifications.json"
+      - "docs/ui-redesign/*showcase-parity-hardening.md"
+      - "AGENTS.md"
       - ".github/workflows/showcase-parity.yml"
   schedule:
     - cron: "17 2 * * *"
@@ -59,6 +67,13 @@ jobs:
           PLAYWRIGHT_VERSION=1.55.0
           npm install --no-save --ignore-scripts @playwright/test@${PLAYWRIGHT_VERSION}
           npx playwright install --with-deps chromium
+
+      - name: Verify manual-first certification ledger
+        working-directory: blog-frontend
+        env:
+          GOUNO_UI_CANONICAL_ROOT: ../upstream-gouno-ui
+          PARITY_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+        run: node scripts/check-showcase-parity-certifications.mjs
 
       - name: Verify AI Settings source parity contract
         working-directory: blog-frontend
