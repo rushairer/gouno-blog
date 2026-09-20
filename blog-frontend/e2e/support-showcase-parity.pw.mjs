@@ -333,6 +333,71 @@ for (const surface of [
     name: "categories",
     fixture: "blog-admin-categories",
     path: "/admin/categories",
+    checkboxName: /选择分类/,
+  },
+  {
+    name: "tags",
+    fixture: "blog-admin-tags",
+    path: "/admin/tags",
+    checkboxName: /选择标签/,
+  },
+  {
+    name: "comments",
+    fixture: "blog-admin-comments",
+    path: "/admin/comments",
+    checkboxName: /选择评论/,
+  },
+]) {
+  test(`Support ${surface.name} selected-resource AI handoff matches Showcase`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      surface.fixture,
+      surface.path,
+      "light",
+    );
+
+    await showcase
+      .getByRole("checkbox", { name: surface.checkboxName })
+      .first()
+      .check();
+    await product
+      .getByRole("checkbox", { name: surface.checkboxName })
+      .first()
+      .check();
+
+    const showcaseToolbar = showcase.getByRole("toolbar", { name: "批量操作" });
+    const productToolbar = product.getByRole("toolbar", { name: "批量操作" });
+    await expect(showcaseToolbar).toBeVisible();
+    await expect(productToolbar).toBeVisible();
+    expect(await showcaseToolbar.getAttribute("data-slot")).toBe("bulk-action-bar");
+    expect(await productToolbar.getAttribute("data-slot")).toBe("bulk-action-bar");
+
+    const showcaseHandoff = showcaseToolbar.getByRole("button", { name: "交给 AI" });
+    const productHandoff = productToolbar.getByRole("button", { name: "交给 AI" });
+    await expect(showcaseHandoff).toBeVisible();
+    await expect(productHandoff).toBeVisible();
+    await expectStyleParity(showcaseHandoff, productHandoff);
+    await expect(showcaseHandoff.locator("svg")).toHaveCount(1);
+    await expect(productHandoff.locator("svg")).toHaveCount(1);
+
+    expect(unknown).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `support-${surface.name}-ai-handoff-light`,
+      testInfo,
+    );
+    await context.close();
+  });
+}
+
+for (const surface of [
+  {
+    name: "categories",
+    fixture: "blog-admin-categories",
+    path: "/admin/categories",
     firstItem: (page) => page.getByRole("listitem").first(),
   },
   {
