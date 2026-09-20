@@ -109,7 +109,7 @@ requireBoth(
 for (const [marker, label] of [
   ['data-slot="workflow-list-toolbar"', "Workflow list toolbar"],
   ['xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem]', "Workflow five-column asset row"],
-  ["WorkflowMetricCard", "Workflow detail metric cards"],
+  ["type-metric-value", "Workflow detail metric-card typography"],
   ["ScheduleFact", "Workflow detail fact row"],
 ]) {
   requireBoth(marker, canonicalAutomation, blogAutomation, label);
