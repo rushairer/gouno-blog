@@ -164,6 +164,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			"/api/admin/ai-draft-assist":            aiTextRequestTimeout,
 			"/api/admin/ai-generate-image":          aiImageRequestTimeout,
 			"/api/admin/ai-index/evaluate":          aiTextRequestTimeout,
+			"/api/admin/ai-index/search":            aiTextRequestTimeout,
 			"/api/admin/ai-index/rebuild":           aiTextRequestTimeout,
 		}),
 		gounoMiddleware.RateLimitMiddleware(ctx, globalConfig.WebServerConfig.RateLimitPerMinute, time.Minute),
