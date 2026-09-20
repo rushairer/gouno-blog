@@ -140,8 +140,13 @@ requireText(
 );
 requireText(
   workflowWorkspace,
-  "WorkflowMetricCard",
-  "Workflow detail must use canonical metric cards rather than a generic summary strip",
+  "type-metric-value",
+  "Workflow detail must use canonical metric-card typography rather than a generic summary strip",
+);
+requireText(
+  workflowWorkspace,
+  "rounded-lg border bg-muted/[0.18] p-4",
+  "Workflow detail must preserve the canonical metric-card surface anatomy",
 );
 requireText(
   workflowWorkspace,
