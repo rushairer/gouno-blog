@@ -83,9 +83,9 @@ function AISettingsContent() {
     oldest_job_age_ms: null,
     retrieval_p95_ms_24h: null,
   });
-  const [indexedContent, setIndexedContent] = useState<KnowledgeIndexedContent[]>(
-    [],
-  );
+  const [indexedContent, setIndexedContent] = useState<
+    KnowledgeIndexedContent[]
+  >([]);
   const [knowledgeSearchResult, setKnowledgeSearchResult] =
     useState<KnowledgeSearchResponse | null>(null);
   const [searchingKnowledge, setSearchingKnowledge] = useState(false);

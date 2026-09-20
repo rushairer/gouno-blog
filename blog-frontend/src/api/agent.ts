@@ -164,15 +164,24 @@ export const agentApi = {
   },
 
   async getIndexContent(limit = 50): Promise<KnowledgeIndexedContent[]> {
-    return apiClient.get<KnowledgeIndexedContent[]>("/api/admin/ai-index/content", {
-      params: { limit },
-    });
+    return apiClient.get<KnowledgeIndexedContent[]>(
+      "/api/admin/ai-index/content",
+      {
+        params: { limit },
+      },
+    );
   },
 
-  async searchIndex(query: string, limit = 5): Promise<KnowledgeSearchResponse> {
-    return apiClient.get<KnowledgeSearchResponse>("/api/admin/ai-index/search", {
-      params: { q: query, limit },
-    });
+  async searchIndex(
+    query: string,
+    limit = 5,
+  ): Promise<KnowledgeSearchResponse> {
+    return apiClient.get<KnowledgeSearchResponse>(
+      "/api/admin/ai-index/search",
+      {
+        params: { q: query, limit },
+      },
+    );
   },
 
   async getAgents(): Promise<Agent[]> {

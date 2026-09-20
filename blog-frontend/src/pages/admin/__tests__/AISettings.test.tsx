@@ -280,10 +280,18 @@ describe("AISettings", () => {
     expect(
       screen.queryByRole("heading", { name: "Knowledge index" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Index overview" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Indexed content" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Retrieval test" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Embedding configuration" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Index overview" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Indexed content" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Retrieval test" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Embedding configuration" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Indexed posts")).toBeInTheDocument();
     expect(screen.getByText("OAuth PKCE")).toBeInTheDocument();
     expect(screen.getByText("12 Chunks")).toBeInTheDocument();
@@ -321,8 +329,12 @@ describe("AISettings", () => {
     });
 
     renderSettings();
-    await user.click(await screen.findByRole("tab", { name: "Knowledge index" }));
-    const input = screen.getByRole("textbox", { name: "Knowledge retrieval test" });
+    await user.click(
+      await screen.findByRole("tab", { name: "Knowledge index" }),
+    );
+    const input = screen.getByRole("textbox", {
+      name: "Knowledge retrieval test",
+    });
     await user.type(input, "Why PKCE?");
     await user.click(screen.getByRole("button", { name: "Test retrieval" }));
 

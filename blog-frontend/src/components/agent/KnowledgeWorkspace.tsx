@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  DatabaseZap,
-  Edit2,
-  Plus,
-  RefreshCw,
-  Trash2,
-} from "lucide-react";
+import { DatabaseZap, Edit2, Plus, RefreshCw, Trash2 } from "lucide-react";
 import {
   Alert,
   Button,
@@ -143,7 +137,11 @@ export function KnowledgeWorkspace({
             aria-labelledby="knowledge-overview-title"
           >
             <div>
-              <Heading id="knowledge-overview-title" level={2} variant="compact">
+              <Heading
+                id="knowledge-overview-title"
+                level={2}
+                variant="compact"
+              >
                 {locale === "zh" ? "索引概览" : "Index overview"}
               </Heading>
               <Text size="sm" tone="muted">
@@ -347,8 +345,12 @@ export function KnowledgeWorkspace({
                             <Text size="sm">{result.snippet}</Text>
                             <div className="flex flex-wrap gap-2">
                               <Tag>{`Score ${result.score.toFixed(2)}`}</Tag>
-                              <Tag>{`Semantic ${result.semantic_score.toFixed(2)}`}</Tag>
-                              <Tag>{`Lexical ${result.lexical_score.toFixed(2)}`}</Tag>
+                              <Tag>
+                                {`Semantic ${result.semantic_score.toFixed(2)}`}
+                              </Tag>
+                              <Tag>
+                                {`Lexical ${result.lexical_score.toFixed(2)}`}
+                              </Tag>
                             </div>
                           </article>
                         ))}
