@@ -18,6 +18,9 @@ const canonicalLead = await readCanonical(
 const canonicalEditors = await readCanonical(
   "showcase/demos/products/blog-admin/ai/settings/editors.tsx",
 );
+const canonicalSections = await readCanonical(
+  "showcase/demos/products/blog-admin/ai/settings/sections.tsx",
+);
 const canonicalGovernance = await readCanonical("docs/product-interface-governance.md");
 
 const sharedLead = await readBlog(
@@ -29,6 +32,9 @@ const editorPatterns = await readBlog(
 );
 const connectorWorkspace = await readBlog(
   "src/components/agent/ConnectorWorkspace.tsx",
+);
+const knowledgeWorkspace = await readBlog(
+  "src/components/agent/KnowledgeWorkspace.tsx",
 );
 const forms = await Promise.all(
   [
@@ -77,6 +83,38 @@ requireBlog(
   "<TabPanelFeedback>",
   connectorWorkspace,
   "Connector shared TabPanelFeedback usage",
+);
+
+for (const [marker, label] of [
+  ['id="knowledge-overview-title"', "Knowledge index overview"],
+  ['id="knowledge-content-title"', "Knowledge indexed content"],
+  ['id="knowledge-retrieval-title"', "Knowledge retrieval validation"],
+  ['id="knowledge-embedding-title"', "Knowledge Embedding configuration"],
+]) {
+  if (!canonicalSections.includes(marker)) {
+    failures.push(`Canonical Knowledge workspace changed: missing ${label}: ${marker}`);
+  }
+  requireBlog(marker, knowledgeWorkspace, label);
+}
+for (const [canonicalMarker, blogMarker, label] of [
+  ["citationId", "citation_id", "Knowledge citation evidence"],
+  ["semanticScore", "semantic_score", "Knowledge semantic score"],
+  ["lexicalScore", "lexical_score", "Knowledge lexical score"],
+]) {
+  if (!canonicalSections.includes(canonicalMarker)) {
+    failures.push(`Canonical Knowledge workspace changed: missing ${label}: ${canonicalMarker}`);
+  }
+  requireBlog(blogMarker, knowledgeWorkspace, label);
+}
+requireBlog(
+  "<TabPanelLead",
+  knowledgeWorkspace,
+  "Knowledge shared TabPanelLead usage",
+);
+requireBlog(
+  "<TabPanelFeedback>",
+  knowledgeWorkspace,
+  "Knowledge shared TabPanelFeedback usage",
 );
 requireBlog(
   "type-family-mono type-body-sm type-weight-semibold",
