@@ -76,7 +76,24 @@ function responseFor(url: string) {
   if (url === "/api/admin/provider-profiles") return [provider];
   if (url === "/api/admin/embedding-profiles") return [];
   if (url === "/api/admin/ai-index/status")
-    return { queued: 0, failed: 0, chunks: 0 };
+    return {
+      indexed_posts: 1,
+      queued: 0,
+      failed: 0,
+      chunks: 12,
+      retrieval_p95_ms_24h: 95,
+    };
+  if (url.startsWith("/api/admin/ai-index/content"))
+    return [
+      {
+        post_id: 10,
+        title: "OAuth PKCE",
+        slug: "oauth-pkce",
+        chunks: 12,
+        status: "ready",
+        last_indexed_at: "2026-07-30T00:00:00Z",
+      },
+    ];
   if (url === "/api/admin/agents") return [agent];
   if (url.startsWith("/api/admin/agent-runs")) return { list: [] };
   if (url === "/api/admin/agent-tools")
@@ -118,7 +135,7 @@ describe("AISettings", () => {
     expect(
       await screen.findByRole("button", { name: "Create Agent" }),
     ).toBeInTheDocument();
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(7));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(8));
     expect(screen.getAllByText("Weekly Operations").length).toBeGreaterThan(0);
 
     const urls = vi
@@ -263,10 +280,60 @@ describe("AISettings", () => {
     expect(
       screen.queryByRole("heading", { name: "Knowledge index" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Chunks")).toBeInTheDocument();
-    expect(screen.getByText("Queued")).toBeInTheDocument();
-    expect(screen.getByText("Failed")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Index overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Indexed content" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Retrieval test" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Embedding configuration" })).toBeInTheDocument();
+    expect(screen.getByText("Indexed posts")).toBeInTheDocument();
+    expect(screen.getByText("OAuth PKCE")).toBeInTheDocument();
+    expect(screen.getByText("12 Chunks")).toBeInTheDocument();
     expect(window.location.search).toBe("?section=knowledge");
+  });
+
+  it("runs a real knowledge retrieval preview from the Knowledge workspace", async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiFetch).mockImplementation(async (input) => {
+      const url = input.toString();
+      if (url.startsWith("/api/admin/ai-index/search")) {
+        return Response.json({
+          data: {
+            query: "Why PKCE?",
+            latency_ms: 41,
+            results: [
+              {
+                citation_id: "kb_test",
+                chunk_id: 99,
+                post_id: 10,
+                title: "OAuth PKCE",
+                slug: "oauth-pkce",
+                snippet: "PKCE binds the authorization request to the token exchange.",
+                start_offset: 0,
+                end_offset: 67,
+                lexical_score: 0.7,
+                semantic_score: 0.9,
+                score: 0.83,
+              },
+            ],
+          },
+        });
+      }
+      return Response.json({ data: responseFor(url) });
+    });
+
+    renderSettings();
+    await user.click(await screen.findByRole("tab", { name: "Knowledge index" }));
+    const input = screen.getByRole("textbox", { name: "Knowledge retrieval test" });
+    await user.type(input, "Why PKCE?");
+    await user.click(screen.getByRole("button", { name: "Test retrieval" }));
+
+    expect(await screen.findByText("kb_test")).toBeInTheDocument();
+    expect(screen.getByText("Semantic 0.90")).toBeInTheDocument();
+    expect(screen.getByText("Lexical 0.70")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "PKCE binds the authorization request to the token exchange.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("uses the canonical delete confirmation modal", async () => {
