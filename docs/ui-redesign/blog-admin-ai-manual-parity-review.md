@@ -1,6 +1,6 @@
 # Blog Admin AI Manual Showcase Parity Review
 
-Status: **implementation review complete; browser evidence pending**
+Status: **verified — manual review, paired Showcase rendered parity, full browser acceptance, CI and image builds passed**
 
 Date: 2026-09-20
 
@@ -24,7 +24,7 @@ visual parity. The order for AI parity work is now:
 | Agent editor | Dedicated Editor structure existed, but typography still contained local token drift. | Keep real API fields and validation; align shared Dedicated Editor layout/sections/actions and typography. |
 | Skills list | Collection and action grammar match Showcase after shared lead adoption. | Preserve real import/export/copy behavior; no cosmetic-only rewrite. |
 | Skill editor | Dedicated Editor grammar is required; business fields may exceed Fixture data. | Keep real governance fields; preserve canonical section/layout/action grammar. |
-| Tools | Tab lead collapsed because Blog had a private copy without the Showcase minimum-height contract; Tool names also used raw Tailwind typography. | Shared TabPanelLead now owns the 36px minimum lead height; Tool names use canonical mono/body tokens. |
+| Tools | Tab lead collapsed because Blog had a private copy without the Showcase minimum-height contract; Tool names also used raw Tailwind typography. Final paired screenshot review also found that real `read / propose / write` risk values were all rendered with the default gray tag. | Shared TabPanelLead owns the 36px minimum lead height; Tool names use canonical mono/body tokens. Preserve the real risk labels, but map `read → success`, `propose → warning`, `write → error` so the product follows the Showcase risk-color grammar without changing backend semantics. |
 | Knowledge | Feedback appeared after summary metrics instead of before them. | Restore TabPanelFeedback-before-content ordering; keep real retry/rebuild behavior. |
 | Model connections | Default-purpose heading used local text sizing. | Use the canonical compact Heading; keep Recent-MFA gate and real import/export/test behavior. |
 | Provider drawer | Contextual Drawer is the correct task surface. | Keep real provider protocol fields; Drawer owns identity and submit boundary. |
@@ -65,3 +65,20 @@ visual parity. The order for AI parity work is now:
 - Workflow Run evidence follows execution → resources/human-interaction → event/evidence flow.
 - Product-only behavior is allowed only when it is explicitly classified as intentional divergence.
 - Migration metadata never proves parity. Paired browser evidence is required before final verification.
+
+## Final verification evidence
+
+The implementation state reviewed above was merged from PR #266 after all evidence
+below passed on head `42b00d787cc14e6039744d74356343bca0b3e336`.
+
+- Manual paired screenshot review: Tools, Sandbox Connectors and AI Operations / Run Center were visually re-checked after the automated comparison passed. Data-count and real-business differences were not treated as layout drift.
+- CI run `35481882455`: **success** — frontend format/lint/UI contracts/typecheck/coverage/build plus backend, seed, integration, dependency and compose gates.
+- Images run `35481882453`: **success** — frontend, backend and seed image builds.
+- Blog Showcase Parity run `35481882452`: **success** — AI Settings source contract, AI Operations source contract and canonical rendered-style comparison all passed.
+- Paired Showcase artifact `10595808968`: `sha256:6420ec85e4e602d24da76788b0bbc30dadf74ff55cac6d83fe61f4868ff273b2`.
+- UI Browser Acceptance run `35481882457`: **success** — full rendered acceptance completed.
+- Browser evidence artifact `10596108871`: `sha256:5f5a1c111970a5c25a071e42546796ebed6722a57ef69b43698ed57b2528e404`.
+- Merge commit: `aea170da25e4499efe77f302f2cce43ad1db60e2`.
+
+This evidence records the result; it does not replace the manual reasoning that
+preceded the implementation and the contracts.
