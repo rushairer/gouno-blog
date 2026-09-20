@@ -468,10 +468,7 @@ describe("WorkflowWorkspace", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Daily digest/ }));
-    expect(
-      screen.getByText("最近正式运行").nextElementSibling,
-    ).toHaveTextContent("失败");
-    expect(screen.getByText("最近试运行：成功")).toBeInTheDocument();
+    expect(screen.getByText("最近 失败")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "重试" })).toBeEnabled();
   });
 
