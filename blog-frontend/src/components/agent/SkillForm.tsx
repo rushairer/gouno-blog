@@ -12,7 +12,6 @@ import {
   Checkbox,
   CheckboxField,
   Field,
-  FormActions,
   FormGrid,
   FormLayout,
   Input,
@@ -20,10 +19,12 @@ import {
   Text,
   Textarea,
 } from "@gouno/ui/core";
+import { AISettingsEditorHeader } from "./AISettingsEditorPatterns";
 import {
-  AISettingsEditorHeader,
-  AISettingsEditorSection,
-} from "./AISettingsEditorPatterns";
+  DedicatedEditorActions,
+  DedicatedEditorLayout,
+  DedicatedEditorSection,
+} from "./DedicatedEditorPatterns";
 import { RiskPill } from "./StatusPill";
 import { ToolBindingsEditor } from "./tools/ToolBindingsEditor";
 
@@ -150,8 +151,10 @@ export function SkillForm({
           />
         ) : null}
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)]">
-          <AISettingsEditorSection
+        <DedicatedEditorLayout
+          primary={
+            <>
+          <DedicatedEditorSection
             title={locale === "zh" ? "能力定义" : "Capability definition"}
             description={
               locale === "zh"
@@ -275,9 +278,12 @@ export function SkillForm({
                 />
               </Field>
             </div>
-          </AISettingsEditorSection>
-
-          <AISettingsEditorSection
+          </DedicatedEditorSection>
+            </>
+          }
+          secondary={
+            <>
+              <DedicatedEditorSection
             title={locale === "zh" ? "执行边界" : "Execution boundary"}
             description={
               locale === "zh"
@@ -467,10 +473,12 @@ export function SkillForm({
                 </Field>
               </FormGrid>
             </div>
-          </AISettingsEditorSection>
-        </div>
+              </DedicatedEditorSection>
+            </>
+          }
+        />
 
-        <FormActions>
+        <DedicatedEditorActions>
           <Button variant="outline" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
@@ -483,7 +491,7 @@ export function SkillForm({
           >
             {saving ? labels.saving : labels.save}
           </Button>
-        </FormActions>
+        </DedicatedEditorActions>
       </div>
     </FormLayout>
   );
