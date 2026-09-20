@@ -239,6 +239,16 @@ if (!categories.includes('data-pattern="editor-form-composition"')) {
     "Categories.tsx: category Drawer form must expose the canonical editor-form-composition marker",
   );
 }
+for (const marker of [
+  "flex items-center gap-2",
+  'className="min-w-0 flex-1 font-mono"',
+]) {
+  if (!categories.includes(marker)) {
+    failures.push(
+      `Categories.tsx: reviewed Slug editor anatomy drifted from Showcase: ${marker}`,
+    );
+  }
+}
 const siteSettings = await readFile(path.join(adminRoot, "SiteSettings.tsx"), "utf8");
 if (!siteSettings.includes('data-pattern="settings-composition"')) {
   failures.push(
