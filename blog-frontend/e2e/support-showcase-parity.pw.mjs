@@ -58,6 +58,45 @@ async function expectNoHorizontalOverflow(page) {
   ).toBe(true);
 }
 
+async function expectSelectedAIHandoffParity(
+  showcase,
+  product,
+  checkboxName,
+  screenshotName,
+  testInfo,
+) {
+  const showcaseCheckbox = showcase
+    .getByRole("checkbox", { name: checkboxName })
+    .first();
+  const productCheckbox = product
+    .getByRole("checkbox", { name: checkboxName })
+    .first();
+
+  await showcaseCheckbox.check();
+  await productCheckbox.check();
+
+  const showcaseToolbar = showcase.getByRole("toolbar", { name: "批量操作" });
+  const productToolbar = product.getByRole("toolbar", { name: "批量操作" });
+  await expect(showcaseToolbar).toBeVisible();
+  await expect(productToolbar).toBeVisible();
+  await expectStyleParity(showcaseToolbar, productToolbar);
+
+  const showcaseAI = showcaseToolbar.getByRole("button", { name: "交给 AI" });
+  const productAI = productToolbar.getByRole("button", { name: "交给 AI" });
+  await expect(showcaseAI).toBeVisible();
+  await expect(productAI).toBeVisible();
+  await expectStyleParity(showcaseAI, productAI);
+
+  await expect(showcaseAI.locator("svg.lucide-sparkles")).toHaveCount(1);
+  await expect(productAI.locator("svg.lucide-sparkles")).toHaveCount(1);
+  await expect(showcaseAI.locator("svg.lucide-bot")).toHaveCount(0);
+  await expect(productAI.locator("svg.lucide-bot")).toHaveCount(0);
+
+  await pairScreenshot(showcase, product, screenshotName, testInfo);
+
+  return { showcaseCheckbox, productCheckbox };
+}
+
 for (const theme of ["light", "dark"]) {
   test(`Categories collection typography matches Showcase (${theme})`, async ({
     browser,
@@ -99,6 +138,16 @@ for (const theme of ["light", "dark"]) {
       `support-categories-${theme}`,
       testInfo,
     );
+
+    const categorySelection = await expectSelectedAIHandoffParity(
+      showcase,
+      product,
+      /^选择分类 /,
+      `support-categories-selection-${theme}`,
+      testInfo,
+    );
+    await categorySelection.showcaseCheckbox.uncheck();
+    await categorySelection.productCheckbox.uncheck();
 
     await showcase
       .getByRole("button", { name: "新建分类", exact: true })
@@ -162,6 +211,13 @@ for (const theme of ["light", "dark"]) {
 
     expect(unknown).toEqual([]);
     await pairScreenshot(showcase, product, `support-tags-${theme}`, testInfo);
+    await expectSelectedAIHandoffParity(
+      showcase,
+      product,
+      /^选择标签 /,
+      `support-tags-selection-${theme}`,
+      testInfo,
+    );
     await context.close();
   });
 
@@ -192,6 +248,13 @@ for (const theme of ["light", "dark"]) {
 
     expect(unknown).toEqual([]);
     await pairScreenshot(showcase, product, `support-comments-${theme}`, testInfo);
+    await expectSelectedAIHandoffParity(
+      showcase,
+      product,
+      /^选择评论 /,
+      `support-comments-selection-${theme}`,
+      testInfo,
+    );
     await context.close();
   });
 
