@@ -361,7 +361,7 @@ export default function MediaLibrary() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-pattern="collection-composition" className="flex flex-col gap-6">
       <PageHeader
         title="媒体库"
         description="上传、检索和复用全站内容中的图片资源，支持 AI 直接文生图入库。"

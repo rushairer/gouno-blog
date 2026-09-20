@@ -220,6 +220,32 @@ for (const name of corePages) {
 const categories = await readFile(path.join(adminRoot, "Categories.tsx"), "utf8");
 assertCategorySlugPicker(categories);
 
+for (const name of [
+  "Categories.tsx",
+  "Tags.tsx",
+  "Comments.tsx",
+  "MediaLibrary.tsx",
+  "Users.tsx",
+]) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  if (!source.includes('data-pattern="collection-composition"')) {
+    failures.push(
+      `${name}: manually reviewed support collection must expose the canonical collection-composition marker`,
+    );
+  }
+}
+if (!categories.includes('data-pattern="editor-form-composition"')) {
+  failures.push(
+    "Categories.tsx: category Drawer form must expose the canonical editor-form-composition marker",
+  );
+}
+const siteSettings = await readFile(path.join(adminRoot, "SiteSettings.tsx"), "utf8");
+if (!siteSettings.includes('data-pattern="settings-composition"')) {
+  failures.push(
+    "SiteSettings.tsx: settings tab body must expose the canonical settings-composition marker",
+  );
+}
+
 for (const name of ["Dashboard.tsx", "Pages.tsx", "Comments.tsx"]) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
   if (!source.includes("useAppFeedback")) {

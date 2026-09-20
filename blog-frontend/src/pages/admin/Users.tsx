@@ -273,7 +273,7 @@ export default function AdminUsers() {
   const initialLoadFailed = Boolean(error) && members.length === 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-pattern="collection-composition" className="flex flex-col gap-6">
       <PageHeader
         title="成员与权限"
         description="管理 Blog 后台成员与角色分配；身份认证与账号安全由 GOSSO 提供。"
