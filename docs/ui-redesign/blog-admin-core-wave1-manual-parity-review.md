@@ -1,6 +1,6 @@
 # Blog Admin Core Wave 1 Manual Showcase Parity Review
 
-Status: **implementation review complete; paired browser evidence pending**
+Status: **verified**
 
 Date: 2026-09-20
 
@@ -10,9 +10,11 @@ Scope:
 - Posts — `/admin/posts`
 - Pages — `/admin/pages`
 
-Certification-rule baseline: `rushairer/gouno-blog@a64dcd1036f74e3146bed7ce79f17ce2c5ac7c75`
+Initial certification-rule baseline: `rushairer/gouno-blog@a64dcd1036f74e3146bed7ce79f17ce2c5ac7c75`
 
-Canonical reference: `rushairer/gouno-ui@a752c16e5f3f2d85215a04ea9ef7d33c56b733ee`
+Current Product validation baseline: `rushairer/gouno-blog@87800efa1d80a2f698a3d4e279b2825b4361188a`
+
+Canonical reference: `rushairer/gouno-ui@c64c19f1a045545f54d988609a6ad2e80f2dfe6c`
 
 Product baseline before this review: `rushairer/gouno-blog@9484fc80fceeee7bbdc3cce920c9a575ecde453e`
 
@@ -88,12 +90,29 @@ The conclusions are being encoded only after manual classification:
 
 These differences must not be removed merely to make fixture content literal.
 
-## Pending evidence
+## Verified evidence
 
-Before this wave can be marked `verified`:
+The accepted evidence set is the current-head validation for `87800efa1d80a2f698a3d4e279b2825b4361188a` against Gouno UI `c64c19f1a045545f54d988609a6ad2e80f2dfe6c`:
 
-- current branch CI must pass;
-- Blog Showcase Parity must pass with the new typography comparisons in light and dark themes;
-- UI Browser Acceptance and image builds must remain green;
-- paired screenshots for Dashboard / Posts / Pages must be reviewed for unexpected composition drift;
-- the certification ledger must then be updated with the reviewed implementation ref and evidence IDs.
+- CI run `35488456855` / #1948 — success;
+- Images run `35488456865` / #1104 — success;
+- Blog Showcase Parity run `35488456854` / #414 — success;
+- UI Browser Acceptance run `35488456853` / #498 — success;
+- paired parity artifact `10598047486`, SHA-256 `92e8bf79a65317cf07077f300356f23ee1a8222552ab0d110325a06a94dbe720`;
+- rendered acceptance artifact `10597529814`, SHA-256 `3ebfd10be2104d2996717f4ec8224d9539b027b31f1434d5a154235fc128a45c`.
+
+### Manual paired-screenshot review
+
+The accepted #414 artifact was downloaded and inspected directly rather than treating artifact creation as proof by itself. The review covered:
+
+- Dashboard light + dark;
+- Posts desktop light + dark;
+- Posts mobile light + dark;
+- Posts destructive Modal light + dark;
+- Pages desktop light + dark.
+
+After the locale-harness correction, no unexplained composition, spacing, typography, action-grammar or responsive drift remained in these reviewed views. Differences in analytics values, dates, row counts, fixture copy and real Product data are intentional data/business differences.
+
+The preceding parity run #413 is explicitly **not** accepted as certification evidence. Its geometry checks passed, but manual artifact review exposed the Product running under the CI browser's en-US locale while the canonical Fixture rendered zh-CN, causing `Please select` versus `请选择`. The harness was corrected, the visible Select copy was added to parity assertions, and only the successful rerun #414 is accepted.
+
+This wave is therefore certified under the manual-first protocol. The aggregate `blog-admin-core-support` family remains `needs-manual-recertification` until the remaining non-AI Admin waves complete.
