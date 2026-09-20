@@ -98,10 +98,10 @@ for (const entry of entries) {
         fail(`${entry.id}: verified stateCoverage must include ${required}.`);
       }
     }
-    if (![..."detail editor drawer".split(" ")].some((name) =>
+    if (![..."detail editor drawer modal".split(" ")].some((name) =>
       [...coverage].some((value) => value.includes(name)),
     )) {
-      fail(`${entry.id}: verified stateCoverage needs a detail/editor/drawer state.`);
+      fail(`${entry.id}: verified stateCoverage needs a detail/editor/drawer/modal state.`);
     }
 
     const dimensions = new Set(entry.reviewDimensions ?? []);
