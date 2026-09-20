@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { installApiFixtures, setTheme } from "./mock-api.mjs";
 import {
   expectStyleParity,
+  expectTypographyParity,
   pairScreenshot,
 } from "./showcase-parity-helpers.mjs";
 
@@ -271,7 +272,7 @@ for (const theme of ["light", "dark"]) {
     const productWeights = productRow.locator(".type-weight-semibold");
     expect(await productWeights.count()).toBe(await showcaseWeights.count());
     for (let index = 0; index < (await productWeights.count()); index += 1) {
-      await expectStyleParity(
+      await expectTypographyParity(
         showcaseWeights.nth(index),
         productWeights.nth(index),
       );
