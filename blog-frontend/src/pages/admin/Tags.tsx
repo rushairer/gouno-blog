@@ -193,7 +193,7 @@ export default function Tags() {
         : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-pattern="collection-composition" className="flex flex-col gap-6">
       <PageHeader
         title="标签"
         description="整理文章中的具体技术与概念信号，支持批量清洗与合并。"
