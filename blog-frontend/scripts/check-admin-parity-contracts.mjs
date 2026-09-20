@@ -239,6 +239,70 @@ if (!dashboard.includes("<IconButtonLink") || !dashboard.includes('variant="ghos
   );
 }
 
+const reviewedTypographyContracts = new Map([
+  [
+    "Dashboard.tsx",
+    {
+      required: [
+        "type-metric-compact",
+        "type-body-sm type-weight-semibold",
+        "type-caption type-weight-medium",
+        "font-mono type-caption",
+      ],
+      forbidden: [
+        "text-xl font-semibold",
+        "text-sm font-semibold",
+        "text-xs font-medium",
+        "font-mono text-xs",
+      ],
+    },
+  ],
+  [
+    "Posts.tsx",
+    {
+      required: [
+        "type-weight-semibold",
+        "type-caption text-muted-foreground",
+        "type-family-mono type-caption",
+      ],
+      forbidden: [
+        "font-semibold leading-snug",
+        "font-mono text-xs",
+        "gap-2 text-xs text-muted-foreground",
+      ],
+    },
+  ],
+  [
+    "Pages.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold",
+        "type-caption text-muted-foreground",
+        "type-family-mono type-caption",
+      ],
+      forbidden: [
+        "text-sm font-semibold",
+        "font-mono text-xs",
+        "line-clamp-1 text-xs",
+      ],
+    },
+  ],
+]);
+
+for (const [name, contract] of reviewedTypographyContracts) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  for (const marker of contract.required) {
+    if (!source.includes(marker)) {
+      failures.push(`${name}: manually reviewed Showcase typography contract is missing ${marker}`);
+    }
+  }
+  for (const marker of contract.forbidden) {
+    if (source.includes(marker)) {
+      failures.push(`${name}: retired raw typography drift returned: ${marker}`);
+    }
+  }
+}
+
 for (const name of await readdir(adminRoot)) {
   if (!name.endsWith(".tsx")) continue;
   const source = await readFile(path.join(adminRoot, name), "utf8");
