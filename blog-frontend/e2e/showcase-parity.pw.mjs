@@ -27,6 +27,15 @@ async function styleFingerprint(locator) {
       backgroundColor: style.backgroundColor,
       boxShadow: style.boxShadow,
       opacity: style.opacity,
+    };
+  });
+}
+
+async function typographyFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
       color: style.color,
       fontFamily: style.fontFamily,
       fontSize: style.fontSize,
