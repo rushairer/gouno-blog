@@ -383,6 +383,12 @@ for (const surface of [
     await expect(showcaseAi.locator("svg.lucide-sparkles")).toHaveCount(1);
     await expect(productAi.locator("svg.lucide-sparkles")).toHaveCount(1);
     await expectStyleParity(showcaseAi, productAi);
+    await expect(
+      showcaseToolbar.getByRole("button", { name: "取消", exact: true }),
+    ).toBeVisible();
+    await expect(
+      productToolbar.getByRole("button", { name: "取消", exact: true }),
+    ).toBeVisible();
 
     expect(unknown).toEqual([]);
     await pairScreenshot(
