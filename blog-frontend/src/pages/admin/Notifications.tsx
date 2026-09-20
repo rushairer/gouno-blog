@@ -375,7 +375,7 @@ export default function AdminNotifications() {
       <Card padding="base">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="flex items-center gap-2 type-caption type-weight-semibold uppercase type-tracking-label text-muted-foreground">
               <Filter className="size-3.5" />
               <span>筛选</span>
             </div>
@@ -415,7 +415,7 @@ export default function AdminNotifications() {
           </div>
 
           {filtered.length > 0 ? (
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <label className="flex items-center gap-2 type-caption text-muted-foreground">
               <Checkbox
                 aria-label="全选当前通知列表"
                 checked={allFilteredSelected}
@@ -486,7 +486,7 @@ export default function AdminNotifications() {
             }
             action={
               hasFilters ? (
-                <Button size="small" onClick={clearFilters}>
+                <Button onClick={clearFilters}>
                   清除筛选
                 </Button>
               ) : undefined
@@ -518,7 +518,7 @@ export default function AdminNotifications() {
                 )}
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 flex-1 items-start gap-3.5">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
                     <Checkbox
                       aria-label={`选择通知 ${displayTitle}`}
                       checked={isChecked}
@@ -540,9 +540,9 @@ export default function AdminNotifications() {
                       {icon}
                     </div>
 
-                    <div className="min-w-0 flex-1 space-y-1">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <strong className="text-sm font-semibold text-foreground">
+                        <strong className="type-body-sm type-weight-semibold text-foreground">
                           {displayTitle}
                         </strong>
                         <Tag color={color}>{tag}</Tag>
@@ -553,7 +553,7 @@ export default function AdminNotifications() {
                           />
                         ) : null}
                         <time
-                          className="font-mono text-xs text-muted-foreground"
+                          className="type-family-mono type-caption text-muted-foreground"
                           dateTime={item.created_at}
                         >
                           {new Date(item.created_at).toLocaleString("zh-CN")}
@@ -564,7 +564,8 @@ export default function AdminNotifications() {
                         <Text
                           size="xs"
                           tone="muted"
-                          className="mt-1 line-clamp-2 leading-relaxed"
+                          leading="relaxed"
+                          className="mt-1 line-clamp-2"
                         >
                           {item.body}
                         </Text>
@@ -578,7 +579,7 @@ export default function AdminNotifications() {
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-end sm:self-center">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     {isUnread ? (
                       <Button
                         size="small"

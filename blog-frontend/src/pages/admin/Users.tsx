@@ -354,19 +354,17 @@ export default function AdminUsers() {
                       <TableCell className="min-w-64 whitespace-normal">
                         <div className="flex items-center gap-3">
                           <span
-                            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 type-body-sm type-weight-semibold text-primary"
                             aria-hidden="true"
                           >
                             {initials(member)}
                           </span>
                           <div className="min-w-0">
-                            <strong className="text-sm font-semibold text-foreground">
-                              {memberName(member)}
-                            </strong>
+                            <span className="type-weight-semibold">{memberName(member)}</span>
                             {member.principal.email ? (
-                              <div className="break-all font-mono text-xs text-muted-foreground">
+                              <Text size="xs" tone="muted" className="break-all">
                                 {member.principal.email}
-                              </div>
+                              </Text>
                             ) : null}
                           </div>
                         </div>
@@ -375,7 +373,7 @@ export default function AdminUsers() {
                         <Button
                           variant="ghost"
                           size="small"
-                          className="font-mono text-xs"
+                          className="type-family-mono type-caption"
                           title={`点击复制完整 Subject ID: ${member.principal.subject}`}
                           aria-label={`复制 ${memberName(member)} 完整 Subject ID`}
                           onClick={(event) => {
@@ -394,7 +392,7 @@ export default function AdminUsers() {
                               <RoleTag key={role} role={role} />
                             ))
                           ) : (
-                            <span className="text-xs italic text-muted-foreground">
+                            <span className="type-caption italic text-muted-foreground">
                               尚未授予角色
                             </span>
                           )}
@@ -424,22 +422,22 @@ export default function AdminUsers() {
                   <div className="flex flex-col gap-4">
                     <div className="flex items-start gap-3">
                       <span
-                        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 type-body-sm type-weight-semibold text-primary"
                         aria-hidden="true"
                       >
                         {initials(member)}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
-                          <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                          <span className="min-w-0 break-words type-weight-semibold">
                             {memberName(member)}
-                          </strong>
+                          </span>
                           <MembershipTag status={member.membership_status} />
                         </div>
                         {member.principal.email ? (
-                          <div className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                          <Text size="xs" tone="muted" className="mt-1 break-all">
                             {member.principal.email}
-                          </div>
+                          </Text>
                         ) : null}
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           {member.roles.length ? (
@@ -447,14 +445,14 @@ export default function AdminUsers() {
                               <RoleTag key={role} role={role} />
                             ))
                           ) : (
-                            <span className="text-xs italic text-muted-foreground">
+                            <span className="type-caption italic text-muted-foreground">
                               尚未授予角色
                             </span>
                           )}
                           <Button
                             variant="ghost"
                             size="small"
-                            className="font-mono text-xs"
+                            className="type-family-mono type-caption"
                             title={`点击复制完整 Subject ID: ${member.principal.subject}`}
                             aria-label={`复制 ${memberName(member)} 完整 Subject ID`}
                             onClick={() => copySubject(member)}
@@ -514,7 +512,7 @@ export default function AdminUsers() {
           >
             <div className="flex items-center gap-3 rounded-lg border bg-muted/20 p-4">
               <span
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 type-body-sm type-weight-semibold text-primary"
                 aria-hidden="true"
               >
                 {initials(editing)}

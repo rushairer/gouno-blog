@@ -566,18 +566,18 @@ export default function MediaLibrary() {
               <div className="flex flex-1 flex-col gap-2 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <strong
-                    className="min-w-0 truncate text-sm font-semibold"
+                    className="min-w-0 truncate type-body-sm type-weight-semibold"
                     title={asset.filename}
                   >
                     {asset.filename}
                   </strong>
                   <Tag>{typeLabel(asset.content_type)}</Tag>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 type-family-mono type-caption text-muted-foreground">
                   <span>{Math.ceil(asset.size_bytes / 1024)} KB</span>
                   <time>{formatDateTime(asset.created_at)}</time>
                   {asset.usage_count ? (
-                    <span className="font-sans text-primary">
+                    <span className="type-family-sans text-primary">
                       引用 {asset.usage_count}
                     </span>
                   ) : null}

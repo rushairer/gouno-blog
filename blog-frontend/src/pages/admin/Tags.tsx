@@ -264,7 +264,7 @@ export default function Tags() {
                       setSelection(tag.name, event.target.checked)
                     }
                   />
-                  <strong className="truncate text-sm font-semibold text-foreground">
+                  <strong className="truncate type-body-sm type-weight-semibold text-foreground">
                     {tag.name}
                   </strong>
                 </div>

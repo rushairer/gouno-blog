@@ -360,6 +360,96 @@ const reviewedEditorTypographyContracts = new Map([
   ],
 ]);
 
+const reviewedSupportTypographyContracts = new Map([
+  [
+    "Categories.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold",
+        "type-family-mono type-caption",
+        "type-caption type-leading-relaxed",
+      ],
+      forbidden: ["text-sm font-semibold", "font-mono text-xs", "text-xs leading-relaxed"],
+    },
+  ],
+  [
+    "Tags.tsx",
+    {
+      required: ["type-body-sm type-weight-semibold"],
+      forbidden: ["truncate text-sm font-semibold"],
+    },
+  ],
+  [
+    "Comments.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold",
+        "type-family-mono type-caption",
+        "type-body-sm type-leading-relaxed",
+      ],
+      forbidden: ["text-sm font-semibold", "font-mono text-xs", "text-sm leading-relaxed"],
+    },
+  ],
+  [
+    "Notifications.tsx",
+    {
+      required: [
+        "type-caption type-weight-semibold uppercase type-tracking-label",
+        "type-body-sm type-weight-semibold",
+        "type-family-mono type-caption",
+      ],
+      forbidden: ["text-xs font-semibold uppercase tracking-wider", "text-sm font-semibold", "font-mono text-xs"],
+    },
+  ],
+  [
+    "MediaLibrary.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold",
+        "type-family-mono type-caption",
+        "type-family-sans text-primary",
+      ],
+      forbidden: ["truncate text-sm font-semibold", "font-mono text-xs", "font-sans text-primary"],
+    },
+  ],
+  [
+    "SiteSettings.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold text-primary",
+        '<Text size="sm" weight="medium">',
+        "type-caption text-muted-foreground",
+      ],
+      forbidden: ["text-sm font-bold text-primary", '<Text size="sm" className="font-medium">'],
+    },
+  ],
+  [
+    "Users.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold text-primary",
+        "type-weight-semibold",
+        "type-family-mono type-caption",
+      ],
+      forbidden: ["text-sm font-semibold text-primary", "font-mono text-xs"],
+    },
+  ],
+]);
+
+for (const [name, supportContract] of reviewedSupportTypographyContracts) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  for (const marker of supportContract.required) {
+    if (!source.includes(marker)) {
+      failures.push(`${name}: manually reviewed support typography contract is missing ${marker}`);
+    }
+  }
+  for (const marker of supportContract.forbidden) {
+    if (source.includes(marker)) {
+      failures.push(`${name}: retired support typography drift returned: ${marker}`);
+    }
+  }
+}
+
 for (const [name, editorContract] of reviewedEditorTypographyContracts) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
   for (const marker of editorContract.required) {

@@ -399,15 +399,15 @@ export default function AdminSiteSettings() {
                 className="size-10 rounded-lg border bg-background object-contain p-1"
               />
             ) : (
-              <div className="flex size-10 items-center justify-center rounded-lg border bg-background text-sm font-bold text-primary">
+              <div className="flex size-10 items-center justify-center rounded-lg border bg-background type-body-sm type-weight-semibold text-primary">
                 GB
               </div>
             )}
             <div className="min-w-0">
-              <Text size="sm" className="font-medium">
+              <Text size="sm" weight="medium">
                 Favicon 预览
               </Text>
-              <code className="mt-1 block truncate text-xs text-muted-foreground">
+              <code className="mt-1 block truncate type-caption text-muted-foreground">
                 {value.favicon_url || "未配置"}
               </code>
             </div>
