@@ -308,7 +308,10 @@ export default function Categories() {
         : undefined;
 
   return (
-    <div data-pattern="collection-composition" className="flex flex-col gap-6">
+    <div
+      data-pattern="collection-composition"
+      className="flex flex-col gap-6"
+    >
       <PageHeader
         title="分类"
         description="建立长期稳定的内容脉络与主题结构。"
@@ -570,7 +573,10 @@ export default function Categories() {
           </>
         }
       >
-        <div data-pattern="editor-form-composition" className="flex flex-col gap-5">
+        <div
+          data-pattern="editor-form-composition"
+          className="flex flex-col gap-5"
+        >
           <FormField label="分类名称" required>
             <Input
               aria-label="分类名称"
