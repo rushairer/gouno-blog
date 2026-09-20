@@ -457,17 +457,17 @@ export default function Dashboard() {
                     <Link
                       key={alert.id}
                       to={presentation.destination}
-                      className="group flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/40 sm:p-6"
+                      className="flex w-full items-start justify-between gap-4 p-4 text-left transition-colors hover:bg-muted/40 sm:p-6"
                     >
-                      <div className="flex min-w-0 flex-1 items-start gap-3">
-                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
                           {presentation.icon}
                         </span>
-                        <div className="min-w-0 space-y-1">
+                        <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="type-body-sm type-weight-semibold text-foreground">
+                            <strong className="type-body-sm type-weight-semibold text-foreground">
                               {presentation.label}
-                            </span>
+                            </strong>
                             <span className="type-caption type-weight-medium text-warning">
                               {alert.title
                                 .replace(
@@ -477,7 +477,7 @@ export default function Dashboard() {
                                 .trim()}
                             </span>
                           </div>
-                          <Text size="xs" tone="muted" className="line-clamp-1">
+                          <Text size="xs" tone="muted" className="mt-1 line-clamp-1">
                             {alert.body
                               ? `失败原因：${alert.body}`
                               : "运行未完成，请打开记录查看失败步骤。"}
@@ -487,7 +487,7 @@ export default function Dashboard() {
                           </time>
                         </div>
                       </div>
-                      <span className="shrink-0 type-caption type-weight-medium text-primary transition-transform group-hover:translate-x-0.5">
+                      <span className="shrink-0 type-caption type-weight-medium text-primary">
                         {presentation.action}
                       </span>
                     </Link>
