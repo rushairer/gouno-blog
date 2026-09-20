@@ -75,6 +75,11 @@ This document defines the **immutable architectural rules, security baselines, a
 - Do not re-verify an already confirmed behavior unless there is evidence of regression.
 - Run typecheck, tests, builds, and registry dependency verification at the end of a coherent UI phase.
 - Use browser verification to confirm actual visual and interaction results; tests and builds do not replace visual confirmation.
+- For Showcase parity work, **manual design reasoning comes before automation**: inspect the canonical Showcase and the real product state-by-state (default, empty, error/feedback, detail, editor/drawer, responsive) before changing or trusting parity gates.
+- Record each observed difference as intentional product divergence or UI drift. Fix confirmed drift first; only then extract stable findings into source checks, browser parity tests, or other automated contracts.
+- A green parity gate proves only the contracts it actually checks. Never infer whole-page visual parity, migration completion, or `verified` status from CI/markers alone.
+- Do not mark a page or migration row `verified` until the relevant visible states have been manually compared and browser evidence has confirmed the resulting implementation.
+- Prefer one shared local composition helper for Showcase-owned patterns that are not public `@gouno/ui` APIs; do not maintain multiple page-private copies of the same canonical pattern.
 - Continue within the user's authorized scope without pausing for confirmation after every internal implementation step.
 - Preserve uncommitted work, authentication boundaries, the Connector hold, and canonical UI integrity rules.
 
