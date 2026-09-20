@@ -1,6 +1,6 @@
 # Blog Admin Core Wave 2 Manual Showcase Parity Review
 
-Status: **implementation review complete; paired browser evidence pending**
+Status: **verified; paired browser evidence manually accepted**
 
 Date: 2026-09-20
 
@@ -10,7 +10,7 @@ Scope:
 - Tags — `/admin/tags`
 - Comments — `/admin/comments`
 
-Current Product baseline for this recertification: `rushairer/gouno-blog@e2c1e6bfbb17cc04b33bafc656aab7493406002e`
+Reviewed Product implementation: `rushairer/gouno-blog@979902532d309cf4da4c35fffe85fcd6c5c71989`
 
 Canonical reference: `rushairer/gouno-ui@c64c19f1a045545f54d988609a6ad2e80f2dfe6c`
 
@@ -78,13 +78,19 @@ The rendered test deliberately uses:
 
 rather than the earlier broad label locator. The earlier locator matched two elements and produced a harness false positive; it was not a Product defect.
 
-## Pending evidence
+## Accepted evidence
 
-Before this wave can become `verified`:
+The current implementation evidence was completed and manually reviewed on 2026-09-20:
 
-- current-head CI must pass;
-- Images must pass;
-- Blog Showcase Parity must pass;
-- UI Browser Acceptance must pass;
-- paired Categories desktop/Drawer/mobile and Tags/Comments desktop/mobile artifacts must be downloaded and manually inspected;
-- only then may the certification ledger record the reviewed implementation ref and accepted evidence IDs.
+- CI run `35495441658` — success;
+- Images run `35495441659` — success;
+- Blog Showcase Parity run `35495441667` — success;
+- UI Browser Acceptance run `35495441666` — success;
+- paired parity artifact `10600359041` (`sha256:0c10da0e8c2e513743e6b0571c00ea0db14e13fa1688c7254251575cf717e73a`);
+- browser acceptance artifact `10600920008` (`sha256:1119a522b24a9d5bbbd10a3b408200a40bcf4658f10f27dce797f80d58bf27d4`).
+
+The paired screenshots were inspected directly rather than inferred from green tests. The review covered Categories light/dark desktop, Categories Drawer light/dark, Categories 390px mobile, Tags light/dark desktop and 390px mobile, and Comments light/dark desktop and 390px mobile.
+
+The inspected evidence preserves the same page hierarchy, semantic typography, spacing rhythm, card/table geometry, action hierarchy, Drawer anatomy and responsive composition between Showcase and Product. Differences in fixture cardinality, concrete copy/data, timestamps, counts and Product shell chrome are expected Product-owned differences and were not treated as parity failures.
+
+Wave 2 is therefore `verified` in the manual-first certification ledger.
