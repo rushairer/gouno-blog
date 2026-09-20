@@ -259,6 +259,15 @@ if (
   );
 }
 
+for (const name of ["Posts.tsx", "Pages.tsx"]) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  if (!source.includes('data-pattern="collection-composition"')) {
+    failures.push(
+      `${name}: reviewed collection page must expose the canonical collection-composition contract marker`,
+    );
+  }
+}
+
 const reviewedTypographyContracts = new Map([
   [
     "Dashboard.tsx",
