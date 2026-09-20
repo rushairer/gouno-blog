@@ -415,19 +415,13 @@ export function KnowledgeWorkspace({
                             <Tag
                               color={profile.enabled ? "success" : "default"}
                             >
-                              {profile.enabled
-                                ? labels.active
-                                : labels.paused}
+                              {profile.enabled ? labels.active : labels.paused}
                             </Tag>
                           </div>
                           <Text size="xs" tone="muted">
                             {profile.model} · {profile.dimensions} dimensions
                           </Text>
-                          <Text
-                            size="xs"
-                            tone="muted"
-                            className="break-all"
-                          >
+                          <Text size="xs" tone="muted" className="break-all">
                             {profile.base_url} · API Key ••••{" "}
                             {profile.api_key_last4}
                           </Text>

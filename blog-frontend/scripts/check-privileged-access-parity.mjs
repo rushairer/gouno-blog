@@ -19,6 +19,7 @@ const apiPath = "api/client.ts";
 const usersPath = "pages/admin/Users.tsx";
 const settingsPath = "pages/admin/SiteSettings.tsx";
 const advancedPath = "components/agent/AdvancedWorkspace.tsx";
+const knowledgePath = "components/agent/KnowledgeWorkspace.tsx";
 const gate = await read(gatePath);
 const sudo = await read(sudoPath);
 const stepUp = await read(stepUpPath);
@@ -26,6 +27,7 @@ const api = await read(apiPath);
 const users = await read(usersPath);
 const settings = await read(settingsPath);
 const advanced = await read(advancedPath);
+const knowledge = await read(knowledgePath);
 
 for (const [text, reason] of [
   ['data-slot="blog-privileged-access-gate"', "must expose the canonical privileged-access slot"],
@@ -76,6 +78,7 @@ for (const [relativePath, source] of [
   [usersPath, users],
   [settingsPath, settings],
   [advancedPath, advanced],
+  [knowledgePath, knowledge],
 ]) {
   requireText(
     source,
@@ -125,10 +128,15 @@ if (providerPolicyTitleCount !== 1) {
     `${advancedPath}: model credential policy must be rendered exactly once by SudoGate (found ${providerPolicyTitleCount})`,
   );
 }
-if (advanced.includes("敏感配置需要近期 MFA")) {
-  failures.push(
-    `${advancedPath}: knowledge policy must not be duplicated by a nested informational Alert`,
-  );
+for (const [relativePath, source] of [
+  [advancedPath, advanced],
+  [knowledgePath, knowledge],
+]) {
+  if (source.includes("敏感配置需要近期 MFA")) {
+    failures.push(
+      `${relativePath}: knowledge policy must not be duplicated by a nested informational Alert`,
+    );
+  }
 }
 requireText(
   advanced,
@@ -137,8 +145,8 @@ requireText(
   "model credential policy description must match Showcase",
 );
 requireText(
-  advanced,
-  advancedPath,
+  knowledge,
+  knowledgePath,
   'description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"',
   "knowledge policy description must match Showcase",
 );
