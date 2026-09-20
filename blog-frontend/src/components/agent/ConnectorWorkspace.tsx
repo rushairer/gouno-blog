@@ -26,6 +26,7 @@ import {
   Field,
   FormGrid,
   FormLayout,
+  Heading,
   IconButton,
   Input,
   Select,
@@ -569,10 +570,10 @@ export function ConnectorWorkspace({
         <Card padding="base">
           <div className="flex flex-col gap-4">
             <div>
-              <strong className="text-base">
+              <Heading level={2} variant="compact">
                 {zh ? "OAuth 回调" : "OAuth callback"}
-              </strong>
-              <Text size="xs" tone="muted" className="mt-1">
+              </Heading>
+              <Text size="sm" tone="muted">
                 {zh
                   ? "完成一次性 Mock 回调后，该状态即失效。"
                   : "The one-time Mock state expires after the callback completes."}
@@ -608,10 +609,10 @@ export function ConnectorWorkspace({
       <Card padding="none" className="overflow-hidden">
         <div className="border-b px-6 py-5">
           <div>
-            <strong className="text-base">
+            <Heading level={2} variant="compact">
               {zh ? "Outbox 沙箱" : "Outbox sandbox"}
-            </strong>
-            <Text size="xs" tone="muted" className="mt-1 max-w-3xl">
+            </Heading>
+            <Text size="sm" tone="muted">
               {zh
                 ? "先审批，再进行不可外发的 Mock 投递；幂等键避免重复入队。"
                 : "Approve first, then perform a non-network Mock delivery. Idempotency keys prevent duplicate queue entries."}
