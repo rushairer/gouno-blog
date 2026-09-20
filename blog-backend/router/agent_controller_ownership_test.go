@@ -21,6 +21,8 @@ func TestRouterUsesCapabilityOwnedAIControllers(t *testing.T) {
 		"agentCtrl.ListMediaCandidates",
 		"*knowledgecontroller.Controller",
 		"knowledgeCtrl.ListEmbeddingProfiles",
+		"knowledgeCtrl.ListIndexContent",
+		"knowledgeCtrl.SearchIndex",
 		"*connectorcontroller.Controller",
 		"connectorCtrl.ListConnectorProfiles",
 	} {
