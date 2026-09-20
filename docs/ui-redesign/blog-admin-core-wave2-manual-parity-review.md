@@ -1,6 +1,6 @@
 # Blog Admin Core Wave 2 Manual Showcase Parity Review
 
-Status: **needs-manual-recertification; previous verified evidence retained as history**
+Status: **verified; paired browser evidence manually accepted**
 
 Date: 2026-09-20
 
@@ -10,9 +10,9 @@ Scope:
 - Tags — `/admin/tags`
 - Comments — `/admin/comments`
 
-Reviewed Product implementation: `rushairer/gouno-blog@979902532d309cf4da4c35fffe85fcd6c5c71989`
+Reviewed Product implementation: `rushairer/gouno-blog@11a20e8068e9b56aeeb24d4d7b01e6d253499d64`
 
-Canonical reference: `rushairer/gouno-ui@c64c19f1a045545f54d988609a6ad2e80f2dfe6c`
+Canonical reference: `rushairer/gouno-ui@8d5c9e605ceee37303e551d71de87bdfec876b2e`
 
 This is the second non-AI Blog Admin recertification wave under `SHOWCASE_PARITY_PROTOCOL.md`.
 
@@ -115,3 +115,61 @@ The old browser evidence remains useful history, but it cannot certify the chang
 2. current Product and canonical refs are compared again;
 3. paired browser evidence is generated and directly inspected;
 4. the ledger is refreshed last with the new refs and artifacts.
+
+
+## 2026-09-20 recertification — selected-resource AI handoff icon grammar
+
+The invalidation above is now resolved.
+
+The canonical Gouno UI action grammar landed in `rushairer/gouno-ui#123` and defines:
+
+- `Sparkles` for AI assistance/generation and selected-resource handoff to an AI Workflow;
+- `Bot` for Agent/AI entity identity or status.
+
+The Product candidate synchronizes Tags and Comments to the canonical `Sparkles` action icon. Categories, Posts, Pages and Media already used `Sparkles`.
+
+A durable Product-side action-grammar guard now checks all six resource Collections:
+
+- Posts;
+- Pages;
+- Categories;
+- Tags;
+- Comments;
+- MediaLibrary.
+
+The paired browser harness was also expanded specifically for the state that exposed the defect. For Categories, Tags and Comments, in both light and dark themes, the test now:
+
+1. selects one real fixture item;
+2. verifies the `BulkActionBar` appears on Showcase and Product;
+3. verifies the `交给 AI` action exists on both sides;
+4. requires `svg.lucide-sparkles` and forbids `svg.lucide-bot`;
+5. compares the toolbar and AI-button computed styles;
+6. saves paired selection-state screenshots.
+
+### Fresh exact-head evidence
+
+Implementation head: `11a20e8068e9b56aeeb24d4d7b01e6d253499d64`  
+Canonical ref: `8d5c9e605ceee37303e551d71de87bdfec876b2e`
+
+- CI run `35512041686` — success;
+- Images run `35512041681` — success;
+- Blog Showcase Parity run `35512041687` — success;
+- UI Browser Acceptance run `35512041688` — success;
+- paired parity artifact `10604968458`, SHA-256 `52904fb18e92f76e7a30f89d698cd739f3b06d26d167a2313c06f4309d732284`;
+- browser acceptance artifact `10605163959`, SHA-256 `eace78ebac207b55665c64a8fb751c6493a203428a75561e3205059c101ffbed`.
+
+### Direct manual screenshot review
+
+The newly added selection-bulk pairs were inspected directly rather than inferred from green automation.
+
+Accepted states:
+
+- Categories light/dark — Product and Showcase both show `Sparkles → 交给 AI → 删除 → 取消`; BulkActionBar height, action density and selected-row relationship remain aligned;
+- Tags light/dark — Product and Showcase both show the same `Sparkles → 交给 AI` action grammar; differing card counts are fixture data variance only;
+- Comments light/dark — Product and Showcase preserve the same filter → selection bar → moderation-card hierarchy, with `Sparkles` on the AI handoff and consistent destructive/cancel ordering.
+
+No additional layout, spacing, typography or interaction defect was found in this recertification pass.
+
+`OperationsWorkspace` was deliberately not changed by this correction. Current source inspection found no runtime import from `AIOperations.tsx` or another live Product module; it is therefore not part of the current List-surface recertification, and changing it here would unnecessarily reopen the separately certified Blog Admin AI scope.
+
+Wave 2 is again `verified`.
