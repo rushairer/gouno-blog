@@ -525,11 +525,13 @@ export default function AdminPosts() {
                       ) : null}
                       <TableCell className="min-w-72 whitespace-normal">
                         <div className="flex flex-col gap-1">
-                          <span className="font-semibold leading-snug">
+                          <span className="type-weight-semibold">
                             {post.title}
                           </span>
-                          <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <code className="font-mono">/{post.slug}</code>
+                          <span className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
+                            <code className="type-family-mono">
+                              /{post.slug}
+                            </code>
                             {post.category ? (
                               <Tag bordered={false}>{post.category.name}</Tag>
                             ) : null}
@@ -540,13 +542,13 @@ export default function AdminPosts() {
                         <PostStatusTag status={post.status} />
                       </TableCell>
                       <TableCell>
-                        <time className="font-mono text-xs text-muted-foreground">
+                        <time className="type-family-mono type-caption text-muted-foreground">
                           {new Date(
                             post.updated_at || post.created_at,
                           ).toLocaleDateString("zh-CN")}
                         </time>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                      <TableCell className="text-right type-family-mono type-caption text-muted-foreground">
                         {(post.views_count ?? 0).toLocaleString()}
                       </TableCell>
                       <TableCell>
@@ -599,17 +601,17 @@ export default function AdminPosts() {
                       ) : null}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
-                          <span className="font-semibold leading-snug">
+                          <span className="type-weight-semibold">
                             {post.title}
                           </span>
                           <PostStatusTag status={post.status} />
                         </div>
-                        <code className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                        <code className="mt-1 block break-all type-family-mono type-caption text-muted-foreground">
                           /{post.slug}
                         </code>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 type-caption text-muted-foreground">
                       {post.category ? <span>{post.category.name}</span> : null}
                       <time>
                         更新于{" "}
