@@ -360,9 +360,11 @@ export default function AdminUsers() {
                             {initials(member)}
                           </span>
                           <div className="min-w-0">
-                            <span className="type-weight-semibold">
-                              {memberName(member)}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="type-weight-semibold">
+                                {memberName(member)}
+                              </span>
+                            </div>
                             {member.principal.email ? (
                               <Text
                                 size="xs"
