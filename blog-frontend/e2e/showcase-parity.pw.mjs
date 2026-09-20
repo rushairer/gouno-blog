@@ -301,6 +301,29 @@ for (const theme of ["light", "dark"]) {
       );
     }
 
+    const showcaseAlertCard = showcase
+      .getByText("AI 运营提醒", { exact: true })
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    const productAlertCard = product
+      .getByText("AI 运营提醒", { exact: true })
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    const showcaseAlertRow = showcaseAlertCard
+      .locator('[data-slot="card-content"]')
+      .getByRole("link")
+      .first();
+    const productAlertRow = productAlertCard
+      .locator('[data-slot="card-content"]')
+      .getByRole("link")
+      .first();
+    expect(await styleFingerprint(productAlertRow)).toEqual(
+      await styleFingerprint(showcaseAlertRow),
+    );
+    expect(
+      await typographyFingerprint(productAlertRow.locator("strong").first()),
+    ).toEqual(
+      await typographyFingerprint(showcaseAlertRow.locator("strong").first()),
+    );
+
     const showcaseActions = showcaseCard
       .getByRole("row")
       .nth(1)
