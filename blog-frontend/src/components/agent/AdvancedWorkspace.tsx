@@ -21,6 +21,9 @@ import type {
   AgentRun,
   AgentSkill,
   EmbeddingProfile,
+  KnowledgeIndexedContent,
+  KnowledgeIndexStatus,
+  KnowledgeSearchResponse,
   ProviderProfile,
   ToolDefinition,
 } from "../../types/agent";
@@ -32,6 +35,7 @@ import type { ProviderFormValue } from "./ProviderForm";
 import { EmbeddingForm } from "./EmbeddingForm";
 import type { EmbeddingFormValue } from "./EmbeddingForm";
 import { ConnectorWorkspace } from "./ConnectorWorkspace";
+import { KnowledgeWorkspace } from "./KnowledgeWorkspace";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { SudoGate } from "../auth/SudoGate";
 import {
@@ -81,7 +85,10 @@ interface AdvancedWorkspaceProps {
   providers: ProviderProfile[];
   embeddingProfiles: EmbeddingProfile[];
   runs: AgentRun[];
-  indexStatus: { queued: number; failed: number; chunks: number };
+  indexStatus: KnowledgeIndexStatus;
+  indexedContent: KnowledgeIndexedContent[];
+  knowledgeSearchResult: KnowledgeSearchResponse | null;
+  searchingKnowledge: boolean;
   // Form editing states
   editingAgent: Agent | "new" | null;
   editingProvider: ProviderProfile | "new" | null;
@@ -117,6 +124,7 @@ interface AdvancedWorkspaceProps {
   onCopySkill: (skill: AgentSkill) => Promise<void>;
   onRetryIndex: () => Promise<void>;
   onRebuildIndex: () => Promise<void>;
+  onSearchKnowledge: (query: string) => Promise<void>;
   onDeleteTarget: (target: DeleteTarget) => void;
   onError: (msg: string) => void;
   onRefresh: () => Promise<void>;
@@ -135,6 +143,9 @@ export function AdvancedWorkspace({
   embeddingProfiles,
   runs,
   indexStatus,
+  indexedContent,
+  knowledgeSearchResult,
+  searchingKnowledge,
   editingAgent,
   editingProvider,
   editingEmbedding,
@@ -159,6 +170,7 @@ export function AdvancedWorkspace({
   onCopySkill,
   onRetryIndex,
   onRebuildIndex,
+  onSearchKnowledge,
   onDeleteTarget,
   onError,
   onRefresh,
@@ -920,190 +932,23 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent && !editingSkill && advancedSection === "knowledge" ? (
-        <div data-pattern="settings-composition" className="contents">
-          <SudoGate
-            title="知识库与向量模型保护"
-            description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"
-            actionLabel="解锁以管理知识库"
-          >
-            <div className="flex flex-col gap-5">
-              <TabPanelLead
-                description={
-                  locale === "zh"
-                    ? "仅索引已发布文章；Embedding Profile 负责把内容转换为可检索知识库。"
-                    : "Only published content is indexed; Embedding Profiles convert content into a searchable knowledge base."
-                }
-                actions={
-                  <>
-                    <Button
-                      size="small"
-                      variant="outline"
-                      type="button"
-                      onClick={() => void onRetryIndex()}
-                      icon={<RefreshCw />}
-                    >
-                      {locale === "zh" ? "重试失败任务" : "Retry failed"}
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outline"
-                      type="button"
-                      onClick={() => void onRebuildIndex()}
-                      icon={<RefreshCw />}
-                    >
-                      {locale === "zh" ? "全量重建" : "Rebuild all"}
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="solid"
-                      color="primary"
-                      type="button"
-                      onClick={() => onEditEmbedding("new")}
-                      icon={<Plus />}
-                    >
-                      {locale === "zh"
-                        ? "添加 Embedding 模型"
-                        : "Add embedding profile"}
-                    </Button>
-                  </>
-                }
-              />
-              <TabPanelFeedback>
-                {indexStatus.failed > 0 ? (
-                  <Alert
-                    type="warning"
-                    showIcon
-                    title={
-                      locale === "zh"
-                        ? "知识索引存在失败任务"
-                        : "Knowledge indexing has failed jobs"
-                    }
-                    description={
-                      locale === "zh"
-                        ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
-                        : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
-                    }
-                  />
-                ) : null}
-              </TabPanelFeedback>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Card padding="base">
-                  <Text size="xs" tone="muted">
-                    {locale === "zh" ? "分段" : "Chunks"}
-                  </Text>
-                  <Heading level={2}>{indexStatus.chunks}</Heading>
-                </Card>
-                <Card padding="base">
-                  <Text size="xs" tone="muted">
-                    {locale === "zh" ? "队列" : "Queued"}
-                  </Text>
-                  <Heading level={2}>{indexStatus.queued}</Heading>
-                </Card>
-                <Card padding="base">
-                  <Text size="xs" tone="muted">
-                    {locale === "zh" ? "失败" : "Failed"}
-                  </Text>
-                  <Heading level={2}>{indexStatus.failed}</Heading>
-                </Card>
-              </div>
-              {embeddingProfiles.length === 0 ? (
-                <Card padding="base">
-                  <Empty
-                    description={
-                      locale === "zh"
-                        ? "还没有嵌入配置。"
-                        : "No embedding profiles configured."
-                    }
-                  />
-                </Card>
-              ) : (
-                <Card padding="none" className="overflow-hidden">
-                  <CardContent className="divide-y p-0">
-                    {embeddingProfiles.map((profile) => {
-                      const testing = testingConnections.includes(
-                        `embedding:${profile.id}`,
-                      );
-                      return (
-                        <div
-                          key={profile.id}
-                          className="flex flex-col gap-4 p-6 xl:flex-row xl:items-center xl:justify-between"
-                        >
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <strong>{profile.name}</strong>
-                              <Tag
-                                color={profile.enabled ? "success" : "default"}
-                              >
-                                {profile.enabled
-                                  ? labels.active
-                                  : labels.paused}
-                              </Tag>
-                            </div>
-                            <Text size="xs" tone="muted">
-                              {profile.model} · {profile.dimensions} dimensions
-                            </Text>
-                            <Text size="xs" tone="muted" className="break-all">
-                              {profile.base_url} · API Key ••••{" "}
-                              {profile.api_key_last4}
-                            </Text>
-                          </div>
-                          <div className="flex min-w-max flex-nowrap items-center gap-1">
-                            <IconButton
-                              label={
-                                testing
-                                  ? locale === "zh"
-                                    ? "正在测试连接"
-                                    : "Testing connection"
-                                  : labels.test
-                              }
-                              aria-busy={testing}
-                              disabled={testing}
-                              icon={
-                                <RefreshCw
-                                  className={
-                                    testing
-                                      ? "agent-row-actions__spinner"
-                                      : undefined
-                                  }
-                                />
-                              }
-                              variant="ghost"
-                              onClick={() =>
-                                void onTestConnection(
-                                  "embedding",
-                                  profile.id,
-                                  profile.name,
-                                )
-                              }
-                            />
-                            <IconButton
-                              label={labels.edit}
-                              icon={<Edit2 />}
-                              variant="ghost"
-                              onClick={() => onEditEmbedding(profile)}
-                            />
-                            <IconButton
-                              label={labels.delete}
-                              icon={<Trash2 />}
-                              variant="ghost"
-                              color="error"
-                              onClick={() =>
-                                onDeleteTarget({
-                                  kind: "embedding",
-                                  value: profile,
-                                })
-                              }
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </SudoGate>
-        </div>
+        <KnowledgeWorkspace
+          locale={locale}
+          labels={labels}
+          embeddingProfiles={embeddingProfiles}
+          indexStatus={indexStatus}
+          indexedContent={indexedContent}
+          searchResult={knowledgeSearchResult}
+          searching={searchingKnowledge}
+          testingConnections={testingConnections}
+          onRetryIndex={onRetryIndex}
+          onRebuildIndex={onRebuildIndex}
+          onSearch={onSearchKnowledge}
+          onEditEmbedding={onEditEmbedding}
+          onTestConnection={onTestConnection}
+          onDeleteTarget={onDeleteTarget}
+          formatDateTime={formatDateTime}
+        />
       ) : null}
       <Drawer
         open={advancedSection === "providers" && editingProvider !== null}
