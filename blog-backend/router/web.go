@@ -410,6 +410,8 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.DELETE("/admin/embedding-profiles/:id", knowledgeCtrl.DeleteEmbeddingProfile)
 				aiOps.POST("/admin/embedding-profiles/:id/test", knowledgeCtrl.TestEmbeddingProfile)
 				aiOps.GET("/admin/ai-index/status", knowledgeCtrl.IndexStatus)
+				aiOps.GET("/admin/ai-index/content", knowledgeCtrl.ListIndexContent)
+				aiOps.GET("/admin/ai-index/search", knowledgeCtrl.SearchIndex)
 				aiOps.POST("/admin/ai-index/rebuild", knowledgeCtrl.RebuildIndex)
 				aiOps.POST("/admin/ai-index/retry", knowledgeCtrl.RetryIndex)
 				aiOps.PUT("/admin/ai-index/evaluation-cases", knowledgeCtrl.ReplaceIndexEvaluation)
