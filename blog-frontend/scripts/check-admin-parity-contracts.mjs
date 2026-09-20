@@ -261,11 +261,27 @@ if (
   );
 }
 
-for (const name of ["Posts.tsx", "Pages.tsx"]) {
+for (const name of ["Posts.tsx", "Pages.tsx", "Categories.tsx", "Tags.tsx", "Comments.tsx"]) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
   if (!source.includes('data-pattern="collection-composition"')) {
     failures.push(
       `${name}: reviewed collection page must expose the canonical collection-composition contract marker`,
+    );
+  }
+}
+
+const categoriesComposition = await readFile(
+  path.join(adminRoot, "Categories.tsx"),
+  "utf8",
+);
+for (const marker of [
+  'data-pattern="editor-form-composition"',
+  "flex items-center gap-2",
+  'className="min-w-0 flex-1 font-mono"',
+]) {
+  if (!categoriesComposition.includes(marker)) {
+    failures.push(
+      `Categories.tsx: reviewed Drawer editor composition drifted from Showcase: ${marker}`,
     );
   }
 }
