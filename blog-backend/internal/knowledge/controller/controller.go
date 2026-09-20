@@ -6,6 +6,8 @@ import (
 	knowledgedomain "github.com/rushairer/blog-backend/internal/knowledge/domain"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -119,6 +121,47 @@ func (ctrl *Controller) IndexStatus(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(value))
+}
+
+func (ctrl *Controller) ListIndexContent(c *gin.Context) {
+	limit := 50
+	if raw := strings.TrimSpace(c.Query("limit")); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value <= 0 {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "limit must be a positive integer"))
+			return
+		}
+		limit = value
+	}
+	items, err := ctrl.service.ListIndexedContent(c.Request.Context(), limit)
+	if err != nil {
+		controllerutil.WriteDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *Controller) SearchIndex(c *gin.Context) {
+	query := strings.TrimSpace(c.Query("q"))
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "q is required"))
+		return
+	}
+	limit := 5
+	if raw := strings.TrimSpace(c.Query("limit")); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value <= 0 {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "limit must be a positive integer"))
+			return
+		}
+		limit = value
+	}
+	items, err := ctrl.service.Search(c.Request.Context(), query, limit, 0)
+	if err != nil {
+		controllerutil.WriteDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"query": query, "results": items}))
 }
 
 func (ctrl *Controller) RebuildIndex(c *gin.Context) {
