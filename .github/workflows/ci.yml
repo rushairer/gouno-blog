@@ -167,6 +167,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Show Knowledge Prettier diff
+        if: github.event_name == 'pull_request' && github.head_ref == 'diagnostics/knowledge-prettier-20260920'
+        run: |
+          npx prettier --write \
+            src/components/agent/KnowledgeWorkspace.tsx \
+            src/pages/admin/__tests__/AISettings.test.tsx
+          git diff -- \
+            src/components/agent/KnowledgeWorkspace.tsx \
+            src/pages/admin/__tests__/AISettings.test.tsx
+
       - name: Verify Gouno UI registry release
         run: |
           node --input-type=module <<'EOF'
