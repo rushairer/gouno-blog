@@ -34,7 +34,7 @@ func TestKnowledgeControllerOwnsKnowledgeTransportOnly(t *testing.T) {
 			t.Fatalf("Knowledge controller crossed ownership boundary: %s", forbidden)
 		}
 	}
-	for _, required := range []string{"*knowledge.Service", "ListEmbeddingProfiles", "EvaluateIndex"} {
+	for _, required := range []string{"*knowledge.Service", "ListEmbeddingProfiles", "ListIndexContent", "SearchIndex", "EvaluateIndex"} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("Knowledge controller missing canonical transport marker: %s", required)
 		}
