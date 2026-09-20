@@ -13,11 +13,12 @@ async function openPair(
   fixtureId,
   productPath,
   theme,
-  { activeSudo = false } = {},
+  {
+    activeSudo = false,
+    viewport = { width: 1440, height: 900 },
+  } = {},
 ) {
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-  });
+  const context = await browser.newContext({ viewport });
   const showcase = await context.newPage();
   const product = await context.newPage();
 
@@ -68,8 +69,18 @@ for (const theme of ["light", "dark"]) {
       theme,
     );
 
-    const showcaseRow = showcase.getByRole("row").nth(1);
-    const productRow = product.getByRole("row").nth(1);
+    const showcaseCollection = showcase.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    const productCollection = product.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    await expect(showcaseCollection).toHaveCount(1);
+    await expect(productCollection).toHaveCount(1);
+    await expectStyleParity(showcaseCollection, productCollection);
+
+    const showcaseRow = showcaseCollection.getByRole("row").nth(1);
+    const productRow = productCollection.getByRole("row").nth(1);
     await expectStyleParity(showcaseRow, productRow);
     for (const selector of [
       "td:nth-child(2) span",
@@ -86,7 +97,42 @@ for (const theme of ["light", "dark"]) {
 
     expect(unknown).toEqual([]);
     await expectNoHorizontalOverflow(product);
-    await pairScreenshot(showcase, product, `support-categories-${theme}`, testInfo);
+    await pairScreenshot(
+      showcase,
+      product,
+      `support-categories-${theme}`,
+      testInfo,
+    );
+
+    await showcase
+      .getByRole("button", { name: "新建分类", exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: "新建分类", exact: true })
+      .click();
+
+    const showcaseDialog = showcase.getByRole("dialog", { name: "新建分类" });
+    const productDialog = product.getByRole("dialog", { name: "新建分类" });
+    const showcaseForm = showcaseDialog.locator(
+      '[data-pattern="editor-form-composition"]',
+    );
+    const productForm = productDialog.locator(
+      '[data-pattern="editor-form-composition"]',
+    );
+    await expect(showcaseForm).toHaveCount(1);
+    await expect(productForm).toHaveCount(1);
+    await expectStyleParity(showcaseForm, productForm);
+    await expectStyleParity(
+      showcaseDialog.getByLabel("Slug 标识"),
+      productDialog.getByLabel("Slug 标识"),
+    );
+    await pairScreenshot(
+      showcase,
+      product,
+      `support-categories-drawer-${theme}`,
+      testInfo,
+    );
+
     await context.close();
   });
 
@@ -99,6 +145,16 @@ for (const theme of ["light", "dark"]) {
       "/admin/tags",
       theme,
     );
+
+    const showcaseCollection = showcase.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    const productCollection = product.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    await expect(showcaseCollection).toHaveCount(1);
+    await expect(productCollection).toHaveCount(1);
+    await expectStyleParity(showcaseCollection, productCollection);
 
     const showcaseCard = showcase
       .locator('[data-slot="card"]')
@@ -129,8 +185,18 @@ for (const theme of ["light", "dark"]) {
       theme,
     );
 
-    const showcaseCard = showcase.getByRole("listitem").first();
-    const productCard = product.getByRole("listitem").first();
+    const showcaseCollection = showcase.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    const productCollection = product.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    await expect(showcaseCollection).toHaveCount(1);
+    await expect(productCollection).toHaveCount(1);
+    await expectStyleParity(showcaseCollection, productCollection);
+
+    const showcaseCard = showcaseCollection.getByRole("listitem").first();
+    const productCard = productCollection.getByRole("listitem").first();
     await expectStyleParity(showcaseCard, productCard);
     for (const selector of [
       ".type-body-sm.type-weight-semibold.text-primary",
@@ -276,3 +342,67 @@ for (const theme of ["light", "dark"]) {
     await context.close();
   });
 }
+for (const surface of [
+  {
+    name: "categories",
+    fixture: "blog-admin-categories",
+    path: "/admin/categories",
+    firstItem: (page) => page.getByRole("listitem").first(),
+  },
+  {
+    name: "tags",
+    fixture: "blog-admin-tags",
+    path: "/admin/tags",
+    firstItem: (page) =>
+      page
+        .getByRole("checkbox", { name: /选择标签/ })
+        .first()
+        .locator('xpath=ancestor::*[@data-slot="card"][1]'),
+  },
+  {
+    name: "comments",
+    fixture: "blog-admin-comments",
+    path: "/admin/comments",
+    firstItem: (page) => page.getByRole("listitem").first(),
+  },
+]) {
+  test(`Support ${surface.name} mobile composition matches Showcase`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      surface.fixture,
+      surface.path,
+      "light",
+      { viewport: { width: 390, height: 844 } },
+    );
+
+    const showcaseCollection = showcase.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    const productCollection = product.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    await expectStyleParity(showcaseCollection, productCollection);
+
+    const showcaseItem = surface.firstItem(showcase);
+    const productItem = surface.firstItem(product);
+    await expectStyleParity(showcaseItem, productItem);
+    await expectStyleParity(
+      showcaseItem.locator("strong").first(),
+      productItem.locator("strong").first(),
+    );
+
+    await expectNoHorizontalOverflow(showcase);
+    await expectNoHorizontalOverflow(product);
+    expect(unknown).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `support-${surface.name}-mobile-light`,
+      testInfo,
+    );
+    await context.close();
+  });
+}
+
