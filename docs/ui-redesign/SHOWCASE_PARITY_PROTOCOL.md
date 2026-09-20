@@ -21,7 +21,7 @@ For every surface family:
 
 1. Read the current canonical Showcase implementation and the current real-product implementation before changing code.
 2. Inventory visible states that materially change composition: default/loaded, loading, empty, recoverable error/feedback, selection/bulk state, detail, editor/drawer/modal, responsive behavior, theme-sensitive behavior, and privileged state when applicable.
-3. Compare composition manually. Do not start from an automated failure list and assume unreported regions are correct.
+3. Compare the design manually across composition, semantic typography roles, spacing/rhythm ownership, feedback semantics, interaction/action grammar, and responsive behavior. Do not start from an automated failure list and assume unreported regions are correct.
 4. Classify every observed difference as one of:
    - `ui-drift`: product presentation/composition has diverged from the canonical Showcase;
    - `showcase-drift`: the canonical fixture itself no longer represents the intended design language;
@@ -41,6 +41,7 @@ A verified entry must record:
 - the reviewed Blog and Gouno UI refs;
 - the exact `@gouno/ui` package baseline;
 - covered visible-state categories;
+- reviewed design dimensions: composition, typography, spacing, feedback semantics, interaction/action grammar, and responsive behavior;
 - relevant product-owned paths and canonical Showcase paths;
 - browser/parity workflow evidence and retained artifacts;
 - intentional product divergences that must not be "fixed" away.
