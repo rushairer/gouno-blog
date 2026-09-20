@@ -354,7 +354,7 @@ export function WorkflowRunDetail({
         >
           <div className="border-b px-5 py-4">
             <OperationsRegionHeading
-              title={zh ? "执行过程" : "Execution process"
+              title={zh ? "执行过程" : "Execution process"}
               description={
                 zh
                   ? "按实际执行顺序查看每一步结果；失败的批处理步骤可以从证据现场重试。"
