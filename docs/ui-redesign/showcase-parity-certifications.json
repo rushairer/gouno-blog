@@ -272,8 +272,8 @@
       ],
       "invalidation": {
         "date": "2026-09-20",
-        "reason": "Canonical Blog Admin selected-resource AI handoff icon grammar changed: 交给 AI now uses Sparkles consistently across sibling Collections; Product Tags/Comments are synchronized and paired browser/manual recertification is pending after the canonical change lands.",
-        "canonicalPullRequest": "rushairer/gouno-ui#122"
+        "reason": "Canonical Blog Admin selected-resource AI handoff icon grammar changed: 交给 AI now uses Sparkles consistently across sibling Collections; Product Tags/Comments are synchronized in the current recertification candidate and paired browser/manual recertification is pending.",
+        "canonicalPullRequest": "rushairer/gouno-ui#123"
       }
     }
   ]
