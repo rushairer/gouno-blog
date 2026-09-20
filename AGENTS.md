@@ -82,6 +82,7 @@ This document defines the **immutable architectural rules, security baselines, a
 - Prefer one shared local composition helper for Showcase-owned patterns that are not public `@gouno/ui` APIs; do not maintain multiple page-private copies of the same canonical pattern.
 - `docs/ui-redesign/showcase-parity-certifications.json` is the only authority for current Showcase parity certification status. Historical migration ledgers and hardening reports are evidence only.
 - Any change to a `verified` certification's product-owned paths, canonical Showcase paths, or consumed `@gouno/ui` baseline invalidates that certification until a fresh manual review and browser evidence are recorded. Never auto-promote certification from CI.
+- Changes that touch a `verified` certification's owned Product paths or its certification policy/evidence must go through a pull request so the strict Showcase parity workflow executes before merge. Do not direct-push parity-sensitive changes to `main` and rely on post-merge CI.
 - Continue within the user's authorized scope without pausing for confirmation after every internal implementation step.
 - Preserve uncommitted work, authentication boundaries, the Connector hold, and canonical UI integrity rules.
 
