@@ -291,6 +291,16 @@ for (const theme of ["light", "dark"]) {
       await styleFingerprint(showcaseCard),
     );
 
+    const showcaseTopRow = showcaseCard.getByRole("row").nth(1);
+    const productTopRow = productCard.getByRole("row").nth(1);
+    for (const cellIndex of [1, 2, 3]) {
+      expect(
+        await typographyFingerprint(productTopRow.locator("td").nth(cellIndex)),
+      ).toEqual(
+        await typographyFingerprint(showcaseTopRow.locator("td").nth(cellIndex)),
+      );
+    }
+
     const showcaseActions = showcaseCard
       .getByRole("row")
       .nth(1)
@@ -332,6 +342,21 @@ for (const theme of ["light", "dark"]) {
     expect(await styleFingerprint(productFilter)).toEqual(
       await styleFingerprint(showcaseFilter),
     );
+
+    const showcasePostRow = showcase.getByRole("row").nth(1);
+    const productPostRow = product.getByRole("row").nth(1);
+    for (const selector of [
+      "td:nth-child(2) span:first-child",
+      "td:nth-child(2) code",
+      "td:nth-child(4) time",
+      "td:nth-child(5)",
+    ]) {
+      expect(
+        await typographyFingerprint(productPostRow.locator(selector)),
+      ).toEqual(
+        await typographyFingerprint(showcasePostRow.locator(selector)),
+      );
+    }
 
     const showcaseCheckbox = showcase.getByRole("checkbox", {
       name: "选择当前页全部文章",
@@ -447,6 +472,21 @@ for (const theme of ["light", "dark"]) {
     expect(await styleFingerprint(productFilter)).toEqual(
       await styleFingerprint(showcaseFilter),
     );
+
+    const showcasePageRow = showcase.getByRole("row").nth(1);
+    const productPageRow = product.getByRole("row").nth(1);
+    for (const selector of [
+      "td:nth-child(2) strong",
+      "td:nth-child(3) code",
+      "td:nth-child(7) time",
+    ]) {
+      expect(
+        await typographyFingerprint(productPageRow.locator(selector)),
+      ).toEqual(
+        await typographyFingerprint(showcasePageRow.locator(selector)),
+      );
+    }
+
     expect(unknown).toEqual([]);
     await pairScreenshot(showcase, product, `pages-${theme}`, testInfo);
     await context.close();
