@@ -115,3 +115,55 @@ The old browser evidence remains useful history, but it cannot certify the chang
 2. current Product and canonical refs are compared again;
 3. paired browser evidence is generated and directly inspected;
 4. the ledger is refreshed last with the new refs and artifacts.
+
+
+## 2026-09-21 recertification — selected-resource action grammar
+
+Status: **verified again after fresh paired manual review**
+
+The invalidated Wave 2 slice has been re-certified against the actually landed canonical change:
+
+- canonical Gouno UI PR: `rushairer/gouno-ui#123`;
+- canonical reviewed ref: `8d5c9e605ceee37303e551d71de87bdfec876b2e`;
+- Product implementation ref: `d93c12a0309c9d037ee6506770200b30303c2068`;
+- `@gouno/ui` package version remains `0.4.8`; this recertification is about canonical Product composition/action grammar, not a package API release.
+
+### What the manual review actually found
+
+The original defect was broader than a single icon:
+
+1. the same selected-resource `交给 AI` action used both `Bot` and `Sparkles` across sibling Collection pages;
+2. Categories already differed between Showcase and Product;
+3. after the first icon-only paired pass, direct screenshot inspection found a second Product drift: Comments replaced the canonical selection cancel action `取消` with page-local `清除选择`.
+
+The first implementation evidence at Product head `5d931f849cfd14eeb9906888b3536dd43d04be55` was therefore **rejected for certification** even though the paired parity run passed. Its paired artifact `10608537054` remains useful defect-discovery evidence, but is not accepted as the final certification artifact.
+
+The Product was corrected again:
+
+- Tags and Comments use `Sparkles` for `交给 AI`;
+- Comments removed its page-local `cancelLabel` override and returned to the canonical default `取消`;
+- the Product action-grammar guard now checks all six resource Collections and rejects both `Bot` for the handoff action and page-local `cancelLabel` overrides;
+- the paired browser harness now enters the actual selected state for Categories, Tags and Comments, asserts a `lucide-sparkles` icon on both sides, asserts the canonical `取消` action on both sides, compares button styles and captures paired screenshots.
+
+### Final accepted rendered evidence
+
+Exact-head evidence for Product implementation `d93c12a0309c9d037ee6506770200b30303c2068`:
+
+- CI run `35522836690` — success;
+- Images run `35522836698` — success;
+- Blog Showcase Parity run `35522836688` — success;
+- UI Browser Acceptance run `35522836678` — success;
+- paired parity artifact `10608943106` (`sha256:70b6cc1eec8b28764267bc7492656ed88204be21d9bec642217fb7b6a655e6f1`);
+- browser acceptance artifact `10608758622` (`sha256:050f8ef49c1ececa08413413e03b7380c81e899dd19344fb65ee85d3cbc712f8`).
+
+The final paired selection-state screenshots were directly inspected:
+
+- Categories: Showcase and Product both render the selected Collection action bar with `Sparkles`, destructive `删除`, and canonical `取消`;
+- Tags: the same three action semantics and hierarchy align;
+- Comments: Product now matches Showcase with `Sparkles` and `取消`; the previously observed `清除选择` drift is gone.
+
+Fixture/Product cardinality still differs, so Product may show the header checkbox as selected when its single fixture row is selected while Showcase retains multiple rows. That is expected data variance and does not change the reviewed action grammar or composition.
+
+The current browser acceptance matrix also passed across the support Admin surfaces after these changes. No Foundation or generic `BulkActionBar` API change was required: the defect belonged to Blog Admin Product composition/action grammar.
+
+Wave 2 is therefore restored to `verified`. Future changes to Categories / Tags / Comments canonical or Product-owned paths must invalidate and manually re-certify this entry again.
