@@ -1,6 +1,6 @@
 # Blog Admin Core Wave 2 Manual Showcase Parity Review
 
-Status: **verified; paired browser evidence manually accepted**
+Status: **needs-manual-recertification; previous verified evidence retained as history**
 
 Date: 2026-09-20
 
@@ -94,3 +94,24 @@ The paired screenshots were inspected directly rather than inferred from green t
 The inspected evidence preserves the same page hierarchy, semantic typography, spacing rhythm, card/table geometry, action hierarchy, Drawer anatomy and responsive composition between Showcase and Product. Differences in fixture cardinality, concrete copy/data, timestamps, counts and Product shell chrome are expected Product-owned differences and were not treated as parity failures.
 
 Wave 2 is therefore `verified` in the manual-first certification ledger.
+
+
+## 2026-09-20 invalidation — selected-resource AI handoff icon grammar
+
+The previous Wave 2 certification is intentionally no longer current.
+
+A manual cross-page review found that the same selected-resource `交给 AI` action used two icon semantics:
+
+- canonical Showcase: Categories / Tags / Comments used `Bot`, while sibling Posts / Pages / Media used `Sparkles`;
+- real Blog Admin: Tags / Comments used `Bot`, while Categories / Posts / Pages / Media used `Sparkles`.
+
+This is neither data-only variance nor a legitimate Product divergence. The action meaning is the same: hand selected resources to the AI Workflow launcher. The canonical action grammar now reserves `Sparkles` for AI assistance/generation/handoff actions and `Bot` for Agent/AI entity identity or status.
+
+Product Tags and Comments are synchronized to `Sparkles`, and the existing action-grammar CI guard now checks all six sibling resource Collections.
+
+The old browser evidence remains useful history, but it cannot certify the changed action grammar. This document and the ledger therefore remain `needs-manual-recertification` until:
+
+1. the paired canonical Gouno UI change lands;
+2. current Product and canonical refs are compared again;
+3. paired browser evidence is generated and directly inspected;
+4. the ledger is refreshed last with the new refs and artifacts.
