@@ -15,12 +15,18 @@ const canonicalSettings = await readCanonical(
 const canonicalLead = await readCanonical(
   "showcase/components/tab-panel-lead.tsx",
 );
+const canonicalEditors = await readCanonical(
+  "showcase/demos/products/blog-admin/ai/settings/editors.tsx",
+);
 const canonicalGovernance = await readCanonical("docs/product-interface-governance.md");
 
 const sharedLead = await readBlog(
   "src/components/patterns/TabPanelLead.tsx",
 );
 const workspace = await readBlog("src/components/agent/AdvancedWorkspace.tsx");
+const editorPatterns = await readBlog(
+  "src/components/agent/AISettingsEditorPatterns.tsx",
+);
 const connectorWorkspace = await readBlog(
   "src/components/agent/ConnectorWorkspace.tsx",
 );
@@ -127,6 +133,43 @@ if (!canonicalSettings.includes("window.scrollTo({ top: 0")) {
 }
 if (!workspace.includes("window.scrollTo({ top: 0")) {
   failures.push("Blog AI Settings must reset scroll when entering a Dedicated Editor");
+}
+
+for (const marker of [
+  "DedicatedEditorLayout",
+  "DedicatedEditorSection",
+  "DedicatedEditorActions",
+]) {
+  if (!canonicalEditors.includes(marker)) {
+    failures.push(`Canonical AI Settings editor grammar changed: missing ${marker}`);
+  }
+  for (const [index, label] of ["AgentForm", "SkillForm"].entries()) {
+    requireBlog(marker, forms[index], `${label} Dedicated Editor grammar`);
+  }
+}
+if (!canonicalEditors.includes('data-pattern="editor-form-composition"')) {
+  failures.push("Canonical AI Settings no longer exposes editor-form-composition");
+}
+requireBlog(
+  'data-pattern="editor-form-section"',
+  editorPatterns,
+  "contextual editor section grammar",
+);
+requireBlog(
+  'variant="subsection"',
+  editorPatterns,
+  "contextual editor header typography",
+);
+for (const [text, label] of [
+  [forms[2], "ProviderForm"],
+  [forms[3], "EmbeddingForm"],
+  [connectorWorkspace, "ConnectorWorkspace"],
+]) {
+  requireBlog(
+    "grid gap-5 xl:grid-cols-2",
+    text,
+    `${label} contextual two-column layout`,
+  );
 }
 
 for (const [index, path] of [
