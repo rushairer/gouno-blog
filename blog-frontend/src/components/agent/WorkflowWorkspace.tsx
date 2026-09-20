@@ -362,9 +362,9 @@ function PanelHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <Heading level={3} variant="label">{title}</Heading>
         {description ? (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          <Text size="sm" tone="muted" className="mt-1">{description}</Text>
         ) : null}
       </div>
       {actions ? <div className="shrink-0">{actions}</div> : null}
@@ -1250,12 +1250,12 @@ export function WorkflowWorkspace({
                       <ol className="divide-y">
                         {workflow.steps.map((step, index) => (
                           <li key={step.id} className="flex gap-4 px-6 py-4">
-                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full border type-caption type-weight-semibold">
                               {index + 1}
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <strong className="text-sm">
+                                <strong className="type-body-sm type-weight-semibold">
                                   {step.name || step.id}
                                 </strong>
                                 <Tag>{step.type}</Tag>
@@ -1291,12 +1291,12 @@ export function WorkflowWorkspace({
                               : "Defines what the Workflow can discover and which resources may become run targets."
                           }
                         />
-                        <dl className="mt-4 space-y-4 text-sm">
+                        <dl className="mt-4 space-y-4 type-body-sm type-weight-semibold">
                           <div>
-                            <dt className="text-xs text-muted-foreground">
+                            <dt className="type-caption text-muted-foreground">
                               Scope
                             </dt>
-                            <dd className="mt-1 font-medium">
+                            <dd className="mt-1 type-body type-weight-medium">
                               {workflow.scope_policy?.mode === "strict"
                                 ? locale === "zh"
                                   ? "严格限制目标资源"
@@ -1307,10 +1307,10 @@ export function WorkflowWorkspace({
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">
+                            <dt className="type-caption text-muted-foreground">
                               {locale === "zh" ? "发现工具" : "Discovery tools"}
                             </dt>
-                            <dd className="mt-1 font-medium">
+                            <dd className="mt-1 type-body type-weight-medium">
                               {workflow.scope_policy?.discovery_tools?.length
                                 ? workflow.scope_policy.discovery_tools.join(
                                     " · ",
@@ -1321,12 +1321,12 @@ export function WorkflowWorkspace({
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">
+                            <dt className="type-caption text-muted-foreground">
                               {locale === "zh"
                                 ? "空结果策略"
                                 : "Empty result policy"}
                             </dt>
-                            <dd className="mt-1 font-medium">
+                            <dd className="mt-1 type-body type-weight-medium">
                               {workflow.resource_query_empty_policy === "fail"
                                 ? locale === "zh"
                                   ? "视为运行失败"
@@ -1378,7 +1378,7 @@ export function WorkflowWorkspace({
                               <Text size="xs" tone="muted">
                                 {labels.input}
                               </Text>
-                              <strong className="mt-1 block text-sm">
+                              <strong className="mt-1 block type-body-sm type-weight-semibold">
                                 {locale === "zh"
                                   ? "无需手动填写"
                                   : "No manual input required"}
@@ -1455,7 +1455,7 @@ export function WorkflowWorkspace({
                               aria-hidden="true"
                             />
                             <span className="min-w-0">
-                              <strong className="block text-sm">
+                              <strong className="block type-body-sm type-weight-semibold">
                                 {locale === "zh"
                                   ? (activeRun.dryRun ? "试运行" : "Workflow") +
                                     " 正在执行"
