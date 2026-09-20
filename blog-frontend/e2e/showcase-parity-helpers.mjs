@@ -34,6 +34,28 @@ export async function expectStyleParity(showcaseLocator, productLocator) {
   );
 }
 
+export async function typographyFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      color: style.color,
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+      fontWeight: style.fontWeight,
+      lineHeight: style.lineHeight,
+      letterSpacing: style.letterSpacing,
+    };
+  });
+}
+
+export async function expectTypographyParity(showcaseLocator, productLocator) {
+  expect(await typographyFingerprint(productLocator)).toEqual(
+    await typographyFingerprint(showcaseLocator),
+  );
+}
+
+
 export async function expectGeometryParity(
   showcaseLocator,
   productLocator,
