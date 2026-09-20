@@ -56,7 +56,9 @@ describe("ConnectorWorkspace", () => {
     );
 
     expect(
-      await screen.findByText("管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。"),
+      await screen.findByText(
+        "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText("还没有连接器 Profile。")).toBeInTheDocument();
     expect(screen.getByText("Outbox 为空。")).toBeInTheDocument();
