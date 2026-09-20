@@ -203,6 +203,7 @@
       "gounoUiPackageVersion": "0.4.8",
       "stateCoverage": [
         "default",
+        "feedback",
         "drawer",
         "selection-bulk",
         "responsive"
