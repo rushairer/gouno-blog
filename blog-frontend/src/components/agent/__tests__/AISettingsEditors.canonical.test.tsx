@@ -95,7 +95,7 @@ describe("AI Settings canonical editors", () => {
     );
 
     expect(screen.getByText("能力定义")).toBeInTheDocument();
-    expect(screen.getByText("执行边界")).toBeInTheDocument();
+    expect(screen.getByText("执行与发布边界")).toBeInTheDocument();
     expect(screen.getByText("Max steps")).toBeInTheDocument();
     expect(screen.getByText("默认日运行上限")).toBeInTheDocument();
     expect(screen.getByText("Max input tokens")).toBeInTheDocument();
