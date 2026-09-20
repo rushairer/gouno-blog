@@ -148,6 +148,24 @@ async function openAiPair(
   return { context, showcase, product, unknown, unexpectedWrites };
 }
 
+async function expectPatternCollectionParity({
+  showcase,
+  product,
+  pattern,
+}) {
+  const showcaseItems = showcase.locator(`[data-pattern="${pattern}"]`);
+  const productItems = product.locator(`[data-pattern="${pattern}"]`);
+  const showcaseCount = await showcaseItems.count();
+  const productCount = await productItems.count();
+  expect(productCount).toBe(showcaseCount);
+  expect(productCount).toBeGreaterThan(0);
+  for (let index = 0; index < productCount; index += 1) {
+    expect(await styleFingerprint(productItems.nth(index))).toEqual(
+      await styleFingerprint(showcaseItems.nth(index)),
+    );
+  }
+}
+
 async function expectNoHorizontalOverflow(page) {
   const overflow = await page.evaluate(
     () =>
@@ -522,6 +540,99 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
       `ai-settings-${tab.replaceAll(" ", "-")}`,
       testInfo,
     );
+  }
+
+  for (const { tab, createLabel, backLabel } of [
+    {
+      tab: "Agents",
+      createLabel: "创建 Agent",
+      backLabel: "返回 Agent 列表",
+    },
+    {
+      tab: "Skills",
+      createLabel: "创建 Skill",
+      backLabel: "返回 Skill 列表",
+    },
+  ]) {
+    await showcase.getByRole("tab", { name: tab, exact: true }).click();
+    await product.getByRole("tab", { name: tab, exact: true }).click();
+    await showcase
+      .getByRole("button", { name: createLabel, exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: createLabel, exact: true })
+      .click();
+
+    const showcaseLayout = showcase.locator(
+      '[data-pattern="dedicated-editor-layout"]',
+    );
+    const productLayout = product.locator(
+      '[data-pattern="dedicated-editor-layout"]',
+    );
+    expect(await styleFingerprint(productLayout)).toEqual(
+      await styleFingerprint(showcaseLayout),
+    );
+    await expectPatternCollectionParity({
+      showcase,
+      product,
+      pattern: "dedicated-editor-section",
+    });
+
+    await pairScreenshot(
+      showcase,
+      product,
+      `ai-settings-${tab.toLowerCase()}-dedicated-editor`,
+      testInfo,
+    );
+
+    await showcase
+      .getByRole("button", { name: backLabel, exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: backLabel, exact: true })
+      .click();
+  }
+
+  for (const { tab, createLabel } of [
+    { tab: "模型连接", createLabel: "添加模型连接" },
+    { tab: "知识库", createLabel: "添加 Embedding 模型" },
+    { tab: "Sandbox 连接器", createLabel: "添加 Connector Profile" },
+  ]) {
+    await showcase.getByRole("tab", { name: tab, exact: true }).click();
+    await product.getByRole("tab", { name: tab, exact: true }).click();
+    await showcase
+      .getByRole("button", { name: createLabel, exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: createLabel, exact: true })
+      .click();
+
+    const showcaseDialog = showcase.getByRole("dialog", {
+      name: createLabel,
+    });
+    const productDialog = product.getByRole("dialog", {
+      name: createLabel,
+    });
+    expect(await styleFingerprint(productDialog)).toEqual(
+      await styleFingerprint(showcaseDialog),
+    );
+    await expectPatternCollectionParity({
+      showcase: showcaseDialog,
+      product: productDialog,
+      pattern: "editor-form-section",
+    });
+
+    await pairScreenshot(
+      showcase,
+      product,
+      `ai-settings-${tab.replaceAll(" ", "-")}-drawer`,
+      testInfo,
+    );
+
+    await showcase.keyboard.press("Escape");
+    await product.keyboard.press("Escape");
+    await expect(showcaseDialog).toBeHidden();
+    await expect(productDialog).toBeHidden();
   }
 
   await expectNoHorizontalOverflow(showcase);
