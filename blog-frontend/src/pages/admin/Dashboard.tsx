@@ -340,7 +340,7 @@ export default function Dashboard() {
                             className="w-full rounded-t-sm bg-primary/65 transition-opacity hover:bg-primary"
                             style={{ height: `${height}%` }}
                           />
-                          <span className="hidden truncate text-[10px] text-muted-foreground sm:block">
+                          <span className="hidden truncate type-caption text-muted-foreground sm:block">
                             {item.date.slice(-2)}
                           </span>
                         </div>
@@ -354,7 +354,7 @@ export default function Dashboard() {
             <Card padding="none" className="overflow-hidden">
               <CardHeader className="border-b p-6">
                 <div className="flex flex-col gap-1">
-                  <CardTitle >内容治理与指标</CardTitle>
+                  <CardTitle>内容治理与指标</CardTitle>
                   <Text size="xs" tone="muted">
                     关键待办事项与健康指标
                   </Text>
@@ -482,7 +482,7 @@ export default function Dashboard() {
                               ? `失败原因：${alert.body}`
                               : "运行未完成，请打开记录查看失败步骤。"}
                           </Text>
-                          <time className="block text-[11px] text-muted-foreground">
+                          <time className="mt-1 block type-caption text-muted-foreground">
                             {new Date(alert.created_at).toLocaleString("zh-CN")}
                           </time>
                         </div>
@@ -501,7 +501,7 @@ export default function Dashboard() {
             <CardHeader className="border-b p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-col gap-1">
-                  <CardTitle >表现最佳文章</CardTitle>
+                  <CardTitle>表现最佳文章</CardTitle>
                   <Text size="xs" tone="muted">
                     按全站阅读量与点赞数排序的热门内容
                   </Text>
