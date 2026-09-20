@@ -486,9 +486,7 @@ export default function AdminNotifications() {
             }
             action={
               hasFilters ? (
-                <Button onClick={clearFilters}>
-                  清除筛选
-                </Button>
+                <Button onClick={clearFilters}>清除筛选</Button>
               ) : undefined
             }
           />
