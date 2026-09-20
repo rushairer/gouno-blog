@@ -214,7 +214,11 @@ export default function AdminComments() {
           onCancel={() => setSelected([])}
           cancelLabel="清除选择"
         >
-          <Button size="small" icon={<Sparkles />} onClick={() => setAIOpen(true)}>
+          <Button
+            size="small"
+            icon={<Sparkles />}
+            onClick={() => setAIOpen(true)}
+          >
             交给 AI
           </Button>
           <Button
