@@ -477,7 +477,11 @@ export default function Dashboard() {
                                 .trim()}
                             </span>
                           </div>
-                          <Text size="xs" tone="muted" className="mt-1 line-clamp-1">
+                          <Text
+                            size="xs"
+                            tone="muted"
+                            className="mt-1 line-clamp-1"
+                          >
                             {alert.body
                               ? `失败原因：${alert.body}`
                               : "运行未完成，请打开记录查看失败步骤。"}
