@@ -333,6 +333,73 @@ for (const surface of [
     name: "categories",
     fixture: "blog-admin-categories",
     path: "/admin/categories",
+    selectFirst: async (page) => {
+      await page.getByRole("row").nth(1).getByRole("checkbox").check();
+    },
+  },
+  {
+    name: "tags",
+    fixture: "blog-admin-tags",
+    path: "/admin/tags",
+    selectFirst: async (page) => {
+      await page.getByRole("checkbox", { name: /选择标签/ }).first().check();
+    },
+  },
+  {
+    name: "comments",
+    fixture: "blog-admin-comments",
+    path: "/admin/comments",
+    selectFirst: async (page) => {
+      await page.getByRole("listitem").first().getByRole("checkbox").check();
+    },
+  },
+]) {
+  test(`Support ${surface.name} selected-resource AI handoff matches Showcase`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      surface.fixture,
+      surface.path,
+      "light",
+    );
+
+    await surface.selectFirst(showcase);
+    await surface.selectFirst(product);
+
+    const showcaseToolbar = showcase.getByRole("toolbar", { name: "批量操作" });
+    const productToolbar = product.getByRole("toolbar", { name: "批量操作" });
+    await expect(showcaseToolbar).toBeVisible();
+    await expect(productToolbar).toBeVisible();
+
+    const showcaseAi = showcaseToolbar.getByRole("button", {
+      name: "交给 AI",
+      exact: true,
+    });
+    const productAi = productToolbar.getByRole("button", {
+      name: "交给 AI",
+      exact: true,
+    });
+    await expect(showcaseAi.locator("svg.lucide-sparkles")).toHaveCount(1);
+    await expect(productAi.locator("svg.lucide-sparkles")).toHaveCount(1);
+    await expectStyleParity(showcaseAi, productAi);
+
+    expect(unknown).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `support-${surface.name}-ai-handoff-selected-light`,
+      testInfo,
+    );
+    await context.close();
+  });
+}
+
+for (const surface of [
+  {
+    name: "categories",
+    fixture: "blog-admin-categories",
+    path: "/admin/categories",
     firstItem: (page) => page.getByRole("listitem").first(),
   },
   {
