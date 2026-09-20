@@ -5,6 +5,9 @@ import type {
   AgentSkill,
   AgentToolCall,
   EmbeddingProfile,
+  KnowledgeIndexedContent,
+  KnowledgeIndexStatus,
+  KnowledgeSearchResponse,
   ProviderProfile,
   ToolDefinition,
   WorkflowInteractionTask,
@@ -156,16 +159,20 @@ export const agentApi = {
         );
   },
 
-  async getIndexStatus(): Promise<{
-    queued: number;
-    failed: number;
-    chunks: number;
-  }> {
-    return apiClient.get<{
-      queued: number;
-      failed: number;
-      chunks: number;
-    }>("/api/admin/ai-index/status");
+  async getIndexStatus(): Promise<KnowledgeIndexStatus> {
+    return apiClient.get<KnowledgeIndexStatus>("/api/admin/ai-index/status");
+  },
+
+  async getIndexContent(limit = 50): Promise<KnowledgeIndexedContent[]> {
+    return apiClient.get<KnowledgeIndexedContent[]>("/api/admin/ai-index/content", {
+      params: { limit },
+    });
+  },
+
+  async searchIndex(query: string, limit = 5): Promise<KnowledgeSearchResponse> {
+    return apiClient.get<KnowledgeSearchResponse>("/api/admin/ai-index/search", {
+      params: { q: query, limit },
+    });
   },
 
   async getAgents(): Promise<Agent[]> {
