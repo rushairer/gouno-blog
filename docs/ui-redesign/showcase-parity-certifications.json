@@ -192,7 +192,7 @@
     {
       "id": "blog-admin-core-wave2",
       "scope": "Blog Admin Categories + Tags + Comments",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-20",
       "manualReview": "docs/ui-redesign/blog-admin-core-wave2-manual-parity-review.md",
@@ -269,7 +269,12 @@
         "Tags retains real rename/merge/delete API state and AI workflow launching.",
         "Comments retains URL-backed filters, real moderation/delete operations, real errors and Product notifications.",
         "Concrete data, counts, timestamps and list lengths may differ from Fixture data while the reviewed composition remains canonical."
-      ]
+      ],
+      "invalidation": {
+        "date": "2026-09-20",
+        "reason": "Canonical Blog Admin selected-resource AI handoff icon grammar changed: 交给 AI now uses Sparkles consistently across sibling Collections; Product Tags/Comments are synchronized and paired browser/manual recertification is pending after the canonical change lands.",
+        "canonicalPullRequest": "rushairer/gouno-ui#122"
+      }
     }
   ]
 }
