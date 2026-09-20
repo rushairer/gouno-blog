@@ -58,6 +58,16 @@ for (const fileName of aiHandoffCollections) {
     continue;
   }
 
+  const bulkActionSource = collection.slice(
+    collection.lastIndexOf("<BulkActionBar", labelIndex),
+    buttonStart,
+  );
+  forbidText(
+    bulkActionSource,
+    "cancelLabel=",
+    `${fileName}: sibling resource Collections must keep the canonical default selection cancel label`,
+  );
+
   const buttonSource = collection.slice(buttonStart, buttonEnd + "</Button>".length);
   requireText(
     buttonSource,
