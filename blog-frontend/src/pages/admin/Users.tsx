@@ -360,9 +360,15 @@ export default function AdminUsers() {
                             {initials(member)}
                           </span>
                           <div className="min-w-0">
-                            <span className="type-weight-semibold">{memberName(member)}</span>
+                            <span className="type-weight-semibold">
+                              {memberName(member)}
+                            </span>
                             {member.principal.email ? (
-                              <Text size="xs" tone="muted" className="break-all">
+                              <Text
+                                size="xs"
+                                tone="muted"
+                                className="break-all"
+                              >
                                 {member.principal.email}
                               </Text>
                             ) : null}
@@ -435,7 +441,11 @@ export default function AdminUsers() {
                           <MembershipTag status={member.membership_status} />
                         </div>
                         {member.principal.email ? (
-                          <Text size="xs" tone="muted" className="mt-1 break-all">
+                          <Text
+                            size="xs"
+                            tone="muted"
+                            className="mt-1 break-all"
+                          >
                             {member.principal.email}
                           </Text>
                         ) : null}
