@@ -396,4 +396,50 @@ export const suggestions = [
   },
 ];
 
-export const indexStatus = { queued: 7, failed: 2, chunks: 12345 };
+export const indexStatus = {
+  indexed_posts: 128,
+  queued: 7,
+  failed: 2,
+  chunks: 12345,
+  retrieval_p95_ms_24h: 112,
+};
+
+export const indexedKnowledgeContent = [
+  {
+    post_id: 201,
+    title: "OAuth 2.1 and PKCE",
+    slug: "oauth-pkce-browser-security",
+    chunks: 24,
+    status: "ready",
+    last_indexed_at: now,
+  },
+  {
+    post_id: 198,
+    title: "BFF business sessions",
+    slug: "bff-business-session",
+    chunks: 18,
+    status: "ready",
+    last_indexed_at: now,
+  },
+];
+
+export const knowledgeSearchResponse = {
+  query: "Why is PKCE important?",
+  latency_ms: 48,
+  results: [
+    {
+      citation_id: "kb_fixture",
+      chunk_id: 901,
+      post_id: 201,
+      title: "OAuth 2.1 and PKCE",
+      slug: "oauth-pkce-browser-security",
+      snippet:
+        "The client keeps the high-entropy code_verifier private and sends only its derived code_challenge during authorization.",
+      start_offset: 0,
+      end_offset: 121,
+      lexical_score: 0.78,
+      semantic_score: 0.94,
+      score: 0.88,
+    },
+  ],
+};
