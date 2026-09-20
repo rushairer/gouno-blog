@@ -506,10 +506,13 @@ func (s *Service) Status(ctx context.Context) (map[string]any, error) {
 		FROM ai_content_index_jobs`).Scan(&queued, &failed, &oldest); err != nil {
 		return nil, err
 	}
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_content_chunks`).Scan(&chunks); err != nil {
-		return nil, err
-	}
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(DISTINCT post_id) FROM ai_content_chunks`).Scan(&indexedPosts); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*), COUNT(DISTINCT post_id)
+		FROM ai_content_chunks
+		WHERE embedding_profile_id = COALESCE((
+			SELECT id FROM ai_embedding_profiles
+			WHERE enabled=true AND deleted_at IS NULL
+			ORDER BY id LIMIT 1
+		), -1)`).Scan(&chunks, &indexedPosts); err != nil {
 		return nil, err
 	}
 	var lag any
