@@ -109,10 +109,11 @@ describe("AIOperations", () => {
   it("loads only operational dependencies and exposes four operational tabs", async () => {
     renderConsole();
     expect(
-      await screen.findByRole("heading", {
-        name: "What needs attention today",
-      }),
+      await screen.findByText(/Handle failed and human-blocked runs first/),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "What needs attention today" }),
+    ).not.toBeInTheDocument();
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(12));
 
     expect(screen.getByRole("tab", { name: "Overview" })).toBeInTheDocument();
