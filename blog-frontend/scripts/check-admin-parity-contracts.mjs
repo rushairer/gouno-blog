@@ -334,6 +334,91 @@ for (const [name, contract] of reviewedTypographyContracts) {
   }
 }
 
+
+for (const name of ["Categories.tsx", "Tags.tsx", "Comments.tsx"]) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  if (!source.includes('data-pattern="collection-composition"')) {
+    failures.push(
+      `${name}: Wave 2 reviewed collection page must expose the canonical collection-composition contract marker`,
+    );
+  }
+}
+
+const categoriesSource = await readFile(
+  path.join(adminRoot, "Categories.tsx"),
+  "utf8",
+);
+for (const marker of [
+  'data-pattern="editor-form-composition"',
+  "flex items-center gap-2",
+  'className="min-w-0 flex-1 font-mono"',
+]) {
+  if (!categoriesSource.includes(marker)) {
+    failures.push(
+      `Categories.tsx: reviewed Drawer editor composition drifted from Showcase: ${marker}`,
+    );
+  }
+}
+
+const wave2ReviewedTypographyContracts = new Map([
+  [
+    "Categories.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold",
+        "type-caption type-leading-relaxed",
+        "type-family-mono type-caption",
+      ],
+      forbidden: [
+        "text-sm font-semibold",
+        "font-mono text-xs",
+        "text-xs leading-relaxed",
+        "p-3 text-xs",
+      ],
+    },
+  ],
+  [
+    "Tags.tsx",
+    {
+      required: ["type-body-sm type-weight-semibold"],
+      forbidden: ["text-sm font-semibold"],
+    },
+  ],
+  [
+    "Comments.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold",
+        "type-family-mono type-caption",
+        "type-body-sm type-leading-relaxed",
+      ],
+      forbidden: [
+        "text-sm font-semibold",
+        "font-mono text-xs",
+        "text-sm leading-relaxed",
+      ],
+    },
+  ],
+]);
+
+for (const [name, contract] of wave2ReviewedTypographyContracts) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  for (const marker of contract.required) {
+    if (!source.includes(marker)) {
+      failures.push(
+        `${name}: Wave 2 reviewed Showcase typography contract is missing ${marker}`,
+      );
+    }
+  }
+  for (const marker of contract.forbidden) {
+    if (source.includes(marker)) {
+      failures.push(
+        `${name}: Wave 2 retired raw typography drift returned: ${marker}`,
+      );
+    }
+  }
+}
+
 for (const name of await readdir(adminRoot)) {
   if (!name.endsWith(".tsx")) continue;
   const source = await readFile(path.join(adminRoot, name), "utf8");
