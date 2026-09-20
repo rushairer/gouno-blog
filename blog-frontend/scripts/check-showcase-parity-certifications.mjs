@@ -27,14 +27,25 @@ function fail(message) {
 
 function git(cwd, args) {
   try {
-    return execFileSync("git", args, {
-      cwd,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
+    return {
+      ok: true,
+      output: execFileSync("git", args, {
+        cwd,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim(),
+    };
   } catch {
-    return "";
+    return { ok: false, output: "" };
   }
+}
+
+function requireHistoryRef(cwd, ref, label) {
+  const result = git(cwd, ["rev-parse", "--verify", `${ref}^{commit}`]);
+  if (!result.ok && process.env.PARITY_STRICT_HISTORY === "1") {
+    fail(`${label}: reviewed ref ${ref} is unavailable; certification freshness cannot be proven.`);
+  }
+  return result.ok;
 }
 
 function pathTouches(changed, prefixes) {
@@ -115,19 +126,23 @@ for (const entry of entries) {
       fail(`${entry.id}: manual review document cannot be read: ${entry.manualReview}`);
     }
 
-    const productChanged = git(repoRoot, [
-      "diff",
-      "--name-only",
-      `${entry.reviewedRefs.blog}..HEAD`,
-      "--",
-      ...(entry.ownedPaths ?? []),
-    ])
-      .split("\n")
-      .filter(Boolean);
-    if (productChanged.length) {
-      fail(
-        `${entry.id}: certification is stale because reviewed product paths changed after ${entry.reviewedRefs.blog.slice(0, 12)}: ${productChanged.join(", ")}`,
-      );
+    if (requireHistoryRef(repoRoot, entry.reviewedRefs.blog, `${entry.id} Blog history`)) {
+      const productDiff = git(repoRoot, [
+        "diff",
+        "--name-only",
+        `${entry.reviewedRefs.blog}..HEAD`,
+        "--",
+        ...(entry.ownedPaths ?? []),
+      ]);
+      if (!productDiff.ok && process.env.PARITY_STRICT_HISTORY === "1") {
+        fail(`${entry.id}: unable to compare reviewed Blog paths against HEAD.`);
+      }
+      const productChanged = productDiff.output.split("\n").filter(Boolean);
+      if (productChanged.length) {
+        fail(
+          `${entry.id}: certification is stale because reviewed product paths changed after ${entry.reviewedRefs.blog.slice(0, 12)}: ${productChanged.join(", ")}`,
+        );
+      }
     }
 
     const packageJson = JSON.parse(
@@ -142,16 +157,22 @@ for (const entry of entries) {
     const upstreamRoot = process.env.GOUNO_UI_CANONICAL_ROOT
       ? resolve(frontendRoot, process.env.GOUNO_UI_CANONICAL_ROOT)
       : "";
-    if (upstreamRoot) {
-      const upstreamChanged = git(upstreamRoot, [
+    if (upstreamRoot && requireHistoryRef(
+      upstreamRoot,
+      entry.reviewedRefs.gounoUi,
+      `${entry.id} Gouno UI history`,
+    )) {
+      const upstreamDiff = git(upstreamRoot, [
         "diff",
         "--name-only",
         `${entry.reviewedRefs.gounoUi}..HEAD`,
         "--",
         ...(entry.canonicalPaths ?? []),
-      ])
-        .split("\n")
-        .filter(Boolean);
+      ]);
+      if (!upstreamDiff.ok && process.env.PARITY_STRICT_HISTORY === "1") {
+        fail(`${entry.id}: unable to compare canonical Showcase paths against HEAD.`);
+      }
+      const upstreamChanged = upstreamDiff.output.split("\n").filter(Boolean);
       if (upstreamChanged.length) {
         fail(
           `${entry.id}: certification is stale because canonical Showcase paths changed after ${entry.reviewedRefs.gounoUi.slice(0, 12)}: ${upstreamChanged.join(", ")}`,
@@ -177,12 +198,14 @@ for (const legacyDoc of [
 
 const baseSha = process.env.PARITY_BASE_SHA?.trim();
 if (baseSha) {
-  const changed = git(repoRoot, ["diff", "--name-only", `${baseSha}...HEAD`])
-    .split("\n")
-    .filter(Boolean);
-  const baseLedgerText = git(repoRoot, ["show", `${baseSha}:${ledgerRel}`]);
-  if (baseLedgerText) {
-    const baseLedger = JSON.parse(baseLedgerText);
+  const changedResult = git(repoRoot, ["diff", "--name-only", `${baseSha}...HEAD`]);
+  if (!changedResult.ok && process.env.PARITY_STRICT_HISTORY === "1") {
+    fail(`PR base ${baseSha}: unable to calculate certification-sensitive changes.`);
+  }
+  const changed = changedResult.output.split("\n").filter(Boolean);
+  const baseLedgerResult = git(repoRoot, ["show", `${baseSha}:${ledgerRel}`]);
+  if (baseLedgerResult.ok && baseLedgerResult.output) {
+    const baseLedger = JSON.parse(baseLedgerResult.output);
     const baseById = new Map(
       (baseLedger.certifications ?? []).map((entry) => [entry.id, entry]),
     );
