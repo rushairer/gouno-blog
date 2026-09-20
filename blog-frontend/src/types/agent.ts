@@ -51,6 +51,44 @@ export interface EmbeddingProfile {
   updated_at: string;
 }
 
+export interface KnowledgeIndexStatus {
+  indexed_posts: number;
+  queued: number;
+  failed: number;
+  chunks: number;
+  oldest_job_age_ms?: number | null;
+  retrieval_p95_ms_24h?: number | null;
+}
+
+export interface KnowledgeIndexedContent {
+  post_id: number;
+  title: string;
+  slug: string;
+  chunks: number;
+  status: "ready" | "pending";
+  last_indexed_at?: string;
+}
+
+export interface KnowledgeSearchResult {
+  citation_id: string;
+  chunk_id: number;
+  post_id: number;
+  title: string;
+  slug: string;
+  snippet: string;
+  start_offset: number;
+  end_offset: number;
+  lexical_score: number;
+  semantic_score: number;
+  score: number;
+}
+
+export interface KnowledgeSearchResponse {
+  query: string;
+  latency_ms: number;
+  results: KnowledgeSearchResult[];
+}
+
 export interface AgentCitation {
   citation_id: string;
   post_id?: number;
