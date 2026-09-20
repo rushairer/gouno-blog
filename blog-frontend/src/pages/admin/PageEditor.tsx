@@ -133,7 +133,7 @@ function FieldActionHeader({
 }) {
   return (
     <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
-      <div className="text-sm font-medium">
+      <div className="type-body-sm type-weight-medium">
         {label}
         {required ? (
           <span aria-hidden="true" className="text-destructive">
@@ -580,7 +580,7 @@ export default function PageEditor() {
         返回单页列表
       </Button>
       <div
-        className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground"
+        className="flex min-w-0 flex-1 items-center gap-2 type-body-sm text-muted-foreground"
         role="status"
         aria-live="polite"
       >
@@ -685,7 +685,7 @@ export default function PageEditor() {
   const inspector = (
     <fieldset disabled={isReadOnly} className="min-w-0 border-0 p-0">
       <div className="min-h-9 border-b pb-3">
-        <Text className="font-semibold">属性</Text>
+        <Text weight="semibold">属性</Text>
         <Text size="xs" tone="muted" className="mt-0.5 block">
           发布、页面配置与 SEO。
         </Text>
@@ -933,6 +933,7 @@ export default function PageEditor() {
     <div className="flex flex-col gap-6">
       {error ? <Alert type="error" showIcon title={error} /> : null}
       <DocumentEditorShell
+        data-pattern="dedicated-workspace-editor"
         aria-label="单页编辑器"
         header={commandBar}
         inspector={inspector}
@@ -1040,7 +1041,7 @@ export default function PageEditor() {
 
           <div>
             <div className="mb-2">
-              <Text className="font-medium">正文</Text>
+              <Text weight="medium">正文</Text>
               <Text size="xs" tone="muted" className="mt-1 block">
                 Markdown 编辑、分屏与预览共用同一编辑器。
               </Text>

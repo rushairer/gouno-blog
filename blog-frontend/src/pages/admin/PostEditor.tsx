@@ -148,7 +148,7 @@ function FieldActionHeader({
 }) {
   return (
     <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
-      <div className="text-sm font-medium">
+      <div className="type-body-sm type-weight-medium">
         {label}
         {required ? (
           <span aria-hidden="true" className="text-destructive">
@@ -845,7 +845,7 @@ export default function PostEditor() {
         返回文章列表
       </Button>
       <div
-        className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground"
+        className="flex min-w-0 flex-1 items-center gap-2 type-body-sm text-muted-foreground"
         role="status"
         aria-live="polite"
       >
@@ -931,7 +931,7 @@ export default function PostEditor() {
                     <ChoiceButton
                       type="button"
                       aria-label={`跳转到 ${item.text}`}
-                      className="w-full min-w-0 overflow-hidden rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&>span]:min-w-0 [&>span]:w-full"
+                      className="w-full min-w-0 overflow-hidden rounded-md px-2 py-1.5 text-left type-body-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&>span]:min-w-0 [&>span]:w-full"
                       style={{
                         paddingLeft: `${8 + Math.max(0, item.level - 2) * 12}px`,
                       }}
@@ -965,10 +965,10 @@ export default function PostEditor() {
               >
                 <span className="flex min-w-0 w-full flex-col gap-1">
                   <span className="flex w-full items-baseline justify-between gap-2">
-                    <span className="truncate font-medium text-foreground">
+                    <span className="truncate type-weight-medium text-foreground">
                       {version.title || "无标题草稿"}
                     </span>
-                    <span className="shrink-0 text-[11px] font-normal text-muted-foreground">
+                    <span className="shrink-0 type-caption type-weight-regular text-muted-foreground">
                       {new Date(version.created_at).toLocaleString("zh-CN", {
                         month: "2-digit",
                         day: "2-digit",
@@ -977,7 +977,7 @@ export default function PostEditor() {
                       })}
                     </span>
                   </span>
-                  <span className="line-clamp-2 text-xs font-normal leading-5 text-muted-foreground">
+                  <span className="line-clamp-2 type-caption type-weight-regular type-leading-relaxed text-muted-foreground">
                     {versionExcerpt(version.content)}
                   </span>
                 </span>
@@ -1053,7 +1053,7 @@ export default function PostEditor() {
   const inspector = (
     <fieldset disabled={isReadOnly} className="min-w-0 border-0 p-0">
       <div className="min-h-9 border-b pb-3">
-        <Text className="font-semibold">属性</Text>
+        <Text weight="semibold">属性</Text>
         <Text size="xs" tone="muted" className="mt-0.5 block">
           发布、组织、封面与 SEO。
         </Text>
@@ -1439,6 +1439,7 @@ export default function PostEditor() {
       {error ? <Alert type="error" showIcon title={error} /> : null}
 
       <DocumentEditorShell
+        data-pattern="dedicated-workspace-editor"
         aria-label="文章编辑器"
         header={commandBar}
         navigator={navigatorPanel}
@@ -1548,7 +1549,7 @@ export default function PostEditor() {
 
           <div>
             <div className="mb-2">
-              <Text className="font-medium">正文</Text>
+              <Text weight="medium">正文</Text>
               <Text size="xs" tone="muted" className="mt-1 block">
                 Markdown 编辑、分屏与预览共用同一编辑器。
               </Text>

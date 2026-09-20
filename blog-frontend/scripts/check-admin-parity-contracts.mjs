@@ -155,6 +155,8 @@ function assertCanonicalEditor(name, source) {
 
   if (shellCount !== 1)
     failures.push(`${name}: editor must render exactly one DocumentEditorShell`);
+  if (!source.includes('data-pattern="dedicated-workspace-editor"'))
+    failures.push(`${name}: editor must expose the manually reviewed dedicated-workspace-editor contract marker`);
   if (markdownCount !== 1)
     failures.push(`${name}: editor must render exactly one canonical MarkdownEditor`);
   if (pickerCount < 2)
@@ -319,6 +321,58 @@ const reviewedTypographyContracts = new Map([
     },
   ],
 ]);
+
+const reviewedEditorTypographyContracts = new Map([
+  [
+    "PostEditor.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-medium",
+        "type-body-sm text-muted-foreground",
+        "type-caption type-weight-regular",
+        '<Text weight="semibold">属性</Text>',
+        '<Text weight="medium">正文</Text>',
+      ],
+      forbidden: [
+        'className="text-sm font-medium"',
+        "text-[11px] font-normal",
+        "line-clamp-2 text-xs font-normal leading-5",
+        '<Text className="font-semibold">属性</Text>',
+        '<Text className="font-medium">正文</Text>',
+      ],
+    },
+  ],
+  [
+    "PageEditor.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-medium",
+        "type-body-sm text-muted-foreground",
+        '<Text weight="semibold">属性</Text>',
+        '<Text weight="medium">正文</Text>',
+      ],
+      forbidden: [
+        'className="text-sm font-medium"',
+        '<Text className="font-semibold">属性</Text>',
+        '<Text className="font-medium">正文</Text>',
+      ],
+    },
+  ],
+]);
+
+for (const [name, editorContract] of reviewedEditorTypographyContracts) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  for (const marker of editorContract.required) {
+    if (!source.includes(marker)) {
+      failures.push(`${name}: manually reviewed editor typography contract is missing ${marker}`);
+    }
+  }
+  for (const marker of editorContract.forbidden) {
+    if (source.includes(marker)) {
+      failures.push(`${name}: retired editor typography drift returned: ${marker}`);
+    }
+  }
+}
 
 for (const [name, contract] of reviewedTypographyContracts) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
