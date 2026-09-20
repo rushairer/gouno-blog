@@ -13,11 +13,12 @@ async function openPair(
   fixtureId,
   productPath,
   theme,
-  { activeSudo = false } = {},
+  {
+    activeSudo = false,
+    viewport = { width: 1440, height: 900 },
+  } = {},
 ) {
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-  });
+  const context = await browser.newContext({ viewport });
   const showcase = await context.newPage();
   const product = await context.newPage();
 
@@ -92,7 +93,46 @@ for (const theme of ["light", "dark"]) {
 
     expect(unknown).toEqual([]);
     await expectNoHorizontalOverflow(product);
-    await pairScreenshot(showcase, product, `support-categories-${theme}`, testInfo);
+    await pairScreenshot(
+      showcase,
+      product,
+      `support-categories-${theme}`,
+      testInfo,
+    );
+
+    await showcase
+      .getByRole("button", { name: "新建分类", exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: "新建分类", exact: true })
+      .click();
+
+    const showcaseDialog = showcase.getByRole("dialog", { name: "新建分类" });
+    const productDialog = product.getByRole("dialog", { name: "新建分类" });
+    const showcaseForm = showcaseDialog.locator(
+      '[data-pattern="editor-form-composition"]',
+    );
+    const productForm = productDialog.locator(
+      '[data-pattern="editor-form-composition"]',
+    );
+    await expectStyleParity(showcaseForm, productForm);
+
+    const showcaseSlug = showcaseDialog.getByRole("textbox", {
+      name: "Slug 标识",
+      exact: true,
+    });
+    const productSlug = productDialog.getByRole("textbox", {
+      name: "Slug 标识",
+      exact: true,
+    });
+    await expectStyleParity(showcaseSlug, productSlug);
+
+    await pairScreenshot(
+      showcase,
+      product,
+      `support-categories-drawer-${theme}`,
+      testInfo,
+    );
     await context.close();
   });
 
@@ -287,3 +327,60 @@ for (const theme of ["light", "dark"]) {
     await context.close();
   });
 }
+
+for (const surface of [
+  {
+    name: "categories",
+    fixture: "blog-admin-categories",
+    path: "/admin/categories",
+    firstItem: (page) => page.getByRole("listitem").first(),
+  },
+  {
+    name: "tags",
+    fixture: "blog-admin-tags",
+    path: "/admin/tags",
+    firstItem: (page) =>
+      page
+        .getByRole("checkbox", { name: /选择标签/ })
+        .first()
+        .locator('xpath=ancestor::*[@data-slot="card"][1]'),
+  },
+  {
+    name: "comments",
+    fixture: "blog-admin-comments",
+    path: "/admin/comments",
+    firstItem: (page) => page.getByRole("listitem").first(),
+  },
+]) {
+  test(`Support ${surface.name} mobile composition matches Showcase`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      surface.fixture,
+      surface.path,
+      "light",
+      { viewport: { width: 390, height: 844 } },
+    );
+
+    const showcaseItem = surface.firstItem(showcase);
+    const productItem = surface.firstItem(product);
+    await expectStyleParity(showcaseItem, productItem);
+    await expectStyleParity(
+      showcaseItem.locator("strong").first(),
+      productItem.locator("strong").first(),
+    );
+
+    await expectNoHorizontalOverflow(showcase);
+    await expectNoHorizontalOverflow(product);
+    expect(unknown).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `support-${surface.name}-mobile-light`,
+      testInfo,
+    );
+    await context.close();
+  });
+}
+
