@@ -239,6 +239,101 @@ if (!dashboard.includes("<IconButtonLink") || !dashboard.includes('variant="ghos
   );
 }
 
+for (const marker of [
+  "flex w-full items-start justify-between gap-4 p-4 text-left",
+  "flex min-w-0 items-start gap-3",
+  "mt-1 line-clamp-1",
+]) {
+  if (!dashboard.includes(marker)) {
+    failures.push(
+      `Dashboard.tsx: manually reviewed AI alert row anatomy drifted from Showcase: ${marker}`,
+    );
+  }
+}
+if (
+  dashboard.includes("group-hover:translate-x-0.5") ||
+  dashboard.includes("mt-0.5 flex size-9")
+) {
+  failures.push(
+    "Dashboard.tsx: page-local AI alert alignment/hover compensation must not replace canonical row anatomy",
+  );
+}
+
+for (const name of ["Posts.tsx", "Pages.tsx"]) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  if (!source.includes('data-pattern="collection-composition"')) {
+    failures.push(
+      `${name}: reviewed collection page must expose the canonical collection-composition contract marker`,
+    );
+  }
+}
+
+const reviewedTypographyContracts = new Map([
+  [
+    "Dashboard.tsx",
+    {
+      required: [
+        "type-metric-compact",
+        "type-body-sm type-weight-semibold",
+        "type-caption type-weight-medium",
+        "font-mono type-caption",
+      ],
+      forbidden: [
+        "text-xl font-semibold",
+        "text-sm font-semibold",
+        "text-xs font-medium",
+        "font-mono text-xs",
+        "text-[10px]",
+        "text-[11px]",
+      ],
+    },
+  ],
+  [
+    "Posts.tsx",
+    {
+      required: [
+        "type-weight-semibold",
+        "type-caption text-muted-foreground",
+        "type-family-mono type-caption",
+      ],
+      forbidden: [
+        "font-semibold leading-snug",
+        "font-mono text-xs",
+        "gap-2 text-xs text-muted-foreground",
+      ],
+    },
+  ],
+  [
+    "Pages.tsx",
+    {
+      required: [
+        "type-body-sm type-weight-semibold",
+        "type-caption text-muted-foreground",
+        "type-family-mono type-caption",
+      ],
+      forbidden: [
+        "text-sm font-semibold",
+        "font-mono text-xs",
+        "line-clamp-1 text-xs",
+      ],
+    },
+  ],
+]);
+
+for (const [name, contract] of reviewedTypographyContracts) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  for (const marker of contract.required) {
+    if (!source.includes(marker)) {
+      failures.push(`${name}: manually reviewed Showcase typography contract is missing ${marker}`);
+    }
+  }
+  for (const marker of contract.forbidden) {
+    if (source.includes(marker)) {
+      failures.push(`${name}: retired raw typography drift returned: ${marker}`);
+    }
+  }
+}
+
 for (const name of await readdir(adminRoot)) {
   if (!name.endsWith(".tsx")) continue;
   const source = await readFile(path.join(adminRoot, name), "utf8");
