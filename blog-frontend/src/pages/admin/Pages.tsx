@@ -410,22 +410,22 @@ export default function AdminPages() {
                     </TableCell>
                     <TableCell className="min-w-72 whitespace-normal">
                       <div className="flex flex-col gap-1">
-                        <strong className="text-sm font-semibold leading-snug text-foreground">
+                        <strong className="type-body-sm type-weight-semibold text-foreground">
                           {pageItem.title}
                         </strong>
                         {pageItem.summary ? (
-                          <span className="line-clamp-1 text-xs text-muted-foreground">
+                          <span className="line-clamp-1 type-caption text-muted-foreground">
                             {pageItem.summary}
                           </span>
                         ) : (
-                          <span className="text-xs italic text-muted-foreground/60">
+                          <span className="type-caption italic text-muted-foreground/60">
                             无摘要
                           </span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                      <code className="rounded bg-muted px-1.5 py-0.5 type-family-mono type-caption text-muted-foreground">
                         /{pageItem.slug}
                       </code>
                     </TableCell>
@@ -447,7 +447,7 @@ export default function AdminPages() {
                       <PageStatusTag status={pageItem.status} />
                     </TableCell>
                     <TableCell>
-                      <time className="font-mono text-xs text-muted-foreground">
+                      <time className="type-family-mono type-caption text-muted-foreground">
                         {new Date(
                           pageItem.updated_at || pageItem.created_at,
                         ).toLocaleDateString("zh-CN")}
@@ -495,12 +495,12 @@ export default function AdminPages() {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
-                        <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                        <strong className="min-w-0 break-words type-body-sm type-weight-semibold">
                           {pageItem.title}
                         </strong>
                         <PageStatusTag status={pageItem.status} />
                       </div>
-                      <code className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                      <code className="mt-1 block break-all type-family-mono type-caption text-muted-foreground">
                         /{pageItem.slug}
                       </code>
                       {pageItem.summary ? (
@@ -514,7 +514,7 @@ export default function AdminPages() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
                     <Tag>{pageItem.template || "default"}</Tag>
                     <span>
                       {pageItem.show_in_nav
