@@ -212,7 +212,6 @@ export default function AdminComments() {
         <BulkActionBar
           selectionLabel={`已选择 ${selected.length} 条评论`}
           onCancel={() => setSelected([])}
-          cancelLabel="清除选择"
         >
           <Button
             size="small"
