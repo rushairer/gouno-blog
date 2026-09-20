@@ -357,7 +357,7 @@ export function AgentForm({
                           ? "当前行为策略"
                           : "Current behavior policy"}
                       </Text>
-                      <strong className="mt-1 block text-sm">
+                      <strong className="mt-1 block type-body-sm type-weight-semibold">
                         {selectedSkill.name} · v{selectedSkill.version}
                       </strong>
                       <Text size="xs" tone="muted" className="mt-1">
