@@ -308,7 +308,7 @@ export default function AdminPosts() {
         : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-pattern="collection-composition" className="flex flex-col gap-6">
       <PageHeader
         title="文章"
         description="管理全站草稿、定时内容与已发布文章。"
