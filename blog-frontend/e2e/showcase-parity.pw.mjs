@@ -31,6 +31,39 @@ async function styleFingerprint(locator) {
   });
 }
 
+async function typographyFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      color: style.color,
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+      fontWeight: style.fontWeight,
+      lineHeight: style.lineHeight,
+      letterSpacing: style.letterSpacing,
+    };
+  });
+}
+
+async function objectRowFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      display: style.display,
+      alignItems: style.alignItems,
+      justifyContent: style.justifyContent,
+      gap: style.gap,
+      paddingTop: style.paddingTop,
+      paddingRight: style.paddingRight,
+      paddingBottom: style.paddingBottom,
+      paddingLeft: style.paddingLeft,
+      textAlign: style.textAlign,
+    };
+  });
+}
+
 async function tabPanelLeadFingerprint(locator) {
   await expect(locator).toBeVisible();
   return locator.evaluate((element) => {
@@ -276,6 +309,39 @@ for (const theme of ["light", "dark"]) {
       await styleFingerprint(showcaseCard),
     );
 
+    const showcaseTopRow = showcaseCard.getByRole("row").nth(1);
+    const productTopRow = productCard.getByRole("row").nth(1);
+    for (const cellIndex of [1, 2, 3]) {
+      expect(
+        await typographyFingerprint(productTopRow.locator("td").nth(cellIndex)),
+      ).toEqual(
+        await typographyFingerprint(showcaseTopRow.locator("td").nth(cellIndex)),
+      );
+    }
+
+    const showcaseAlertCard = showcase
+      .getByText("AI 运营提醒", { exact: true })
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    const productAlertCard = product
+      .getByText("AI 运营提醒", { exact: true })
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    const showcaseAlertRow = showcaseAlertCard
+      .locator('[data-slot="card-content"]')
+      .getByRole("link")
+      .first();
+    const productAlertRow = productAlertCard
+      .locator('[data-slot="card-content"]')
+      .getByRole("link")
+      .first();
+    expect(await objectRowFingerprint(productAlertRow)).toEqual(
+      await objectRowFingerprint(showcaseAlertRow),
+    );
+    expect(
+      await typographyFingerprint(productAlertRow.locator("strong").first()),
+    ).toEqual(
+      await typographyFingerprint(showcaseAlertRow.locator("strong").first()),
+    );
+
     const showcaseActions = showcaseCard
       .getByRole("row")
       .nth(1)
@@ -317,6 +383,21 @@ for (const theme of ["light", "dark"]) {
     expect(await styleFingerprint(productFilter)).toEqual(
       await styleFingerprint(showcaseFilter),
     );
+
+    const showcasePostRow = showcase.getByRole("row").nth(1);
+    const productPostRow = product.getByRole("row").nth(1);
+    for (const selector of [
+      "td:nth-child(2) .type-weight-semibold",
+      "td:nth-child(2) code",
+      "td:nth-child(4) time",
+      "td:nth-child(5)",
+    ]) {
+      expect(
+        await typographyFingerprint(productPostRow.locator(selector)),
+      ).toEqual(
+        await typographyFingerprint(showcasePostRow.locator(selector)),
+      );
+    }
 
     const showcaseCheckbox = showcase.getByRole("checkbox", {
       name: "选择当前页全部文章",
@@ -432,6 +513,21 @@ for (const theme of ["light", "dark"]) {
     expect(await styleFingerprint(productFilter)).toEqual(
       await styleFingerprint(showcaseFilter),
     );
+
+    const showcasePageRow = showcase.getByRole("row").nth(1);
+    const productPageRow = product.getByRole("row").nth(1);
+    for (const selector of [
+      "td:nth-child(2) strong",
+      "td:nth-child(3) code",
+      "td:nth-child(7) time",
+    ]) {
+      expect(
+        await typographyFingerprint(productPageRow.locator(selector)),
+      ).toEqual(
+        await typographyFingerprint(showcasePageRow.locator(selector)),
+      );
+    }
+
     expect(unknown).toEqual([]);
     await pairScreenshot(showcase, product, `pages-${theme}`, testInfo);
     await context.close();
