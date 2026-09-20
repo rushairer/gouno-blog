@@ -17,6 +17,76 @@ export const aiProvider = {
   updated_at: now,
 };
 
+export const connectorProfiles = [
+  {
+    id: 31,
+    name: "Web Research Sandbox",
+    kind: "search_console",
+    sandbox: true,
+    enabled: true,
+    config: { scope: "read-only public research" },
+    credential_last4: "3412",
+    has_credential: true,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: 32,
+    name: "Media Sandbox",
+    kind: "webhook",
+    sandbox: true,
+    enabled: true,
+    config: { scope: "media candidates and generated assets" },
+    credential_last4: "7821",
+    has_credential: true,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: 33,
+    name: "Source Archive",
+    kind: "newsletter",
+    sandbox: true,
+    enabled: false,
+    config: { scope: "historical source archive" },
+    has_credential: false,
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+export const connectorOutbox = [
+  {
+    id: 301,
+    connector_profile_id: 32,
+    idempotency_key: "run-702-media-preview",
+    payload: { run_id: 702, action: "preview" },
+    status: "awaiting_approval",
+    attempts: 0,
+    created_at: now,
+  },
+  {
+    id: 302,
+    connector_profile_id: 33,
+    idempotency_key: "run-698-source-sync",
+    payload: { run_id: 698, action: "sync" },
+    status: "failed",
+    attempts: 1,
+    error_message: "Sandbox mock timeout",
+    created_at: now,
+  },
+  {
+    id: 303,
+    connector_profile_id: 31,
+    idempotency_key: "run-690-search-console",
+    payload: { run_id: 690, action: "inspect" },
+    status: "delivered",
+    attempts: 1,
+    delivered_at: now,
+    created_at: now,
+  },
+];
+
 export const embeddingProfile = {
   id: 1,
   name: "Primary Embeddings",
