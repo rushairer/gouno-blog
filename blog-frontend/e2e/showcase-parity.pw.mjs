@@ -554,6 +554,9 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
     expect(await styleFingerprint(productLead)).toEqual(
       await styleFingerprint(showcaseLead),
     );
+    expect(await tabPanelLeadFingerprint(productLead)).toEqual(
+      await tabPanelLeadFingerprint(showcaseLead),
+    );
 
     await expect(showcaseLead).not.toHaveText("");
     await expect(productLead).not.toHaveText("");
@@ -561,6 +564,26 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
 
   await showcase.getByRole("tab", { name: /自动化/ }).click();
   await product.getByRole("tab", { name: /自动化/ }).click();
+
+  const showcaseWorkflowToolbar = showcase.locator(
+    '[data-slot="workflow-list-toolbar"]',
+  );
+  const productWorkflowToolbar = product.locator(
+    '[data-slot="workflow-list-toolbar"]',
+  );
+  expect(await styleFingerprint(productWorkflowToolbar)).toEqual(
+    await styleFingerprint(showcaseWorkflowToolbar),
+  );
+
+  const showcaseWorkflowRow = showcase
+    .getByRole("button", { name: /打开 Workflow：/ })
+    .first();
+  const productWorkflowRow = product
+    .getByRole("button", { name: /打开 Workflow：/ })
+    .first();
+  expect(await styleFingerprint(productWorkflowRow)).toEqual(
+    await styleFingerprint(showcaseWorkflowRow),
+  );
 
   // Automation now uses list -> dedicated detail. Enter one Workflow on both
   // surfaces before comparing detail-only regions such as Recent Runs.
@@ -612,6 +635,28 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
     productRecentRow.boundingBox(),
   ]);
   expect(productRecentBox?.width).toBe(showcaseRecentBox?.width);
+
+  await showcase.getByRole("tab", { name: /待我处理/ }).click();
+  await product.getByRole("tab", { name: /待我处理/ }).click();
+
+  const showcaseInboxMasterDetail = showcase
+    .locator('[data-slot="ops-master-detail"]')
+    .first();
+  const productInboxMasterDetail = product
+    .locator('[data-slot="ops-master-detail"]')
+    .first();
+  expect(await styleFingerprint(productInboxMasterDetail)).toEqual(
+    await styleFingerprint(showcaseInboxMasterDetail),
+  );
+  const [showcaseInboxMinHeight, productInboxMinHeight] = await Promise.all([
+    showcaseInboxMasterDetail.evaluate(
+      (element) => getComputedStyle(element).minHeight,
+    ),
+    productInboxMasterDetail.evaluate(
+      (element) => getComputedStyle(element).minHeight,
+    ),
+  ]);
+  expect(productInboxMinHeight).toBe(showcaseInboxMinHeight);
 
   await showcase.getByRole("tab", { name: /运行中心/ }).click();
   await product.getByRole("tab", { name: /运行中心/ }).click();
