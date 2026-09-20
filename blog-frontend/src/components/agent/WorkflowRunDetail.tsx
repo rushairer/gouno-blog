@@ -143,7 +143,9 @@ function ResourceEvidence({
                     : "discovery"}
             </Text>
           </div>
-          <Tag color={resource.access_level === "target" ? "primary" : undefined}>
+          <Tag
+            color={resource.access_level === "target" ? "primary" : undefined}
+          >
             {resource.access_level === "target"
               ? zh
                 ? "目标"
@@ -400,7 +402,9 @@ export function WorkflowRunDetail({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center justify-between gap-2">
-                        <strong className="type-body-sm type-weight-semibold">{step.step_id}</strong>
+                        <strong className="type-body-sm type-weight-semibold">
+                          {step.step_id}
+                        </strong>
                         <StatusPill status={step.status} locale={locale} />
                       </span>
                       <Text size="xs" tone="muted" className="mt-1">

@@ -361,9 +361,13 @@ function PanelHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
-        <Heading level={3} variant="label">{title}</Heading>
+        <Heading level={3} variant="label">
+          {title}
+        </Heading>
         {description ? (
-          <Text size="sm" tone="muted" className="mt-1">{description}</Text>
+          <Text size="sm" tone="muted" className="mt-1">
+            {description}
+          </Text>
         ) : null}
       </div>
       {actions ? <div className="shrink-0">{actions}</div> : null}
