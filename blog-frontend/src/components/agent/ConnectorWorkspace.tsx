@@ -100,6 +100,9 @@ export function ConnectorWorkspace({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const safeProfiles = Array.isArray(profiles) ? profiles : [];
+  const safeOutbox = Array.isArray(outbox) ? outbox : [];
+
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const oauthResult = query.get("connector_oauth");
@@ -211,7 +214,7 @@ export function ConnectorWorkspace({
 
   const startOAuth = async (id: number) => {
     try {
-      const profile = profiles.find((item) => item.id === id);
+      const profile = safeProfiles.find((item) => item.id === id);
       const real = profile?.kind === "search_console" && !profile.sandbox;
       if (real) {
         window.location.assign(`/api/admin/ai-connectors/${id}/oauth/start`);
@@ -311,7 +314,7 @@ export function ConnectorWorkspace({
       </TabPanelFeedback>
 
       <Card padding="none" className="overflow-hidden">
-        {profiles.length === 0 ? (
+        {safeProfiles.length === 0 ? (
           <CardContent className="p-6">
             <Empty
               icon={<Inbox />}
@@ -327,7 +330,7 @@ export function ConnectorWorkspace({
           </CardContent>
         ) : (
           <CardContent className="divide-y p-0">
-            {profiles.map((profile) => (
+            {safeProfiles.map((profile) => (
               <div
                 key={profile.id}
                 className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"
@@ -635,7 +638,7 @@ export function ConnectorWorkspace({
                   <option value="">
                     {zh ? "选择 Profile" : "Choose profile"}
                   </option>
-                  {profiles.map((profile) => (
+                  {safeProfiles.map((profile) => (
                     <option key={profile.id} value={String(profile.id)}>
                       {profile.name}
                     </option>
@@ -673,7 +676,7 @@ export function ConnectorWorkspace({
         </CardContent>
 
         <div className="border-t">
-          {outbox.length === 0 ? (
+          {safeOutbox.length === 0 ? (
             <div className="p-6">
               <Empty
                 icon={<Inbox />}
@@ -682,8 +685,8 @@ export function ConnectorWorkspace({
             </div>
           ) : (
             <div className="divide-y">
-              {outbox.map((item) => {
-                const profile = profiles.find(
+              {safeOutbox.map((item) => {
+                const profile = safeProfiles.find(
                   (candidate) => candidate.id === item.connector_profile_id,
                 );
                 return (
