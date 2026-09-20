@@ -34,7 +34,7 @@ Existing automated parity failures were not used as the starting point.
 | Surface | Manual finding | Classification | Decision |
 | --- | --- | --- | --- |
 | Dashboard summary/cards | Overall composition, card grouping and 24px page rhythm still match the canonical fixture. Product retained raw `text-xs`, `text-xl font-semibold`, arbitrary `text-[10px]` / `text-[11px]` and CardTitle size overrides where Showcase had moved to semantic typography roles. | `ui-drift` | Preserve real analytics/permission data; restore `type-caption`, `type-metric-compact` and canonical CardTitle ownership. |
-| Dashboard AI alerts | Product-only routing and real alert data are legitimate, but alert title/meta typography had drifted from the fixture. | presentation = `ui-drift`; business data = `intentional-product-divergence` | Align semantic typography while retaining real destination and API behavior. |
+| Dashboard AI alerts | Product-only routing and real alert data are legitimate, but alert title/meta typography had drifted from the fixture. The object row had also changed from canonical top alignment (`items-start`) to centered alignment with local `mt-0.5` icon compensation and hover translation. | presentation/composition = `ui-drift`; business data = `intentional-product-divergence` | Restore canonical object-row anatomy and semantic typography while retaining real destination and API behavior. |
 | Dashboard Top Posts | Card/table/action composition remains aligned. Numeric cells still used raw mono/xs typography in Product. | `ui-drift` | Keep real links and permissions; align semantic caption typography. |
 | Posts collection | PageHeader, filter Card, selection, BulkActionBar, table/mobile split, destructive Modal and action grammar remain structurally aligned. Title/meta/slug/date/view typography used raw utilities instead of the canonical semantic roles. | `ui-drift` | Replace only the typography ownership; retain real API/filter/permission/routing behavior. |
 | Pages collection | PageHeader, filter Card, selection, table/mobile split, Modal and action grammar remain structurally aligned. Title/summary/slug/date/meta typography used raw utilities instead of semantic roles. | `ui-drift` | Align semantic typography; retain copy/delete/AI launcher and real page metadata behavior. |
@@ -48,6 +48,7 @@ That left a blind spot where a Product could continue to pass parity while using
 ## Fixes extracted from the manual review
 
 - Dashboard:
+  - AI alert row → canonical `items-start` object-row anatomy; remove page-local icon/hover compensation;
   - summary detail → `type-caption`;
   - governance metrics → `type-metric-compact`;
   - AI alert labels/meta/actions/timestamps → canonical body/caption roles;
