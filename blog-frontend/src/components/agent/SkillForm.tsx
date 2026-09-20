@@ -243,10 +243,7 @@ export function SkillForm({
                               : item.description}
                           </Text>
                           <span className="mt-2 block">
-                            <RiskPill
-                              risk={item.risk_level}
-                              locale={locale}
-                            />
+                            <RiskPill risk={item.risk_level} locale={locale} />
                           </span>
                         </span>
                       </label>
@@ -359,9 +356,7 @@ export function SkillForm({
                       }
                     >
                       <option value="approval">
-                        {locale === "zh"
-                          ? "审批后创建"
-                          : "Approval required"}
+                        {locale === "zh" ? "审批后创建" : "Approval required"}
                       </option>
                       <option value="draft">
                         {locale === "zh" ? "创建草稿" : "Create draft"}
@@ -426,9 +421,7 @@ export function SkillForm({
 
               <DedicatedEditorSection
                 title={
-                  locale === "zh"
-                    ? "默认治理限制"
-                    : "Default governance limits"
+                  locale === "zh" ? "默认治理限制" : "Default governance limits"
                 }
                 description={
                   locale === "zh"

@@ -1569,16 +1569,15 @@ export function WorkflowWorkspace({
                 value: String(
                   workflows.filter((workflow) => {
                     const latestRun = runs.find(
-                      (run) =>
-                        run.workflow_id === workflow.id && !run.dry_run,
+                      (run) => run.workflow_id === workflow.id && !run.dry_run,
                     );
                     return Boolean(
                       latestRun &&
-                        [
-                          "failed",
-                          "waiting_for_user",
-                          "awaiting_approval",
-                        ].includes(latestRun.status),
+                      [
+                        "failed",
+                        "waiting_for_user",
+                        "awaiting_approval",
+                      ].includes(latestRun.status),
                     );
                   }).length,
                 ),
@@ -1706,10 +1705,7 @@ export function WorkflowWorkspace({
                         onSelect={() => {
                           setSelectedWorkflowID(workflow.id);
                           const url = new URL(window.location.href);
-                          url.searchParams.set(
-                            "workflow",
-                            String(workflow.id),
-                          );
+                          url.searchParams.set("workflow", String(workflow.id));
                           window.history.replaceState(null, "", url);
                           window.scrollTo({
                             top: 0,

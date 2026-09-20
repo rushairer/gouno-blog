@@ -248,35 +248,32 @@ export function ProviderForm({
         ) : null}
 
         <div className="grid gap-5 xl:grid-cols-2">
-            <AISettingsEditorSection
-              title="连接身份"
-              description="名称和供应商类型用于识别连接；启停状态决定它是否可被 Agent 或默认模型选择。"
-            >
-              <FormGrid columns={2}>
-                <Field label={labels.providerName}>
-                  <Input
-                    required
-                    value={value.name}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                  />
-                </Field>
-                <Field label={labels.providerType}>
-                  <Select
-                    value={value.provider_type}
-                    onChange={setProviderType}
-                  >
-                    <option value="openai">OpenAI / compatible</option>
-                    <option value="anthropic">Anthropic native</option>
-                    <option value="gemini">Gemini native</option>
-                  </Select>
-                </Field>
-              </FormGrid>
-            </AISettingsEditorSection>
+          <AISettingsEditorSection
+            title="连接身份"
+            description="名称和供应商类型用于识别连接；启停状态决定它是否可被 Agent 或默认模型选择。"
+          >
+            <FormGrid columns={2}>
+              <Field label={labels.providerName}>
+                <Input
+                  required
+                  value={value.name}
+                  onChange={(event) =>
+                    setValue((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+              <Field label={labels.providerType}>
+                <Select value={value.provider_type} onChange={setProviderType}>
+                  <option value="openai">OpenAI / compatible</option>
+                  <option value="anthropic">Anthropic native</option>
+                  <option value="gemini">Gemini native</option>
+                </Select>
+              </Field>
+            </FormGrid>
+          </AISettingsEditorSection>
 
           <AISettingsEditorSection
             title="模型与端点"

@@ -1,11 +1,4 @@
-import {
-  Check,
-  Clock3,
-  Play,
-  RefreshCw,
-  ShieldCheck,
-  X,
-} from "lucide-react";
+import { Check, Clock3, Play, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { operationsApi } from "../../api/operations";
 import { workflowApi } from "../../api/workflows";
@@ -565,7 +558,10 @@ export function DecisionInboxWorkspace({
                     : `${visibleItems.length} items match the current filter`}
                 </Text>
               </div>
-              <Clock3 className="size-4 text-muted-foreground" aria-hidden="true" />
+              <Clock3
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
             </div>
           </div>
           <div
@@ -582,7 +578,11 @@ export function DecisionInboxWorkspace({
                     status={<DecisionStatus item={item} />}
                     meta={item.meta}
                     summary={item.summary}
-                    signals={<OperationsMeta>{formatDateTime(item.createdAt)}</OperationsMeta>}
+                    signals={
+                      <OperationsMeta>
+                        {formatDateTime(item.createdAt)}
+                      </OperationsMeta>
+                    }
                     selected={selected?.key === item.key}
                     onClick={() => {
                       setSelectedKey(item.key);

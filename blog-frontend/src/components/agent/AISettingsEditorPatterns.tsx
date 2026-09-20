@@ -57,12 +57,7 @@ export function AISettingsEditorSection({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <CardTitle>{title}</CardTitle>
-            <Text
-              size="xs"
-              tone="muted"
-              leading="relaxed"
-              className="mt-1"
-            >
+            <Text size="xs" tone="muted" leading="relaxed" className="mt-1">
               {description}
             </Text>
           </div>

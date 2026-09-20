@@ -330,7 +330,6 @@ export function WorkflowRunDetail({
             },
           ]}
         />
-
       </section>
 
       {selected.run.error_message ? (

@@ -49,10 +49,7 @@ import {
   Text,
 } from "@gouno/ui/core";
 import { DedicatedEditorLead } from "./DedicatedEditorPatterns";
-import {
-  TabPanelFeedback,
-  TabPanelLead,
-} from "../patterns/TabPanelLead";
+import { TabPanelFeedback, TabPanelLead } from "../patterns/TabPanelLead";
 
 export type AdvancedSection =
   | "agents"
@@ -973,20 +970,20 @@ export function AdvancedWorkspace({
               />
               <TabPanelFeedback>
                 {indexStatus.failed > 0 ? (
-                <Alert
-                  type="warning"
-                  showIcon
-                  title={
-                    locale === "zh"
-                      ? "知识索引存在失败任务"
-                      : "Knowledge indexing has failed jobs"
-                  }
-                  description={
-                    locale === "zh"
-                      ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
-                      : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
-                  }
-                />
+                  <Alert
+                    type="warning"
+                    showIcon
+                    title={
+                      locale === "zh"
+                        ? "知识索引存在失败任务"
+                        : "Knowledge indexing has failed jobs"
+                    }
+                    description={
+                      locale === "zh"
+                        ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
+                        : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
+                    }
+                  />
                 ) : null}
               </TabPanelFeedback>
               <div className="grid gap-4 sm:grid-cols-3">
