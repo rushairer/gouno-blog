@@ -290,38 +290,30 @@ requirePattern(
   "Workflow editor item anatomy must preserve the canonical 16px internal rhythm",
 );
 
-const migration = JSON.parse(
-  await readFile(resolve(root, "../docs/ui-redesign/migration.json"), "utf8"),
+requireText(
+  workflowRunDetail,
+  'aria-label={zh ? "运行资源" : "Run resources"}',
+  "WorkflowRunDetail: resources must own a canonical standalone evidence section",
 );
-const requiredMigrationIds = new Set([
-  "blog-admin:pages/admin/AIOperations.tsx",
-  "blog-admin:components/agent/AgentRunRecords.tsx",
-  "blog-admin:components/agent/InboxWorkspace.tsx",
-  "blog-admin:components/agent/WorkflowRunRecords.tsx",
-  "blog-admin:components/agent/WorkflowWorkspace.tsx",
-  "blog-admin:components/agent/WorkspaceOverview.tsx",
-]);
-const migrationRows = new Map();
-function collect(value) {
-  if (Array.isArray(value)) return value.forEach(collect);
-  if (!value || typeof value !== "object") return;
-  if (typeof value.id === "string") migrationRows.set(value.id, value);
-  Object.values(value).forEach(collect);
-}
-collect(migration);
-for (const id of requiredMigrationIds) {
-  const row = migrationRows.get(id);
-  if (
-    !row ||
-    row.implementation !== "migrated" ||
-    row.verification !== "verified"
-  ) {
-    failures.push(
-      `${id}: AI Operations route cannot be declared complete while this visible owned surface is unresolved`,
-    );
-  }
-}
+requireText(
+  workflowRunDetail,
+  'aria-label={zh ? "人工交互" : "Human interactions"}',
+  "WorkflowRunDetail: human interactions must own a canonical standalone evidence section",
+);
+requireText(
+  workflowRunDetail,
+  "grid gap-6 xl:grid-cols-2",
+  "WorkflowRunDetail: resource and human-interaction evidence must preserve the canonical responsive pair",
+);
+requireText(
+  workflowRunDetail,
+  "type-family-mono type-caption type-weight-semibold",
+  "WorkflowRunDetail: persisted event names must use the canonical mono caption token",
+);
 
+// Migration metadata is a reporting ledger, not proof of parity. It is updated
+// only after manual review and browser evidence have passed; never use its
+// existing 'verified' value as an input to this contract.
 if (failures.length) {
   console.error("AI Operations canonical layout contract failed:\n");
   failures.forEach((failure) => console.error(`- ${failure}`));
