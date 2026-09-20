@@ -599,7 +599,7 @@ export function WorkflowRunDetail({
           >
             <div className="border-b px-5 py-4">
               <OperationsRegionHeading
-                title={zh ? "事件" : "Events"
+                title={zh ? "事件" : "Events"}
                 description={
                   zh
                     ? "保留交互、生成、应用和状态变化等已持久化事件。"
