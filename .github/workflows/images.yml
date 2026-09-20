@@ -18,6 +18,7 @@ jobs:
   build-images:
     name: Build blog images
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     strategy:
       matrix:
