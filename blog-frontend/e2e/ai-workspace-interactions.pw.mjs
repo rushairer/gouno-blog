@@ -172,7 +172,17 @@ test("Provider settings expose provider and embedding configuration without writ
 
   await page.getByRole("tab", { name: "Knowledge index" }).click();
   await expect(page.getByText("Primary Embeddings", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Index overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Indexed content" })).toBeVisible();
+  await expect(page.getByText("OAuth 2.1 and PKCE", { exact: true })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("section")).toBe("knowledge");
+
+  await page
+    .getByRole("textbox", { name: "Knowledge retrieval test" })
+    .fill("Why is PKCE important?");
+  await page.getByRole("button", { name: "Test retrieval" }).click();
+  await expect(page.getByText("kb_fixture", { exact: true })).toBeVisible();
+  await expect(page.getByText("Semantic 0.94", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Add embedding profile" }).click();
   const embeddingDrawer = page.getByRole("dialog", {
