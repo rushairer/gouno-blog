@@ -86,8 +86,13 @@ describe("AI Operations canonical overview", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "今天需要关注什么" }),
+      screen.getByText(
+        "先处理失败与等待人工的运行，再决定建议、候选和后续编辑任务；AI 不会绕过人工边界直接发布内容。",
+      ),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "今天需要关注什么" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Run #900 · 旧文维护")).toBeInTheDocument();
     expect(screen.getByText("provider timeout")).toBeInTheDocument();
     expect(screen.getByText("12 次运行 · 2 次失败")).toBeInTheDocument();

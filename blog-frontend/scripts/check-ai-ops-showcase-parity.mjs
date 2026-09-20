@@ -28,6 +28,9 @@ const canonicalContract = await readCanonical(
   "tests/product-blog-admin-ai-operations-run-center-contract.test.ts",
 );
 
+const blogLead = await readBlog(
+  "src/components/patterns/TabPanelLead.tsx",
+);
 const blogPatterns = await readBlog(
   "src/components/agent/OperationsPatterns.tsx",
 );
@@ -66,9 +69,18 @@ function requireBoth(marker, canonical, consumer, label) {
 requireBoth(
   'data-pattern="tab-panel-lead"',
   canonicalLead,
-  blogPatterns,
+  blogLead,
   "tab-panel lead semantics",
 );
+requireBoth(
+  'className="flex min-h-9 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"',
+  canonicalLead,
+  blogLead,
+  "tab-panel lead minimum-height rhythm",
+);
+if (!blogPatterns.includes("../patterns/TabPanelLead")) {
+  failures.push("AI Operations must consume the shared Blog Admin TabPanelLead pattern");
+}
 requireBoth(
   "sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)]",
   canonicalAutomation,
@@ -93,6 +105,24 @@ requireBoth(
   blogAgentRecords,
   "Agent Run Center rail width",
 );
+
+for (const [marker, label] of [
+  ['data-slot="workflow-list-toolbar"', "Workflow list toolbar"],
+  ['xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem]', "Workflow five-column asset row"],
+  ["type-metric-value", "Workflow detail metric-card typography"],
+  ["ScheduleFact", "Workflow detail fact row"],
+]) {
+  requireBoth(marker, canonicalAutomation, blogAutomation, label);
+}
+requireBoth(
+  'xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.55fr)]',
+  canonicalOverviewInbox,
+  blogInbox,
+  "Decision Inbox master-detail geometry",
+);
+if (!blogWorkflowRecords.includes("OperationsObjectRow")) {
+  failures.push("Workflow Run rail must use the shared OperationsObjectRow grammar");
+}
 
 requireBoth(
   'data-pattern="dedicated-list-editor"',

@@ -31,6 +31,21 @@ async function styleFingerprint(locator) {
   });
 }
 
+async function tabPanelLeadFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return {
+      display: style.display,
+      minHeight: style.minHeight,
+      gap: style.gap,
+      alignItems: style.alignItems,
+      height: Math.round(rect.height * 100) / 100,
+    };
+  });
+}
+
 async function layoutFingerprint(locator) {
   await expect(locator).toBeVisible();
   return locator.evaluate((element) => {
@@ -104,15 +119,24 @@ async function openAiPair(
   productPath,
   theme = "light",
   viewport = { width: 1440, height: 900 },
+  { activeSudo = false } = {},
 ) {
   const context = await browser.newContext({ viewport });
   const showcase = await context.newPage();
   const product = await context.newPage();
   await setTheme(showcase, theme);
   await setTheme(product, theme);
-  await product.addInitScript(() => {
-    localStorage.setItem("gouno-blog:locale", "zh");
-  });
+  await product.addInitScript(
+    ({ sudo }) => {
+      localStorage.setItem("gouno-blog:locale", "zh");
+      if (sudo) {
+        localStorage.setItem("gouno:sudo_activated_at", Date.now().toString());
+      } else {
+        localStorage.removeItem("gouno:sudo_activated_at");
+      }
+    },
+    { sudo: activeSudo },
+  );
   const { unknown, unexpectedWrites } = await installAiFixtures(product);
   await showcase.goto(
     `${showcaseOrigin}/?embedded=1&workspace=blog-admin&brand=blog-admin#${fixtureId}`,
@@ -122,6 +146,24 @@ async function openAiPair(
     waitUntil: "networkidle",
   });
   return { context, showcase, product, unknown, unexpectedWrites };
+}
+
+async function expectPatternCollectionParity({
+  showcase,
+  product,
+  pattern,
+}) {
+  const showcaseItems = showcase.locator(`[data-pattern="${pattern}"]`);
+  const productItems = product.locator(`[data-pattern="${pattern}"]`);
+  const showcaseCount = await showcaseItems.count();
+  const productCount = await productItems.count();
+  expect(productCount).toBe(showcaseCount);
+  expect(productCount).toBeGreaterThan(0);
+  for (let index = 0; index < productCount; index += 1) {
+    expect(await styleFingerprint(productItems.nth(index))).toEqual(
+      await styleFingerprint(showcaseItems.nth(index)),
+    );
+  }
 }
 
 async function expectNoHorizontalOverflow(page) {
@@ -456,6 +498,150 @@ for (const theme of ["light", "dark"]) {
   }
 }
 
+test("AI Settings tab leads and section rhythm match Showcase", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown, unexpectedWrites } =
+    await openAiPair(
+      browser,
+      "blog-admin-ai-settings",
+      "/admin/ai-settings",
+      "light",
+      { width: 1440, height: 1000 },
+      { activeSudo: true },
+    );
+
+  for (const tab of [
+    "Agents",
+    "Skills",
+    "Tools",
+    "知识库",
+    "模型连接",
+    "Sandbox 连接器",
+  ]) {
+    await showcase.getByRole("tab", { name: tab, exact: true }).click();
+    await product.getByRole("tab", { name: tab, exact: true }).click();
+
+    const showcaseLead = showcase.locator('[data-pattern="tab-panel-lead"]');
+    const productLead = product.locator('[data-pattern="tab-panel-lead"]');
+    await expect(showcaseLead).toHaveCount(1);
+    await expect(productLead).toHaveCount(1);
+
+    const [showcaseFingerprint, productFingerprint] = await Promise.all([
+      tabPanelLeadFingerprint(showcaseLead),
+      tabPanelLeadFingerprint(productLead),
+    ]);
+    expect(productFingerprint).toEqual(showcaseFingerprint);
+    expect(productFingerprint.minHeight).toBe("36px");
+
+    await pairScreenshot(
+      showcase,
+      product,
+      `ai-settings-${tab.replaceAll(" ", "-")}`,
+      testInfo,
+    );
+  }
+
+  for (const { tab, createLabel, backLabel } of [
+    {
+      tab: "Agents",
+      createLabel: "创建 Agent",
+      backLabel: "返回 Agent 列表",
+    },
+    {
+      tab: "Skills",
+      createLabel: "创建 Skill",
+      backLabel: "返回 Skill 列表",
+    },
+  ]) {
+    await showcase.getByRole("tab", { name: tab, exact: true }).click();
+    await product.getByRole("tab", { name: tab, exact: true }).click();
+    await showcase
+      .getByRole("button", { name: createLabel, exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: createLabel, exact: true })
+      .click();
+
+    const showcaseLayout = showcase.locator(
+      '[data-pattern="dedicated-editor-layout"]',
+    );
+    const productLayout = product.locator(
+      '[data-pattern="dedicated-editor-layout"]',
+    );
+    expect(await styleFingerprint(productLayout)).toEqual(
+      await styleFingerprint(showcaseLayout),
+    );
+    await expectPatternCollectionParity({
+      showcase,
+      product,
+      pattern: "dedicated-editor-section",
+    });
+
+    await pairScreenshot(
+      showcase,
+      product,
+      `ai-settings-${tab.toLowerCase()}-dedicated-editor`,
+      testInfo,
+    );
+
+    await showcase
+      .getByRole("button", { name: backLabel, exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: backLabel, exact: true })
+      .click();
+  }
+
+  for (const { tab, createLabel } of [
+    { tab: "模型连接", createLabel: "添加模型连接" },
+    { tab: "知识库", createLabel: "添加 Embedding 模型" },
+    { tab: "Sandbox 连接器", createLabel: "添加 Connector Profile" },
+  ]) {
+    await showcase.getByRole("tab", { name: tab, exact: true }).click();
+    await product.getByRole("tab", { name: tab, exact: true }).click();
+    await showcase
+      .getByRole("button", { name: createLabel, exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: createLabel, exact: true })
+      .click();
+
+    const showcaseDialog = showcase.getByRole("dialog", {
+      name: createLabel,
+    });
+    const productDialog = product.getByRole("dialog", {
+      name: createLabel,
+    });
+    expect(await styleFingerprint(productDialog)).toEqual(
+      await styleFingerprint(showcaseDialog),
+    );
+    await expectPatternCollectionParity({
+      showcase: showcaseDialog,
+      product: productDialog,
+      pattern: "editor-form-section",
+    });
+
+    await pairScreenshot(
+      showcase,
+      product,
+      `ai-settings-${tab.replaceAll(" ", "-")}-drawer`,
+      testInfo,
+    );
+
+    await showcase.keyboard.press("Escape");
+    await product.keyboard.press("Escape");
+    await expect(showcaseDialog).toBeHidden();
+    await expect(productDialog).toBeHidden();
+  }
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+  expect(unknown).toEqual([]);
+  expect(unexpectedWrites).toEqual([]);
+  await context.close();
+});
+
 test("AI Operations top-level panels, Recent Runs and Run Center match Showcase", async ({
   browser,
 }, testInfo) => {
@@ -479,6 +665,9 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
     expect(await styleFingerprint(productLead)).toEqual(
       await styleFingerprint(showcaseLead),
     );
+    expect(await tabPanelLeadFingerprint(productLead)).toEqual(
+      await tabPanelLeadFingerprint(showcaseLead),
+    );
 
     await expect(showcaseLead).not.toHaveText("");
     await expect(productLead).not.toHaveText("");
@@ -486,6 +675,26 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
 
   await showcase.getByRole("tab", { name: /自动化/ }).click();
   await product.getByRole("tab", { name: /自动化/ }).click();
+
+  const showcaseWorkflowToolbar = showcase.locator(
+    '[data-slot="workflow-list-toolbar"]',
+  );
+  const productWorkflowToolbar = product.locator(
+    '[data-slot="workflow-list-toolbar"]',
+  );
+  expect(await styleFingerprint(productWorkflowToolbar)).toEqual(
+    await styleFingerprint(showcaseWorkflowToolbar),
+  );
+
+  const showcaseWorkflowRow = showcase
+    .getByRole("button", { name: /打开 Workflow：/ })
+    .first();
+  const productWorkflowRow = product
+    .getByRole("button", { name: /打开 Workflow：/ })
+    .first();
+  expect(await styleFingerprint(productWorkflowRow)).toEqual(
+    await styleFingerprint(showcaseWorkflowRow),
+  );
 
   // Automation now uses list -> dedicated detail. Enter one Workflow on both
   // surfaces before comparing detail-only regions such as Recent Runs.
@@ -538,6 +747,48 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
   ]);
   expect(productRecentBox?.width).toBe(showcaseRecentBox?.width);
 
+  const showcaseWorkflowDetail = showcase.locator(
+    '[data-slot="workflow-detail"]',
+  );
+  const productWorkflowDetail = product.locator(
+    '[data-slot="workflow-detail"]',
+  );
+  expect(await styleFingerprint(productWorkflowDetail)).toEqual(
+    await styleFingerprint(showcaseWorkflowDetail),
+  );
+
+  const showcaseWorkflowOverview = showcaseWorkflowDetail
+    .locator('[data-slot="card"]')
+    .first();
+  const productWorkflowOverview = productWorkflowDetail
+    .locator('[data-slot="card"]')
+    .first();
+  expect(await styleFingerprint(productWorkflowOverview)).toEqual(
+    await styleFingerprint(showcaseWorkflowOverview),
+  );
+
+  await showcase.getByRole("tab", { name: /待我处理/ }).click();
+  await product.getByRole("tab", { name: /待我处理/ }).click();
+
+  const showcaseInboxMasterDetail = showcase
+    .locator('[data-slot="ops-master-detail"]')
+    .first();
+  const productInboxMasterDetail = product
+    .locator('[data-slot="ops-master-detail"]')
+    .first();
+  expect(await styleFingerprint(productInboxMasterDetail)).toEqual(
+    await styleFingerprint(showcaseInboxMasterDetail),
+  );
+  const [showcaseInboxMinHeight, productInboxMinHeight] = await Promise.all([
+    showcaseInboxMasterDetail.evaluate(
+      (element) => getComputedStyle(element).minHeight,
+    ),
+    productInboxMasterDetail.evaluate(
+      (element) => getComputedStyle(element).minHeight,
+    ),
+  ]);
+  expect(productInboxMinHeight).toBe(showcaseInboxMinHeight);
+
   await showcase.getByRole("tab", { name: /运行中心/ }).click();
   await product.getByRole("tab", { name: /运行中心/ }).click();
 
@@ -558,6 +809,32 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
     productRail.boundingBox(),
   ]);
   expect(productRailBox?.width).toBe(showcaseRailBox?.width);
+
+  const showcaseWorkflowRunDetail = showcase
+    .locator('[data-pattern="record-detail-composition"]')
+    .first();
+  const productWorkflowRunDetail = product
+    .locator('[data-pattern="record-detail-composition"]')
+    .first();
+  expect(await styleFingerprint(productWorkflowRunDetail)).toEqual(
+    await styleFingerprint(showcaseWorkflowRunDetail),
+  );
+
+  for (const regionName of ["执行过程", "运行资源", "人工交互"]) {
+    const showcaseRegion = showcase.getByRole("region", {
+      name: regionName,
+      exact: true,
+    });
+    const productRegion = product.getByRole("region", {
+      name: regionName,
+      exact: true,
+    });
+    await expect(showcaseRegion).toBeVisible();
+    await expect(productRegion).toBeVisible();
+    expect(await styleFingerprint(productRegion)).toEqual(
+      await styleFingerprint(showcaseRegion),
+    );
+  }
 
   await showcase.getByRole("button", { name: /Agent 运行/ }).click();
   await product.getByRole("button", { name: /Agent 运行/ }).click();

@@ -21,8 +21,9 @@ function statusColor(status: string): TagColor {
 }
 
 function riskColor(risk: string): TagColor {
-  if (["high", "critical"].includes(risk)) return "error";
-  if (["medium", "moderate"].includes(risk)) return "warning";
+  if (["high", "critical", "write"].includes(risk)) return "error";
+  if (["medium", "moderate", "propose"].includes(risk)) return "warning";
+  if (["low", "read"].includes(risk)) return "success";
   return "default";
 }
 

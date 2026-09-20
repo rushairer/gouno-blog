@@ -2,7 +2,9 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  ChevronRight,
   CirclePause,
+  Clock3,
   Database,
   Edit2,
   GitBranch,
@@ -12,6 +14,7 @@ import {
   Plus,
   RotateCcw,
   Save,
+  Search,
   TestTube2,
   Trash2,
   X,
@@ -39,14 +42,13 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Empty,
   Field,
   FormActions,
   FormLayout,
+  Heading,
   IconButton,
   Input,
   Modal,
-  SearchField,
   Select,
   Tag,
   Text,
@@ -56,8 +58,6 @@ import { StatusPill } from "./StatusPill";
 import { statusLabel } from "./labels";
 import { WorkflowInputForm } from "./WorkflowInputForm";
 import {
-  OperationsMeta,
-  OperationsObjectRow,
   OperationsPanelLead,
   OperationsRegionHeading,
   OperationsSummaryStrip,
@@ -77,6 +77,195 @@ type WorkflowValue = {
   scope_policy: { mode: "strict" | "unscoped"; discovery_tools: string[] };
   resource_query_empty_policy: "succeed" | "fail";
 };
+
+function WorkflowMetricCard({
+  label,
+  value,
+  detail,
+  progress,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  progress?: number;
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/[0.18] p-4">
+      <Text size="xs" tone="muted">
+        {label}
+      </Text>
+      <strong className="mt-2 block type-metric-value">{value}</strong>
+      {progress !== undefined ? (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-[width]"
+            style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }}
+          />
+        </div>
+      ) : null}
+      <Text size="xs" tone="muted" className="mt-2">
+        {detail}
+      </Text>
+    </div>
+  );
+}
+
+function ScheduleFact({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="min-w-0 px-4 py-4 first:pl-0 last:pr-0">
+      <Text size="xs" tone="muted">
+        {label}
+      </Text>
+      <strong className="mt-1 block type-body-sm type-weight-semibold">
+        {value}
+      </strong>
+      <Text size="xs" tone="muted" className="mt-1">
+        {detail}
+      </Text>
+    </div>
+  );
+}
+
+function WorkflowAssetRow({
+  workflow,
+  latestRun,
+  metric,
+  locale,
+  formatTime,
+  onSelect,
+}: {
+  workflow: Workflow;
+  latestRun?: WorkflowRun;
+  metric?: WorkflowMetric;
+  locale: "en" | "zh";
+  formatTime: (value?: string) => string;
+  onSelect: () => void;
+}) {
+  const successRate = metric?.runs
+    ? Math.round(((metric.runs - metric.failures) / metric.runs) * 100)
+    : 0;
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      block
+      aria-label={
+        (locale === "zh" ? "打开 Workflow：" : "Open Workflow: ") +
+        workflow.name
+      }
+      className="group grid h-auto w-full min-w-0 grid-cols-1 gap-4 whitespace-normal rounded-none border-b px-5 py-4 text-left font-normal transition-colors last:border-b-0 hover:bg-muted/30 xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem] xl:items-center [&>span]:contents"
+      onClick={onSelect}
+    >
+      <span className="flex min-w-0 items-start gap-3">
+        <span
+          className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/25 text-muted-foreground transition-colors group-hover:text-foreground"
+          aria-hidden="true"
+        >
+          <GitBranch className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <strong className="min-w-0 type-body-sm type-weight-semibold text-foreground [overflow-wrap:anywhere]">
+              {workflow.name}
+            </strong>
+            <Tag color={workflow.enabled ? "success" : undefined}>
+              {workflow.enabled
+                ? locale === "zh"
+                  ? "已启用"
+                  : "Enabled"
+                : locale === "zh"
+                  ? "已停用"
+                  : "Disabled"}
+            </Tag>
+            <Tag>v{workflow.current_version}</Tag>
+          </span>
+          <Text size="xs" tone="muted" className="mt-1 line-clamp-2">
+            {workflow.description}
+          </Text>
+          <Text size="xs" tone="muted" className="mt-1">
+            {workflow.steps.length} {locale === "zh" ? "个步骤" : "steps"}
+            {workflow.template_key ? ` · ${workflow.template_key}` : ""}
+          </Text>
+        </span>
+      </span>
+
+      <span className="min-w-0">
+        <Text size="xs" tone="muted" className="xl:hidden">
+          {locale === "zh" ? "执行计划" : "Schedule"}
+        </Text>
+        <code className="mt-1 block type-family-mono type-caption type-weight-medium text-foreground">
+          {workflow.cron_expression ||
+            (locale === "zh" ? "仅手动" : "Manual only")}
+        </code>
+        <Text size="xs" tone="muted" className="mt-1">
+          {workflow.timezone}
+        </Text>
+        <Text size="xs" tone="muted" className="mt-0.5">
+          {locale === "zh" ? "下次" : "Next"} {formatTime(workflow.next_run_at)}
+        </Text>
+      </span>
+
+      <span className="min-w-0">
+        <Text size="xs" tone="muted" className="xl:hidden">
+          {locale === "zh" ? "最近运行" : "Latest run"}
+        </Text>
+        <span className="mt-1 flex flex-wrap items-center gap-2">
+          {latestRun ? (
+            <StatusPill status={latestRun.status} locale={locale} />
+          ) : (
+            <Tag>{locale === "zh" ? "暂无运行" : "No runs"}</Tag>
+          )}
+          <Text size="xs" tone="muted">
+            {latestRun
+              ? formatTime(latestRun.started_at || latestRun.created_at)
+              : "—"}
+          </Text>
+        </span>
+        <Text size="xs" tone="muted" className="mt-1 line-clamp-2">
+          {latestRun?.error_message ||
+            (latestRun
+              ? locale === "zh"
+                ? "运行证据已记录"
+                : "Run evidence recorded"
+              : locale === "zh"
+                ? "暂无运行记录"
+                : "No run records")}
+        </Text>
+      </span>
+
+      <span className="min-w-0">
+        <Text size="xs" tone="muted" className="xl:hidden">
+          {locale === "zh" ? "运行质量" : "Run quality"}
+        </Text>
+        <strong className="mt-1 block type-body-sm type-weight-semibold">
+          {successRate}%
+        </strong>
+        <Text
+          size="xs"
+          tone={metric?.failures ? "danger" : "muted"}
+          className="mt-1"
+        >
+          {metric?.runs || 0} {locale === "zh" ? "次运行" : "runs"} ·{" "}
+          {metric?.failures || 0} {locale === "zh" ? "次失败" : "failures"}
+        </Text>
+      </span>
+
+      <ChevronRight
+        className="hidden size-4 text-muted-foreground xl:block"
+        aria-hidden="true"
+      />
+    </Button>
+  );
+}
 
 function exampleInput(
   schema: Record<string, unknown>,
@@ -172,9 +361,13 @@ function PanelHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <Heading level={3} variant="label">
+          {title}
+        </Heading>
         {description ? (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          <Text size="sm" tone="muted" className="mt-1">
+            {description}
+          </Text>
         ) : null}
       </div>
       {actions ? <div className="shrink-0">{actions}</div> : null}
@@ -607,7 +800,7 @@ export function WorkflowWorkspace({
       : "—";
 
   return (
-    <div className="workflow-workspace flex flex-col gap-6">
+    <div className="workflow-workspace flex flex-col gap-5">
       <OperationsPanelLead
         description={
           selectedWorkflow
@@ -657,7 +850,7 @@ export function WorkflowWorkspace({
         <div
           data-slot="workflow-detail"
           data-pattern="record-detail-composition"
-          className="min-w-0"
+          className="flex min-w-0 flex-col gap-5"
         >
           <div className="workflow-detail-view min-w-0">
             {(() => {
@@ -733,14 +926,14 @@ export function WorkflowWorkspace({
                   >
                     <div className="flex flex-col gap-4 border-b p-6 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/[0.08] text-primary">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/[0.08] text-primary">
                           <GitBranch className="size-5" aria-hidden="true" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-xl font-semibold tracking-tight">
+                            <Heading level={2} variant="section">
                               {workflow.name}
-                            </h2>
+                            </Heading>
                             <Tag
                               color={workflow.enabled ? "success" : undefined}
                             >
@@ -767,6 +960,7 @@ export function WorkflowWorkspace({
                           size="small"
                           variant="outline"
                           type="button"
+                          icon={<Clock3 />}
                           onClick={() => onOpenRecords?.(workflow.id)}
                         >
                           {locale === "zh" ? "运行记录" : "Run records"}
@@ -838,120 +1032,89 @@ export function WorkflowWorkspace({
                       </div>
                     </div>
 
-                    <div className="p-6">
-                      <OperationsSummaryStrip
-                        ariaLabel={
+                    <div className="grid gap-3 p-6 sm:grid-cols-2 2xl:grid-cols-4">
+                      <WorkflowMetricCard
+                        label={locale === "zh" ? "成功率" : "Success rate"}
+                        value={`${successRate}%`}
+                        detail={
                           locale === "zh"
-                            ? "Workflow 运行摘要"
-                            : "Workflow run summary"
+                            ? `${metric?.runs || 0} 次运行中的完成率`
+                            : `${metric?.runs || 0} runs`
                         }
-                        items={[
-                          {
-                            label: locale === "zh" ? "成功率" : "Success rate",
-                            value: successRate + "%",
-                            detail:
-                              locale === "zh"
-                                ? (metric?.runs || 0) + " 次运行中的完成率"
-                                : (metric?.runs || 0) + " runs",
-                          },
-                          {
-                            label:
-                              locale === "zh"
-                                ? "最近正式运行"
-                                : "Latest live run",
-                            value: latestRun
-                              ? statusLabel(latestRun.status, locale)
-                              : labels.never,
-                            detail: latestDryRun
-                              ? (locale === "zh"
-                                  ? "最近试运行："
-                                  : "Latest dry-run: ") +
-                                statusLabel(latestDryRun.status, locale)
-                              : locale === "zh"
-                                ? (metric?.runs || 0) + " 次累计运行"
-                                : (metric?.runs || 0) + " total runs",
-                          },
-                          {
-                            label: locale === "zh" ? "失败次数" : "Failures",
-                            value: metric?.failures || 0,
-                            detail:
-                              (metric?.failures || 0) > 0
-                                ? locale === "zh"
-                                  ? "可在运行中心追溯失败证据"
-                                  : "Inspect evidence in the run center"
-                                : locale === "zh"
-                                  ? "暂无失败记录"
-                                  : "No failures",
-                          },
-                          {
-                            label: "Token",
-                            value: (metric?.tokens || 0).toLocaleString(),
-                            detail:
-                              locale === "zh"
-                                ? "累计 Workflow Run"
-                                : "All Workflow Runs",
-                          },
-                        ]}
+                        progress={successRate}
                       />
+                      <WorkflowMetricCard
+                        label={locale === "zh" ? "累计运行" : "Total runs"}
+                        value={String(metric?.runs || 0)}
+                        detail={
+                          latestRun
+                            ? `${locale === "zh" ? "最近" : "Latest"} ${statusLabel(latestRun.status, locale)}`
+                            : latestDryRun
+                              ? `${locale === "zh" ? "最近试运行" : "Latest dry-run"} ${statusLabel(latestDryRun.status, locale)}`
+                              : labels.never
+                        }
+                      />
+                      <WorkflowMetricCard
+                        label={locale === "zh" ? "失败次数" : "Failures"}
+                        value={String(metric?.failures || 0)}
+                        detail={
+                          (metric?.failures || 0) > 0
+                            ? locale === "zh"
+                              ? "可在运行中心追溯失败证据"
+                              : "Inspect evidence in the run center"
+                            : locale === "zh"
+                              ? "暂无失败记录"
+                              : "No failures"
+                        }
+                      />
+                      <WorkflowMetricCard
+                        label={locale === "zh" ? "Token 消耗" : "Token usage"}
+                        value={(metric?.tokens || 0).toLocaleString()}
+                        detail={
+                          locale === "zh"
+                            ? "累计 Workflow Run"
+                            : "All Workflow Runs"
+                        }
+                      />
+                    </div>
 
-                      <div className="grid border-b sm:grid-cols-2 xl:grid-cols-4 xl:divide-x">
-                        <div className="min-w-0 py-4 xl:pr-5">
-                          <Text size="xs" tone="muted">
-                            {labels.next}
-                          </Text>
-                          <strong className="mt-1 block text-sm">
-                            {formatTime(workflow.next_run_at)}
-                          </strong>
-                          <Text size="xs" tone="muted" className="mt-1">
-                            {workflow.enabled
-                              ? locale === "zh"
-                                ? "Scheduler 已启用"
-                                : "Scheduler enabled"
-                              : locale === "zh"
-                                ? "Workflow 已停用"
-                                : "Workflow disabled"}
-                          </Text>
-                        </div>
-                        <div className="min-w-0 py-4 xl:px-5">
-                          <Text size="xs" tone="muted">
-                            {labels.schedule}
-                          </Text>
-                          <strong className="mt-1 block text-sm">
-                            {workflow.cron_expression ||
-                              (locale === "zh" ? "仅手动" : "Manual only")}
-                          </strong>
-                          <Text size="xs" tone="muted" className="mt-1">
-                            {workflow.timezone}
-                          </Text>
-                        </div>
-                        <div className="min-w-0 py-4 xl:px-5">
-                          <Text size="xs" tone="muted">
-                            {locale === "zh" ? "当前版本" : "Current version"}
-                          </Text>
-                          <strong className="mt-1 block text-sm">
-                            v{workflow.current_version}
-                          </strong>
-                          <Text size="xs" tone="muted" className="mt-1">
-                            {workflow.template_key ||
-                              (locale === "zh"
-                                ? "自定义 Workflow"
-                                : "Custom Workflow")}
-                          </Text>
-                        </div>
-                        <div className="min-w-0 py-4 xl:pl-5">
-                          <Text size="xs" tone="muted">
-                            {locale === "zh" ? "流程规模" : "Flow size"}
-                          </Text>
-                          <strong className="mt-1 block text-sm">
-                            {workflow.steps.length}{" "}
-                            {locale === "zh" ? "个步骤" : "steps"}
-                          </strong>
-                          <Text size="xs" tone="muted" className="mt-1">
-                            {inputProperties.length}{" "}
-                            {locale === "zh" ? "项运行输入" : "runtime inputs"}
-                          </Text>
-                        </div>
-                      </div>
+                    <div className="mx-6 grid border-t sm:grid-cols-2 xl:grid-cols-4 xl:divide-x">
+                      <ScheduleFact
+                        label={labels.next}
+                        value={formatTime(workflow.next_run_at)}
+                        detail={
+                          workflow.enabled
+                            ? locale === "zh"
+                              ? "Scheduler 已启用"
+                              : "Scheduler enabled"
+                            : locale === "zh"
+                              ? "Workflow 已停用"
+                              : "Workflow disabled"
+                        }
+                      />
+                      <ScheduleFact
+                        label={labels.schedule}
+                        value={
+                          workflow.cron_expression ||
+                          (locale === "zh" ? "仅手动" : "Manual only")
+                        }
+                        detail={workflow.timezone}
+                      />
+                      <ScheduleFact
+                        label={locale === "zh" ? "当前版本" : "Current version"}
+                        value={`v${workflow.current_version}`}
+                        detail={
+                          workflow.template_key ||
+                          (locale === "zh"
+                            ? "自定义 Workflow"
+                            : "Custom Workflow")
+                        }
+                      />
+                      <ScheduleFact
+                        label={locale === "zh" ? "流程规模" : "Flow size"}
+                        value={`${workflow.steps.length} ${locale === "zh" ? "个步骤" : "steps"}`}
+                        detail={`${inputProperties.length} ${locale === "zh" ? "项运行输入" : "runtime inputs"}`}
+                      />
                     </div>
                   </Card>
 
@@ -1009,7 +1172,9 @@ export function WorkflowWorkspace({
                                   : "Open recent Run #") + run.id
                               }
                             >
-                              <strong className="text-sm">Run #{run.id}</strong>
+                              <strong className="type-body-sm type-weight-semibold">
+                                Run #{run.id}
+                              </strong>
                               <span>
                                 <StatusPill
                                   status={run.status}
@@ -1088,12 +1253,12 @@ export function WorkflowWorkspace({
                       <ol className="divide-y">
                         {workflow.steps.map((step, index) => (
                           <li key={step.id} className="flex gap-4 px-6 py-4">
-                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full border type-caption type-weight-semibold">
                               {index + 1}
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <strong className="text-sm">
+                                <strong className="type-body-sm type-weight-semibold">
                                   {step.name || step.id}
                                 </strong>
                                 <Tag>{step.type}</Tag>
@@ -1129,12 +1294,12 @@ export function WorkflowWorkspace({
                               : "Defines what the Workflow can discover and which resources may become run targets."
                           }
                         />
-                        <dl className="mt-4 space-y-4 text-sm">
+                        <dl className="mt-4 space-y-4 type-body-sm type-weight-semibold">
                           <div>
-                            <dt className="text-xs text-muted-foreground">
+                            <dt className="type-caption text-muted-foreground">
                               Scope
                             </dt>
-                            <dd className="mt-1 font-medium">
+                            <dd className="mt-1 type-body type-weight-medium">
                               {workflow.scope_policy?.mode === "strict"
                                 ? locale === "zh"
                                   ? "严格限制目标资源"
@@ -1145,10 +1310,10 @@ export function WorkflowWorkspace({
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">
+                            <dt className="type-caption text-muted-foreground">
                               {locale === "zh" ? "发现工具" : "Discovery tools"}
                             </dt>
-                            <dd className="mt-1 font-medium">
+                            <dd className="mt-1 type-body type-weight-medium">
                               {workflow.scope_policy?.discovery_tools?.length
                                 ? workflow.scope_policy.discovery_tools.join(
                                     " · ",
@@ -1159,12 +1324,12 @@ export function WorkflowWorkspace({
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">
+                            <dt className="type-caption text-muted-foreground">
                               {locale === "zh"
                                 ? "空结果策略"
                                 : "Empty result policy"}
                             </dt>
-                            <dd className="mt-1 font-medium">
+                            <dd className="mt-1 type-body type-weight-medium">
                               {workflow.resource_query_empty_policy === "fail"
                                 ? locale === "zh"
                                   ? "视为运行失败"
@@ -1216,7 +1381,7 @@ export function WorkflowWorkspace({
                               <Text size="xs" tone="muted">
                                 {labels.input}
                               </Text>
-                              <strong className="mt-1 block text-sm">
+                              <strong className="mt-1 block type-body-sm type-weight-semibold">
                                 {locale === "zh"
                                   ? "无需手动填写"
                                   : "No manual input required"}
@@ -1293,7 +1458,7 @@ export function WorkflowWorkspace({
                               aria-hidden="true"
                             />
                             <span className="min-w-0">
-                              <strong className="block text-sm">
+                              <strong className="block type-body-sm type-weight-semibold">
                                 {locale === "zh"
                                   ? (activeRun.dryRun ? "试运行" : "Workflow") +
                                     " 正在执行"
@@ -1380,134 +1545,210 @@ export function WorkflowWorkspace({
             })()}
           </div>
         </div>
-      ) : (
-        <Card
-          padding="none"
-          className="overflow-hidden"
-          role="region"
-          aria-label={locale === "zh" ? "Workflow 资产" : "Workflow assets"}
-        >
-          <div className="flex flex-col gap-3 border-b bg-muted/[0.12] px-4 py-4 lg:flex-row lg:items-center">
-            <div className="min-w-0 flex-1">
-              <SearchField
-                aria-label={
-                  locale === "zh" ? "搜索 Workflow" : "Search workflows"
-                }
-                value={workflowQuery}
-                onChange={(event) => setWorkflowQuery(event.target.value)}
-                placeholder={
-                  locale === "zh" ? "搜索 Workflow" : "Search workflows"
-                }
-              />
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="sm:w-44">
-                <Select
-                  aria-label={
-                    locale === "zh"
-                      ? "按状态筛选 Workflow"
-                      : "Filter workflows by status"
-                  }
-                  value={statusFilter}
-                  onChange={(value) =>
-                    setStatusFilter(
-                      selectValue(value) as "all" | "enabled" | "disabled",
-                    )
-                  }
-                >
-                  <option value="all">
-                    {locale === "zh" ? "全部状态" : "All status"}
-                  </option>
-                  <option value="enabled">
-                    {locale === "zh" ? "已启用" : "Enabled"}
-                  </option>
-                  <option value="disabled">
-                    {locale === "zh" ? "已停用" : "Disabled"}
-                  </option>
-                </Select>
-              </div>
-              <Text
-                size="xs"
-                tone="muted"
-                className="shrink-0 sm:min-w-16 sm:text-right"
-              >
-                {visibleWorkflows.length} / {workflows.length}
-              </Text>
-            </div>
-          </div>
-          <div
-            role="list"
-            aria-label={locale === "zh" ? "Workflow 列表" : "Workflow list"}
+      ) : workflows.length ? (
+        <div className="flex flex-col gap-5">
+          <OperationsSummaryStrip
+            ariaLabel={
+              locale === "zh" ? "Workflow 资产摘要" : "Workflow asset summary"
+            }
+            items={[
+              {
+                label: "Workflow",
+                value: String(workflows.length),
+                detail: locale === "zh" ? "自动化资产" : "automation assets",
+              },
+              {
+                label: locale === "zh" ? "已启用" : "Enabled",
+                value: String(
+                  workflows.filter((workflow) => workflow.enabled).length,
+                ),
+                detail:
+                  locale === "zh"
+                    ? `${workflows.filter((workflow) => !workflow.enabled).length} 项已停用`
+                    : `${workflows.filter((workflow) => !workflow.enabled).length} disabled`,
+              },
+              {
+                label: locale === "zh" ? "待关注" : "Needs attention",
+                value: String(
+                  workflows.filter((workflow) => {
+                    const latestRun = runs.find(
+                      (run) => run.workflow_id === workflow.id && !run.dry_run,
+                    );
+                    return Boolean(
+                      latestRun &&
+                      [
+                        "failed",
+                        "waiting_for_user",
+                        "awaiting_approval",
+                      ].includes(latestRun.status),
+                    );
+                  }).length,
+                ),
+                detail:
+                  locale === "zh"
+                    ? "最新 Run 失败或等待人工"
+                    : "latest Run failed or needs human input",
+              },
+              {
+                label: locale === "zh" ? "累计运行" : "Total runs",
+                value: String(
+                  metrics.reduce((sum, item) => sum + item.runs, 0),
+                ),
+                detail:
+                  locale === "zh"
+                    ? `${metrics.reduce((sum, item) => sum + item.failures, 0)} 次失败`
+                    : `${metrics.reduce((sum, item) => sum + item.failures, 0)} failures`,
+              },
+            ]}
+          />
+
+          <Card
+            padding="none"
+            className="overflow-hidden"
+            role="region"
+            aria-label={locale === "zh" ? "Workflow 资产" : "Workflow assets"}
           >
-            {visibleWorkflows.length ? (
-              visibleWorkflows.map((workflow) => {
-                const latestRun = runs.find(
-                  (run) => run.workflow_id === workflow.id && !run.dry_run,
-                );
-                return (
-                  <div key={workflow.id} role="listitem">
-                    <OperationsObjectRow
-                      leading={<GitBranch className="size-4" />}
-                      title={workflow.name}
-                      status={
-                        <Tag color={workflow.enabled ? "success" : undefined}>
-                          {workflow.enabled
-                            ? locale === "zh"
-                              ? "已启用"
-                              : "Enabled"
-                            : locale === "zh"
-                              ? "已停用"
-                              : "Disabled"}
-                        </Tag>
-                      }
-                      meta={
-                        (workflow.cron_expression ||
-                          (locale === "zh" ? "仅手动" : "Manual")) +
-                        " · v" +
-                        workflow.current_version
-                      }
-                      summary={workflow.description}
-                      signals={
-                        <>
-                          <OperationsMeta>
-                            {labels.next} {formatTime(workflow.next_run_at)}
-                          </OperationsMeta>
-                          {latestRun ? (
-                            <OperationsMeta>
-                              {locale === "zh" ? "最近 " : "Latest "}
-                              {statusLabel(latestRun.status, locale)}
-                            </OperationsMeta>
-                          ) : null}
-                        </>
-                      }
-                      onClick={() => {
-                        setSelectedWorkflowID(workflow.id);
-                        const url = new URL(window.location.href);
-                        url.searchParams.set("workflow", String(workflow.id));
-                        window.history.replaceState(null, "", url);
-                        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-                      }}
-                      ariaLabel={
-                        (locale === "zh"
-                          ? "打开 Workflow："
-                          : "Open Workflow: ") + workflow.name
-                      }
-                    />
-                  </div>
-                );
-              })
-            ) : (
-              <div className="p-6">
-                <Empty
-                  title={
+            <div
+              data-slot="workflow-list-toolbar"
+              className="flex flex-col gap-3 border-b bg-muted/[0.12] px-4 py-4 lg:flex-row lg:items-center"
+            >
+              <div className="min-w-0 flex-1">
+                <Input
+                  type="search"
+                  aria-label={
+                    locale === "zh" ? "搜索 Workflow" : "Search workflows"
+                  }
+                  prefix={<Search className="size-4" />}
+                  value={workflowQuery}
+                  onChange={(event) => setWorkflowQuery(event.target.value)}
+                  placeholder={
                     locale === "zh"
-                      ? "没有符合条件的 Workflow。"
-                      : "No matching workflows."
+                      ? "搜索名称、描述或模板"
+                      : "Search name, description, or template"
                   }
                 />
               </div>
-            )}
-          </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="sm:w-44">
+                  <Select
+                    aria-label={
+                      locale === "zh"
+                        ? "按状态筛选 Workflow"
+                        : "Filter workflows by status"
+                    }
+                    value={statusFilter}
+                    onChange={(value) =>
+                      setStatusFilter(
+                        selectValue(value) as "all" | "enabled" | "disabled",
+                      )
+                    }
+                  >
+                    <option value="all">
+                      {locale === "zh" ? "全部状态" : "All status"}
+                    </option>
+                    <option value="enabled">
+                      {locale === "zh" ? "已启用" : "Enabled"}
+                    </option>
+                    <option value="disabled">
+                      {locale === "zh" ? "已停用" : "Disabled"}
+                    </option>
+                  </Select>
+                </div>
+                {workflowQuery || statusFilter !== "all" ? (
+                  <Button
+                    size="small"
+                    variant="ghost"
+                    type="button"
+                    onClick={() => {
+                      setWorkflowQuery("");
+                      setStatusFilter("all");
+                    }}
+                  >
+                    {locale === "zh" ? "清除筛选" : "Clear filters"}
+                  </Button>
+                ) : null}
+                <Text
+                  size="xs"
+                  tone="muted"
+                  className="shrink-0 sm:min-w-16 sm:text-right"
+                >
+                  {visibleWorkflows.length} / {workflows.length}
+                </Text>
+              </div>
+            </div>
+
+            <div
+              aria-hidden="true"
+              className="hidden grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem] gap-4 border-b bg-muted/[0.18] px-5 py-2.5 type-caption type-weight-medium text-muted-foreground xl:grid"
+            >
+              <span>Workflow</span>
+              <span>{locale === "zh" ? "执行计划" : "Schedule"}</span>
+              <span>{locale === "zh" ? "最近运行" : "Latest run"}</span>
+              <span>{locale === "zh" ? "运行质量" : "Run quality"}</span>
+              <span />
+            </div>
+
+            <div
+              role="list"
+              aria-label={locale === "zh" ? "Workflow 列表" : "Workflow list"}
+              className="overflow-hidden"
+            >
+              {visibleWorkflows.length ? (
+                visibleWorkflows.map((workflow) => {
+                  const latestRun = runs.find(
+                    (run) => run.workflow_id === workflow.id && !run.dry_run,
+                  );
+                  return (
+                    <div key={workflow.id} role="listitem">
+                      <WorkflowAssetRow
+                        workflow={workflow}
+                        latestRun={latestRun}
+                        metric={metricMap.get(workflow.id)}
+                        locale={locale}
+                        formatTime={formatTime}
+                        onSelect={() => {
+                          setSelectedWorkflowID(workflow.id);
+                          const url = new URL(window.location.href);
+                          url.searchParams.set("workflow", String(workflow.id));
+                          window.history.replaceState(null, "", url);
+                          window.scrollTo({
+                            top: 0,
+                            left: 0,
+                            behavior: "auto",
+                          });
+                        }}
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+                  <Search
+                    className="size-5 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <strong className="type-body-sm type-weight-semibold">
+                    {locale === "zh"
+                      ? "没有符合条件的 Workflow"
+                      : "No matching workflows"}
+                  </strong>
+                  <Text size="xs" tone="muted">
+                    {locale === "zh"
+                      ? "调整搜索词或状态筛选后再试，或使用上方“清除筛选”恢复全部资产。"
+                      : "Adjust the search or status filter, or clear filters to restore all assets."}
+                  </Text>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <Card padding="base">
+          <Text tone="muted">
+            {locale === "zh"
+              ? "还没有 Workflow，请先创建一项自动化。"
+              : "No Workflows yet. Create an automation first."}
+          </Text>
         </Card>
       )}
       <Modal

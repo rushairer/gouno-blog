@@ -26,10 +26,10 @@ export function AISettingsEditorHeader({
         {icon}
       </span>
       <div className="min-w-0">
-        <Heading level={2} className="text-lg">
+        <Heading level={2} variant="subsection">
           {title}
         </Heading>
-        <Text size="sm" tone="muted" className="mt-1 max-w-3xl">
+        <Text size="sm" tone="muted">
           {description}
         </Text>
       </div>
@@ -47,13 +47,20 @@ export function AISettingsEditorSection({
   children: ReactNode;
 }) {
   return (
-    <Card padding="none" className="overflow-hidden">
+    <Card
+      padding="none"
+      data-slot="ai-settings-editor-form-section"
+      data-pattern="editor-form-section"
+      className="overflow-hidden"
+    >
       <CardHeader className="border-b p-6">
-        <div className="flex flex-col gap-1">
-          <CardTitle className="text-base">{title}</CardTitle>
-          <Text size="xs" tone="muted">
-            {description}
-          </Text>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <CardTitle>{title}</CardTitle>
+            <Text size="xs" tone="muted" leading="relaxed" className="mt-1">
+              {description}
+            </Text>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-6">{children}</CardContent>

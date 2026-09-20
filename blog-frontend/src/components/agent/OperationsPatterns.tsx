@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Button, Heading, Text } from "@gouno/ui/core";
+import { TabPanelLead } from "../patterns/TabPanelLead";
 
 export type OperationsSummaryItem = {
   label: ReactNode;
@@ -16,33 +17,13 @@ export function OperationsPanelLead({
   description?: ReactNode;
   actions?: ReactNode;
 }) {
-  if (!title && !description && !actions) return null;
-
   return (
-    <div
-      data-slot="ops-panel-lead"
-      data-pattern="tab-panel-lead"
-      className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-    >
-      <div className="min-w-0">
-        {title ? <Heading level={2}>{title}</Heading> : null}
-        {description ? (
-          <Text
-            tone="muted"
-            size="sm"
-            leading="relaxed"
-            className={title ? "mt-1 max-w-3xl" : "max-w-3xl"}
-          >
-            {description}
-          </Text>
-        ) : null}
-      </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {actions}
-        </div>
-      ) : null}
-    </div>
+    <TabPanelLead
+      title={title}
+      description={description}
+      actions={actions}
+      dataSlot="ops-panel-lead"
+    />
   );
 }
 
@@ -54,6 +35,7 @@ export function OperationsObjectRow({
   signals,
   leading,
   selected = false,
+  disabled = false,
   onClick,
   ariaLabel,
 }: {
@@ -64,6 +46,7 @@ export function OperationsObjectRow({
   signals?: ReactNode;
   leading?: ReactNode;
   selected?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
   ariaLabel?: string;
 }) {
@@ -73,6 +56,7 @@ export function OperationsObjectRow({
       block
       aria-label={ariaLabel}
       aria-pressed={selected}
+      disabled={disabled}
       className={[
         "group relative h-auto items-stretch justify-start whitespace-normal rounded-none border-b edge-s-emphasis px-4 py-4 text-left transition-colors last:border-b-0",
         "focus-visible:ring-inset",

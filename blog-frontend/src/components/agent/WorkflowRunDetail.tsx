@@ -8,7 +8,7 @@ import type {
   WorkflowRunEvent,
   WorkflowStepRun,
 } from "../../types/agent";
-import { Alert, Button, Empty, Tag, Text } from "@gouno/ui/core";
+import { Alert, Button, Empty, Heading, Tag, Text } from "@gouno/ui/core";
 import {
   OperationsRegionHeading,
   OperationsSummaryStrip,
@@ -105,25 +105,31 @@ function ResourceEvidence({
 }) {
   if (!resources.length) {
     return (
-      <Text size="sm" tone="muted">
-        {zh
-          ? "该运行没有结构化资源快照。"
-          : "No structured resource snapshot for this run."}
-      </Text>
+      <div className="p-8">
+        <Empty
+          title={
+            zh
+              ? "该运行没有结构化资源快照"
+              : "No structured resource snapshot for this run"
+          }
+        />
+      </div>
     );
   }
+
   return (
     <div className="divide-y">
       {resources.map((resource) => (
         <div
           key={resource.id}
-          className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+          className="flex items-start justify-between gap-4 px-5 py-4"
         >
           <div className="min-w-0">
-            <strong className="block text-sm">
+            <strong className="type-body-sm type-weight-semibold">
               {resource.label || `${resource.type} #${resource.key}`}
             </strong>
             <Text size="xs" tone="muted" className="mt-1">
+              {resource.type} ·{" "}
               {resource.source === "manual"
                 ? zh
                   ? "手选"
@@ -137,7 +143,9 @@ function ResourceEvidence({
                     : "discovery"}
             </Text>
           </div>
-          <Tag>
+          <Tag
+            color={resource.access_level === "target" ? "primary" : undefined}
+          >
             {resource.access_level === "target"
               ? zh
                 ? "目标"
@@ -228,22 +236,30 @@ export function WorkflowRunDetail({
       ) : null}
 
       <section
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-3"
         aria-label={zh ? "Run 摘要" : "Run summary"}
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-semibold tracking-tight">
+              <Heading level={2}>
                 Run #{selected.run.id} · {workflowName}
-              </h2>
+              </Heading>
               <StatusPill status={selected.run.status} locale={locale} />
               {selected.run.dry_run ? <Tag>Dry-run</Tag> : null}
             </div>
-            <Text className="mt-1 max-w-3xl" tone="muted">
+            <Text className="mt-2 max-w-4xl" tone="muted">
               {zh
                 ? "一次 Run 就是一份可追溯证据：执行步骤、资源、人工交互、事件和输出都保留在这里。"
                 : "Each Run is traceable evidence: execution steps, resources, human interactions, events, and output are preserved here."}
+            </Text>
+            <Text size="xs" tone="muted" className="mt-1">
+              Workflow v{selected.run.workflow_version_id}
+              {selected.run.triggered_by
+                ? ` · ${zh ? "触发" : "Triggered by"}：${selected.run.triggered_by}`
+                : selected.run.schedule_key
+                  ? ` · ${selected.run.schedule_key}`
+                  : ""}
             </Text>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -292,48 +308,53 @@ export function WorkflowRunDetail({
               value: selected.run.started_at
                 ? formatDateTime(selected.run.started_at)
                 : "—",
+              detail: selected.run.finished_at
+                ? `${zh ? "结束" : "Finished"} ${formatDateTime(selected.run.finished_at)}`
+                : zh
+                  ? "仍在执行 / 等待"
+                  : "Still running / waiting",
             },
             {
-              label: zh ? "结束时间" : "Finished",
-              value: selected.run.finished_at
-                ? formatDateTime(selected.run.finished_at)
-                : zh
-                  ? "仍在运行"
-                  : "Still running",
-              detail: duration(
+              label: zh ? "总耗时" : "Duration",
+              value: duration(
                 selected.run.started_at,
                 selected.run.finished_at,
               ),
+              detail: selected.run.dry_run
+                ? "Dry-run"
+                : zh
+                  ? "正式运行"
+                  : "Live run",
             },
             {
               label: "Token",
               value: totalTokens.toLocaleString(),
-              detail: `${selected.run.input_tokens || 0} in · ${selected.run.output_tokens || 0} out`,
+              detail: `${selected.run.input_tokens || 0} in / ${selected.run.output_tokens || 0} out`,
             },
             {
               label: zh ? "执行步骤" : "Execution steps",
               value: selected.steps.length,
-              detail: `Workflow v${selected.run.workflow_version_id}`,
+              detail: `${selected.resources.length} ${zh ? "个资源" : "resources"} · ${selected.interactions.length} ${zh ? "个人工交互" : "human interactions"}`,
             },
           ]}
         />
-
-        {selected.run.error_message ? (
-          <Alert
-            type="error"
-            showIcon
-            title={zh ? "运行失败" : "Run failed"}
-            description={`${selected.run.error_message}${selected.run.error_code ? ` · ${selected.run.error_code}` : ""}`}
-          />
-        ) : null}
       </section>
 
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)]">
+      {selected.run.error_message ? (
+        <Alert
+          type="error"
+          showIcon
+          title={zh ? "运行失败" : "Run failed"}
+          description={`${selected.run.error_message}${selected.run.error_code ? ` · ${selected.run.error_code}` : ""}`}
+        />
+      ) : null}
+
+      <div className="flex min-w-0 flex-col gap-6">
         <section
           className="overflow-hidden rounded-lg border bg-background"
           aria-label={zh ? "执行过程" : "Execution process"}
         >
-          <div className="border-b px-6 py-4">
+          <div className="border-b px-5 py-4">
             <OperationsRegionHeading
               title={zh ? "执行过程" : "Execution process"}
               description={
@@ -375,13 +396,15 @@ export function WorkflowRunDetail({
                   className="group"
                   open={step.status === "failed"}
                 >
-                  <summary className="flex cursor-pointer list-none items-start gap-4 px-6 py-4 hover:bg-muted/30">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
+                  <summary className="flex cursor-pointer list-none items-start gap-4 px-5 py-4 hover:bg-muted/30">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full border type-caption type-weight-semibold">
                       {index + 1}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center justify-between gap-2">
-                        <strong className="text-sm">{step.step_id}</strong>
+                        <strong className="type-body-sm type-weight-semibold">
+                          {step.step_id}
+                        </strong>
                         <StatusPill status={step.status} locale={locale} />
                       </span>
                       <Text size="xs" tone="muted" className="mt-1">
@@ -398,7 +421,7 @@ export function WorkflowRunDetail({
                       ) : null}
                     </span>
                   </summary>
-                  <div className="border-t bg-muted/[0.12] px-6 py-5">
+                  <div className="border-t bg-muted/[0.12] px-5 py-5">
                     <div className="grid gap-5 md:grid-cols-2">
                       <div className="min-w-0">
                         <Text size="xs" tone="muted">
@@ -451,124 +474,134 @@ export function WorkflowRunDetail({
         </section>
 
         <div className="flex min-w-0 flex-col gap-6">
-          <section
-            className="overflow-hidden rounded-lg border bg-background"
-            aria-label={zh ? "运行证据" : "Run evidence"}
-          >
-            <div className="border-b px-6 py-4">
-              <OperationsRegionHeading
-                title={zh ? "运行证据" : "Run evidence"}
-                description={
-                  zh
-                    ? "资源快照与 Human Interaction 共同解释这次 Run 读了什么、等待了什么，以及什么可以成为写入目标。"
-                    : "Resource snapshots and Human Interactions explain what this Run read, waited for, and could target for change."
-                }
-              />
-            </div>
-            <div className="grid gap-6 p-6 md:grid-cols-2">
-              <section>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <strong className="text-sm">
-                    {zh ? "资源" : "Resources"}
-                  </strong>
-                  <Tag>{selected.resources.length}</Tag>
-                </div>
-                <ResourceEvidence resources={selected.resources} zh={zh} />
-              </section>
-              <section>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <strong className="text-sm">
-                    {zh ? "人工交互" : "Human interactions"}
-                  </strong>
-                  <Tag>{selected.interactions.length}</Tag>
-                </div>
-                {selected.interactions.length ? (
-                  <div className="divide-y">
-                    {selected.interactions.map((task) => (
-                      <div key={task.id} className="py-3 first:pt-0 last:pb-0">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <strong className="block text-sm">
-                              {task.interaction_type === "choice"
+          <div className="grid gap-6 xl:grid-cols-2">
+            <section
+              className="overflow-hidden rounded-lg border bg-background"
+              aria-label={zh ? "运行资源" : "Run resources"}
+            >
+              <div className="border-b px-5 py-4">
+                <OperationsRegionHeading
+                  title={zh ? "资源证据" : "Resource evidence"}
+                  description={
+                    zh
+                      ? "Target 资源可以成为提案目标；Discovery / Read 资源只提供上下文。"
+                      : "Target resources may become proposal targets; Discovery / Read resources provide context only."
+                  }
+                />
+              </div>
+              <ResourceEvidence resources={selected.resources} zh={zh} />
+            </section>
+
+            <section
+              className="overflow-hidden rounded-lg border bg-background"
+              aria-label={zh ? "人工交互" : "Human interactions"}
+            >
+              <div className="border-b px-5 py-4">
+                <OperationsRegionHeading
+                  title={zh ? "人工交互" : "Human interactions"}
+                  description={
+                    zh
+                      ? "Choice、Input、Preview Confirm 与 Approval 都属于原 Run；处理后恢复原流程。"
+                      : "Choice, Input, Preview Confirm, and Approval stay on the original Run and resume it when resolved."
+                  }
+                />
+              </div>
+              {selected.interactions.length ? (
+                <div className="divide-y">
+                  {selected.interactions.map((task) => (
+                    <div key={task.id} className="px-5 py-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <strong className="type-body-sm type-weight-semibold">
+                            {task.interaction_type === "choice"
+                              ? zh
+                                ? "请选择"
+                                : "Choose an option"
+                              : task.interaction_type === "preview_confirm"
                                 ? zh
-                                  ? "请选择"
-                                  : "Choose an option"
-                                : task.interaction_type === "preview_confirm"
-                                  ? zh
-                                    ? "确认预览并继续"
-                                    : "Confirm preview"
-                                  : zh
-                                    ? "请确认操作"
-                                    : "Confirmation required"}
-                            </strong>
-                            <Text size="xs" tone="muted" className="mt-1">
-                              {task.workflow_step_id || `Task #${task.id}`}
-                            </Text>
-                          </div>
-                          <Tag>{task.status}</Tag>
+                                  ? "确认预览并继续"
+                                  : "Confirm preview"
+                                : zh
+                                  ? "请确认操作"
+                                  : "Confirmation required"}
+                          </strong>
+                          <Text size="xs" tone="muted" className="mt-1">
+                            {task.workflow_step_id || `Task #${task.id}`}
+                          </Text>
                         </div>
-                        {task.status === "pending" ? (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {task.interaction_type === "choice" &&
-                            Array.isArray(task.options) ? (
-                              task.options.map((option, index) => (
-                                <Button
-                                  size="small"
-                                  variant="outline"
-                                  key={index}
-                                  onClick={() =>
-                                    void onResolveInteraction(task, { option })
-                                  }
-                                >
-                                  {String(option)}
-                                </Button>
-                              ))
-                            ) : (
+                        <Tag
+                          color={
+                            task.status === "resolved" ? "success" : "warning"
+                          }
+                        >
+                          {task.status}
+                        </Tag>
+                      </div>
+                      {task.status === "pending" ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {task.interaction_type === "choice" &&
+                          Array.isArray(task.options) ? (
+                            task.options.map((option, index) => (
                               <Button
                                 size="small"
-                                variant="solid"
-                                color="primary"
+                                variant="outline"
+                                key={index}
                                 onClick={() =>
-                                  void onResolveInteraction(task, {
-                                    confirmed: true,
-                                  })
+                                  void onResolveInteraction(task, { option })
                                 }
                               >
-                                {zh ? "确认并继续" : "Confirm and continue"}
+                                {String(option)}
                               </Button>
-                            )}
+                            ))
+                          ) : (
                             <Button
                               size="small"
-                              variant="ghost"
-                              onClick={() => void onCancelInteraction(task)}
+                              variant="solid"
+                              color="primary"
+                              onClick={() =>
+                                void onResolveInteraction(task, {
+                                  confirmed: true,
+                                })
+                              }
                             >
-                              {zh ? "取消任务" : "Cancel task"}
+                              {zh ? "确认并继续" : "Confirm and continue"}
                             </Button>
-                          </div>
-                        ) : task.response ? (
-                          <div className="mt-3">
-                            <JsonLog value={task.response} />
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <Text size="sm" tone="muted">
-                    {zh
-                      ? "本次运行没有人工交互。"
-                      : "This run has no human interactions."}
-                  </Text>
-                )}
-              </section>
-            </div>
-          </section>
+                          )}
+                          <Button
+                            size="small"
+                            variant="ghost"
+                            onClick={() => void onCancelInteraction(task)}
+                          >
+                            {zh ? "取消任务" : "Cancel task"}
+                          </Button>
+                        </div>
+                      ) : task.response ? (
+                        <div className="mt-3">
+                          <JsonLog value={task.response} />
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8">
+                  <Empty
+                    title={
+                      zh
+                        ? "本次运行没有人工交互"
+                        : "This run has no human interactions"
+                    }
+                  />
+                </div>
+              )}
+            </section>
+          </div>
 
           <section
             className="overflow-hidden rounded-lg border bg-background"
             aria-label={zh ? "运行事件" : "Run events"}
           >
-            <div className="border-b px-6 py-4">
+            <div className="border-b px-5 py-4">
               <OperationsRegionHeading
                 title={zh ? "事件" : "Events"}
                 description={
@@ -581,11 +614,11 @@ export function WorkflowRunDetail({
             {selected.events.length ? (
               <div className="divide-y">
                 {newestFirst(selected.events).map((event) => (
-                  <details key={event.id} className="px-6 py-4">
+                  <details key={event.id} className="px-5 py-4">
                     <summary className="cursor-pointer list-none">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <strong className="font-mono text-xs">
+                          <strong className="type-family-mono type-caption type-weight-semibold">
                             {event.event_type}
                           </strong>
                           {event.workflow_step_id ? (

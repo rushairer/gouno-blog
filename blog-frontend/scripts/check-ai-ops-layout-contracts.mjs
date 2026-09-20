@@ -15,6 +15,7 @@ function requirePattern(text, pattern, message) {
   if (!pattern.test(text)) failures.push(message);
 }
 
+const sharedLead = await source("src/components/patterns/TabPanelLead.tsx");
 const patterns = await source("src/components/agent/OperationsPatterns.tsx");
 requireText(
   patterns,
@@ -23,8 +24,18 @@ requireText(
 );
 requireText(
   patterns,
+  "../patterns/TabPanelLead",
+  "AI Operations panel lead must reuse the shared Blog Admin pattern",
+);
+requireText(
+  sharedLead,
   'data-pattern="tab-panel-lead"',
-  "AI Operations panel lead must expose the shared semantic pattern marker",
+  "Shared TabPanelLead must expose the semantic pattern marker",
+);
+requireText(
+  sharedLead,
+  "flex min-h-9 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+  "Shared TabPanelLead must preserve the canonical minimum-height rhythm",
 );
 
 const objectRowOverflowGuards =
@@ -60,6 +71,20 @@ for (const path of panelConsumers) {
     `${path}: top-level tab title/subtitle must use OperationsPanelLead`,
   );
 }
+
+const inboxWorkspace = await source(
+  "src/components/agent/DecisionInboxWorkspace.tsx",
+);
+requireText(
+  inboxWorkspace,
+  "xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.55fr)]",
+  "Decision Inbox must preserve the canonical master-detail geometry",
+);
+requireText(
+  inboxWorkspace,
+  "type-body-sm type-weight-semibold",
+  "Decision Inbox rail header must use canonical typography tokens",
+);
 
 const railFiles = [
   "src/components/agent/WorkflowRunRecords.tsx",
@@ -103,6 +128,32 @@ for (const path of railFiles) {
 const workflowWorkspace = await source(
   "src/components/agent/WorkflowWorkspace.tsx",
 );
+requireText(
+  workflowWorkspace,
+  'data-slot="workflow-list-toolbar"',
+  "Workflow list must preserve the canonical toolbar boundary",
+);
+requireText(
+  workflowWorkspace,
+  "xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem]",
+  "Workflow list must preserve the canonical five-column asset anatomy",
+);
+requireText(
+  workflowWorkspace,
+  "type-metric-value",
+  "Workflow detail must use canonical metric-card typography rather than a generic summary strip",
+);
+requireText(
+  workflowWorkspace,
+  "rounded-lg border bg-muted/[0.18] p-4",
+  "Workflow detail must preserve the canonical metric-card surface anatomy",
+);
+requireText(
+  workflowWorkspace,
+  "ScheduleFact",
+  "Workflow detail must use the canonical schedule fact row",
+);
+
 requireText(
   workflowWorkspace,
   'data-slot="workflow-detail"',
@@ -244,38 +295,30 @@ requirePattern(
   "Workflow editor item anatomy must preserve the canonical 16px internal rhythm",
 );
 
-const migration = JSON.parse(
-  await readFile(resolve(root, "../docs/ui-redesign/migration.json"), "utf8"),
+requireText(
+  workflowRunDetail,
+  'aria-label={zh ? "运行资源" : "Run resources"}',
+  "WorkflowRunDetail: resources must own a canonical standalone evidence section",
 );
-const requiredMigrationIds = new Set([
-  "blog-admin:pages/admin/AIOperations.tsx",
-  "blog-admin:components/agent/AgentRunRecords.tsx",
-  "blog-admin:components/agent/InboxWorkspace.tsx",
-  "blog-admin:components/agent/WorkflowRunRecords.tsx",
-  "blog-admin:components/agent/WorkflowWorkspace.tsx",
-  "blog-admin:components/agent/WorkspaceOverview.tsx",
-]);
-const migrationRows = new Map();
-function collect(value) {
-  if (Array.isArray(value)) return value.forEach(collect);
-  if (!value || typeof value !== "object") return;
-  if (typeof value.id === "string") migrationRows.set(value.id, value);
-  Object.values(value).forEach(collect);
-}
-collect(migration);
-for (const id of requiredMigrationIds) {
-  const row = migrationRows.get(id);
-  if (
-    !row ||
-    row.implementation !== "migrated" ||
-    row.verification !== "verified"
-  ) {
-    failures.push(
-      `${id}: AI Operations route cannot be declared complete while this visible owned surface is unresolved`,
-    );
-  }
-}
+requireText(
+  workflowRunDetail,
+  'aria-label={zh ? "人工交互" : "Human interactions"}',
+  "WorkflowRunDetail: human interactions must own a canonical standalone evidence section",
+);
+requireText(
+  workflowRunDetail,
+  "grid gap-6 xl:grid-cols-2",
+  "WorkflowRunDetail: resource and human-interaction evidence must preserve the canonical responsive pair",
+);
+requireText(
+  workflowRunDetail,
+  "type-family-mono type-caption type-weight-semibold",
+  "WorkflowRunDetail: persisted event names must use the canonical mono caption token",
+);
 
+// Migration metadata is a reporting ledger, not proof of parity. It is updated
+// only after manual review and browser evidence have passed; never use its
+// existing 'verified' value as an input to this contract.
 if (failures.length) {
   console.error("AI Operations canonical layout contract failed:\n");
   failures.forEach((failure) => console.error(`- ${failure}`));

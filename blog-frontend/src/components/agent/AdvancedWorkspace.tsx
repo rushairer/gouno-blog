@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import {
   Bot,
   CirclePause,
@@ -49,6 +49,7 @@ import {
   Text,
 } from "@gouno/ui/core";
 import { DedicatedEditorLead } from "./DedicatedEditorPatterns";
+import { TabPanelFeedback, TabPanelLead } from "../patterns/TabPanelLead";
 
 export type AdvancedSection =
   | "agents"
@@ -66,33 +67,6 @@ export type DeleteTarget =
 
 function formatCapability(value: string) {
   return value.replace(".", " / ").replaceAll("_", " ");
-}
-
-function TabPanelLead({
-  description,
-  actions,
-}: {
-  description?: ReactNode;
-  actions?: ReactNode;
-}) {
-  if (!description && !actions) return null;
-
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        {description ? (
-          <Text tone="muted" size="sm" className="max-w-3xl leading-relaxed">
-            {description}
-          </Text>
-        ) : null}
-      </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {actions}
-        </div>
-      ) : null}
-    </div>
-  );
 }
 
 interface AdvancedWorkspaceProps {
@@ -348,7 +322,9 @@ export function AdvancedWorkspace({
                     className="grid gap-3 p-6 md:grid-cols-[minmax(0,1fr)_minmax(8rem,0.3fr)_auto] md:items-center"
                   >
                     <div className="min-w-0">
-                      <strong className="font-mono text-sm">{tool.name}</strong>
+                      <strong className="type-family-mono type-body-sm type-weight-semibold">
+                        {tool.name}
+                      </strong>
                       <Text size="xs" tone="muted">
                         {locale === "zh"
                           ? tool.description_zh || tool.description
@@ -394,33 +370,35 @@ export function AdvancedWorkspace({
               </Button>
             }
           />
-          {providers.length === 0 ? (
-            <Alert
-              type="warning"
-              showIcon
-              title={
-                locale === "zh"
-                  ? "先添加模型连接"
-                  : "Add a model connection first"
-              }
-              description={
-                locale === "zh"
-                  ? "保存首个可用模型连接后再创建 Agent。"
-                  : "Save the first usable model connection before creating an Agent."
-              }
-              action={
-                <Button
-                  size="small"
-                  type="button"
-                  onClick={() => onSelectSection("providers")}
-                >
-                  {locale === "zh"
-                    ? "配置模型连接"
-                    : "Configure a model connection"}
-                </Button>
-              }
-            />
-          ) : null}
+          <TabPanelFeedback>
+            {providers.length === 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                title={
+                  locale === "zh"
+                    ? "先添加模型连接"
+                    : "Add a model connection first"
+                }
+                description={
+                  locale === "zh"
+                    ? "保存首个可用模型连接后再创建 Agent。"
+                    : "Save the first usable model connection before creating an Agent."
+                }
+                action={
+                  <Button
+                    size="small"
+                    type="button"
+                    onClick={() => onSelectSection("providers")}
+                  >
+                    {locale === "zh"
+                      ? "配置模型连接"
+                      : "Configure a model connection"}
+                  </Button>
+                }
+              />
+            ) : null}
+          </TabPanelFeedback>
           {agents.length === 0 ? (
             <Card padding="lg">
               <Empty
@@ -452,7 +430,7 @@ export function AdvancedWorkspace({
                       key={agent.id}
                       className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
                     >
-                      <div className="min-w-0 space-y-3">
+                      <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <strong>{agent.name}</strong>
                           <Tag color={agent.enabled ? "success" : "default"}>
@@ -471,7 +449,7 @@ export function AdvancedWorkspace({
                         <Text size="sm" tone="muted">
                           {agent.description}
                         </Text>
-                        <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="grid gap-2 type-caption text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
                           <span>
                             {labels.provider}:{" "}
                             {provider?.name ||
@@ -754,7 +732,7 @@ export function AdvancedWorkspace({
               <Card padding="base">
                 <div className="flex flex-col gap-4">
                   <div>
-                    <Heading level={2} className="text-base">
+                    <Heading level={2} variant="compact">
                       {locale === "zh" ? "默认用途" : "Default Purposes"}
                     </Heading>
                     <Text size="sm" tone="muted">
@@ -990,6 +968,24 @@ export function AdvancedWorkspace({
                   </>
                 }
               />
+              <TabPanelFeedback>
+                {indexStatus.failed > 0 ? (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    title={
+                      locale === "zh"
+                        ? "知识索引存在失败任务"
+                        : "Knowledge indexing has failed jobs"
+                    }
+                    description={
+                      locale === "zh"
+                        ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
+                        : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
+                    }
+                  />
+                ) : null}
+              </TabPanelFeedback>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Card padding="base">
                   <Text size="xs" tone="muted">
@@ -1010,22 +1006,6 @@ export function AdvancedWorkspace({
                   <Heading level={2}>{indexStatus.failed}</Heading>
                 </Card>
               </div>
-              {indexStatus.failed > 0 ? (
-                <Alert
-                  type="warning"
-                  showIcon
-                  title={
-                    locale === "zh"
-                      ? "知识索引存在失败任务"
-                      : "Knowledge indexing has failed jobs"
-                  }
-                  description={
-                    locale === "zh"
-                      ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
-                      : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
-                  }
-                />
-              ) : null}
               {embeddingProfiles.length === 0 ? (
                 <Card padding="base">
                   <Empty

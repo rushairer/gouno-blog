@@ -26,6 +26,7 @@ import {
   Field,
   FormGrid,
   FormLayout,
+  Heading,
   IconButton,
   Input,
   Select,
@@ -34,6 +35,7 @@ import {
   Textarea,
 } from "@gouno/ui/core";
 import { AISettingsEditorSection } from "./AISettingsEditorPatterns";
+import { TabPanelFeedback, TabPanelLead } from "../patterns/TabPanelLead";
 
 type Locale = "en" | "zh";
 
@@ -98,6 +100,9 @@ export function ConnectorWorkspace({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const safeProfiles = Array.isArray(profiles) ? profiles : [];
+  const safeOutbox = Array.isArray(outbox) ? outbox : [];
+
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const oauthResult = query.get("connector_oauth");
@@ -147,8 +152,8 @@ export function ConnectorWorkspace({
       connectorApi.getProfiles(),
       connectorApi.getOutbox(),
     ]);
-    setProfiles(profileData);
-    setOutbox(outboxData);
+    setProfiles(Array.isArray(profileData) ? profileData : []);
+    setOutbox(Array.isArray(outboxData) ? outboxData : []);
   }, []);
 
   useEffect(() => {
@@ -209,7 +214,7 @@ export function ConnectorWorkspace({
 
   const startOAuth = async (id: number) => {
     try {
-      const profile = profiles.find((item) => item.id === id);
+      const profile = safeProfiles.find((item) => item.id === id);
       const real = profile?.kind === "search_console" && !profile.sandbox;
       if (real) {
         window.location.assign(`/api/admin/ai-connectors/${id}/oauth/start`);
@@ -265,62 +270,51 @@ export function ConnectorWorkspace({
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <Text size="sm" tone="muted" className="max-w-3xl leading-relaxed">
-          {zh
-            ? "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。"
-            : "Manage Sandbox external capabilities available to Agents, OAuth boundaries, and the Outbox approval path."}
-        </Text>
-        <Button
-          size="small"
-          variant="solid"
-          color="primary"
-          type="button"
-          icon={<Plus />}
-          onClick={() => openProfileEditor("new")}
-        >
-          {zh ? "添加 Connector Profile" : "Add Connector Profile"}
-        </Button>
-      </div>
-
-      <Alert
-        type="info"
-        showIcon
-        title={zh ? "Sandbox connector 边界" : "Sandbox connector boundary"}
+      <TabPanelLead
         description={
           zh
-            ? "Search Console 可使用只读 Google OAuth；其余连接器保持 Sandbox Mock。Outbox 必须先审批，再进行不可外发的 Mock 投递。"
-            : "Search Console may use read-only Google OAuth. Other connectors remain Sandbox mocks. Outbox items require approval before non-network Mock delivery."
+            ? "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。"
+            : "Manage Sandbox external capabilities available to Agents, OAuth boundaries, and the Outbox approval path."
+        }
+        actions={
+          <Button
+            size="small"
+            variant="solid"
+            color="primary"
+            type="button"
+            icon={<Plus />}
+            onClick={() => openProfileEditor("new")}
+          >
+            {zh ? "添加 Connector Profile" : "Add Connector Profile"}
+          </Button>
         }
       />
 
-      {error ? (
-        <Alert type="error" showIcon>
-          {error}
-        </Alert>
-      ) : null}
-      {message ? (
-        <Alert type="success" showIcon role="status">
-          {message}
-        </Alert>
-      ) : null}
+      <TabPanelFeedback>
+        <Alert
+          type="info"
+          showIcon
+          title={zh ? "Sandbox connector 边界" : "Sandbox connector boundary"}
+          description={
+            zh
+              ? "Search Console 可使用只读 Google OAuth；其余连接器保持 Sandbox Mock。Outbox 必须先审批，再进行不可外发的 Mock 投递。"
+              : "Search Console may use read-only Google OAuth. Other connectors remain Sandbox mocks. Outbox items require approval before non-network Mock delivery."
+          }
+        />
+        {error ? (
+          <Alert type="error" showIcon>
+            {error}
+          </Alert>
+        ) : null}
+        {message ? (
+          <Alert type="success" showIcon role="status">
+            {message}
+          </Alert>
+        ) : null}
+      </TabPanelFeedback>
 
       <Card padding="none" className="overflow-hidden">
-        <div className="border-b px-6 py-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <strong className="text-base">Connector Profiles</strong>
-              <Text size="xs" tone="muted" className="mt-1">
-                {zh
-                  ? "查看连接模式、凭据状态并发起对应的 OAuth 流程；配置修改在上下文 Drawer 中完成。"
-                  : "Review connection mode and credential state, start OAuth when needed, and edit configuration in the contextual Drawer."}
-              </Text>
-            </div>
-            <Tag>{profiles.length}</Tag>
-          </div>
-        </div>
-
-        {profiles.length === 0 ? (
+        {safeProfiles.length === 0 ? (
           <CardContent className="p-6">
             <Empty
               icon={<Inbox />}
@@ -336,7 +330,7 @@ export function ConnectorWorkspace({
           </CardContent>
         ) : (
           <CardContent className="divide-y p-0">
-            {profiles.map((profile) => (
+            {safeProfiles.map((profile) => (
               <div
                 key={profile.id}
                 className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"
@@ -353,10 +347,12 @@ export function ConnectorWorkspace({
                           ? "已停用"
                           : "Disabled"}
                     </Tag>
-                    <Tag>{profile.sandbox ? "Sandbox" : "Read-only OAuth"}</Tag>
                   </div>
-                  <Text size="xs" tone="muted" className="mt-2">
+                  <Text size="xs" tone="muted">
                     {profile.kind} ·{" "}
+                    {profile.sandbox ? "sandbox" : "read-only OAuth"}
+                  </Text>
+                  <Text size="xs" tone="muted">
                     {profile.has_credential
                       ? zh
                         ? `凭据 •••• ${profile.credential_last4 || ""}`
@@ -366,22 +362,22 @@ export function ConnectorWorkspace({
                         : "No credential"}
                   </Text>
                 </div>
-                <div className="flex min-w-max items-center gap-1">
-                  <Button
-                    variant="outline"
+                <div className="flex min-w-max flex-nowrap items-center gap-1">
+                  <IconButton
+                    variant="ghost"
                     size="small"
-                    type="button"
-                    onClick={() => void startOAuth(profile.id)}
+                    label={
+                      profile.kind === "search_console" && !profile.sandbox
+                        ? zh
+                          ? "连接 Google"
+                          : "Connect Google"
+                        : zh
+                          ? "开始 Mock OAuth"
+                          : "Start mock OAuth"
+                    }
                     icon={<KeyRound />}
-                  >
-                    {profile.kind === "search_console" && !profile.sandbox
-                      ? zh
-                        ? "连接 Google"
-                        : "Connect Google"
-                      : zh
-                        ? "开始 Mock OAuth"
-                        : "Start mock OAuth"}
-                  </Button>
+                    onClick={() => void startOAuth(profile.id)}
+                  />
                   <IconButton
                     variant="ghost"
                     size="small"
@@ -450,7 +446,7 @@ export function ConnectorWorkspace({
               data-pattern="editor-form-composition"
               onSubmit={saveProfile}
             >
-              <div className="flex flex-col gap-5">
+              <div className="grid gap-5 xl:grid-cols-2">
                 <AISettingsEditorSection
                   title={zh ? "连接身份" : "Connection identity"}
                   description={
@@ -488,7 +484,7 @@ export function ConnectorWorkspace({
                       </Field>
                     </FormGrid>
                     <Field label={zh ? "状态" : "Status"}>
-                      <label className="inline-flex items-center gap-2 text-sm">
+                      <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
                         <Checkbox
                           checked={enabled}
                           onChange={(event) => setEnabled(event.target.checked)}
@@ -510,7 +506,7 @@ export function ConnectorWorkspace({
                   <div className="flex flex-col gap-5">
                     {kind === "search_console" ? (
                       <Field label={zh ? "连接模式" : "Connection mode"}>
-                        <label className="inline-flex items-center gap-2 text-sm">
+                        <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
                           <Checkbox
                             checked={sandbox}
                             onChange={(event) =>
@@ -577,10 +573,10 @@ export function ConnectorWorkspace({
         <Card padding="base">
           <div className="flex flex-col gap-4">
             <div>
-              <strong className="text-base">
+              <Heading level={2} variant="compact">
                 {zh ? "OAuth 回调" : "OAuth callback"}
-              </strong>
-              <Text size="xs" tone="muted" className="mt-1">
+              </Heading>
+              <Text size="sm" tone="muted">
                 {zh
                   ? "完成一次性 Mock 回调后，该状态即失效。"
                   : "The one-time Mock state expires after the callback completes."}
@@ -616,10 +612,10 @@ export function ConnectorWorkspace({
       <Card padding="none" className="overflow-hidden">
         <div className="border-b px-6 py-5">
           <div>
-            <strong className="text-base">
+            <Heading level={2} variant="compact">
               {zh ? "Outbox 沙箱" : "Outbox sandbox"}
-            </strong>
-            <Text size="xs" tone="muted" className="mt-1 max-w-3xl">
+            </Heading>
+            <Text size="sm" tone="muted">
               {zh
                 ? "先审批，再进行不可外发的 Mock 投递；幂等键避免重复入队。"
                 : "Approve first, then perform a non-network Mock delivery. Idempotency keys prevent duplicate queue entries."}
@@ -642,7 +638,7 @@ export function ConnectorWorkspace({
                   <option value="">
                     {zh ? "选择 Profile" : "Choose profile"}
                   </option>
-                  {profiles.map((profile) => (
+                  {safeProfiles.map((profile) => (
                     <option key={profile.id} value={String(profile.id)}>
                       {profile.name}
                     </option>
@@ -680,7 +676,7 @@ export function ConnectorWorkspace({
         </CardContent>
 
         <div className="border-t">
-          {outbox.length === 0 ? (
+          {safeOutbox.length === 0 ? (
             <div className="p-6">
               <Empty
                 icon={<Inbox />}
@@ -689,8 +685,8 @@ export function ConnectorWorkspace({
             </div>
           ) : (
             <div className="divide-y">
-              {outbox.map((item) => {
-                const profile = profiles.find(
+              {safeOutbox.map((item) => {
+                const profile = safeProfiles.find(
                   (candidate) => candidate.id === item.connector_profile_id,
                 );
                 return (

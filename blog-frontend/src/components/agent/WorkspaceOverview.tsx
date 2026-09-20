@@ -1,4 +1,4 @@
-import { AlertTriangle, GitBranch, ShieldCheck } from "lucide-react";
+import { GitBranch, ShieldCheck } from "lucide-react";
 import type {
   AgentApproval,
   ContentCandidateSet,
@@ -240,7 +240,6 @@ export function WorkspaceOverview({
                 return (
                   <OperationsObjectRow
                     key={run.id}
-                    leading={<AlertTriangle className="size-4" />}
                     title={`Run #${run.id}${workflow ? ` · ${workflow.name}` : ""}`}
                     status={<RunStatus status={run.status} zh={zh} />}
                     meta={`${formatDateTime(run.started_at || run.created_at)} · v${workflow?.current_version ?? "—"}`}
@@ -299,7 +298,6 @@ export function WorkspaceOverview({
                 return (
                   <OperationsObjectRow
                     key={workflow.id}
-                    leading={<GitBranch className="size-4" />}
                     title={workflow.name}
                     status={
                       <Tag color={workflow.enabled ? "success" : undefined}>

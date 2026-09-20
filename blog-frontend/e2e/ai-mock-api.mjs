@@ -7,6 +7,8 @@ import {
   aiSkill,
   aiTools,
   approvals,
+  connectorOutbox,
+  connectorProfiles,
   embeddingProfile,
   indexStatus,
   suggestions,
@@ -63,6 +65,8 @@ export async function installAiFixtures(page) {
     if (path === "/api/admin/agent-skills") return respond([aiSkill]);
     if (path === "/api/admin/provider-profiles") return respond([aiProvider]);
     if (path === "/api/admin/embedding-profiles") return respond([embeddingProfile]);
+    if (path === "/api/admin/ai-connectors") return respond(connectorProfiles);
+    if (path === "/api/admin/ai-connector-outbox") return respond(connectorOutbox);
     if (path === "/api/admin/ai-index/status") return respond(indexStatus);
 
     if (path === "/api/admin/agent-runs") return respond({ list: agentRuns });

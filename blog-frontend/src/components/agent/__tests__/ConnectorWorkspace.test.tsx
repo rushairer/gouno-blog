@@ -37,6 +37,33 @@ describe("ConnectorWorkspace", () => {
     );
   });
 
+  it("keeps the settings surface usable when collection payloads are unexpectedly null", async () => {
+    apiFetch.mockImplementation((path: string) => {
+      if (
+        path === "/api/admin/ai-connectors" ||
+        path === "/api/admin/ai-connector-outbox"
+      ) {
+        return Promise.resolve(response(null));
+      }
+      return Promise.resolve(response({}));
+    });
+
+    render(
+      <ConnectorWorkspace
+        locale="zh"
+        onRefresh={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("还没有连接器 Profile。")).toBeInTheDocument();
+    expect(screen.getByText("Outbox 为空。")).toBeInTheDocument();
+  });
+
   it("loads sandbox profiles and keeps OAuth, approval and delivery on mock APIs", async () => {
     apiFetch.mockImplementation((path: string) => {
       if (path === "/api/admin/ai-connectors")

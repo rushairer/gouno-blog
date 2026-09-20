@@ -1,14 +1,4 @@
-import {
-  Check,
-  Image,
-  Lightbulb,
-  ListTodo,
-  MessageSquareMore,
-  Play,
-  RefreshCw,
-  ShieldCheck,
-  X,
-} from "lucide-react";
+import { Check, Clock3, Play, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { operationsApi } from "../../api/operations";
 import { workflowApi } from "../../api/workflows";
@@ -32,6 +22,7 @@ import {
 } from "@gouno/ui/core";
 import { JsonPreview } from "./AgentRunRecords";
 import {
+  OperationsMeta,
   OperationsObjectRow,
   OperationsPanelLead,
   OperationsRegionHeading,
@@ -352,15 +343,6 @@ function DecisionStatus({ item }: { item: DecisionItem }) {
   return <Tag>{item.status}</Tag>;
 }
 
-function DecisionIcon({ kind }: { kind: DecisionKind }) {
-  if (kind === "approval") return <ShieldCheck className="size-4" />;
-  if (kind === "interaction") return <MessageSquareMore className="size-4" />;
-  if (kind === "suggestion") return <Lightbulb className="size-4" />;
-  if (kind === "media") return <Image className="size-4" />;
-  if (kind === "editorial") return <ListTodo className="size-4" />;
-  return <Check className="size-4" />;
-}
-
 export function DecisionInboxWorkspace({
   locale,
   approvals,
@@ -507,7 +489,7 @@ export function DecisionInboxWorkspace({
 
   return (
     <div
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-5"
       aria-label={zh ? "待我处理" : "Review queue"}
     >
       <OperationsPanelLead
@@ -545,7 +527,7 @@ export function DecisionInboxWorkspace({
             key={option.value}
             size="small"
             variant={filter === option.value ? "solid" : "outline"}
-            color={filter === option.value ? "primary" : "default"}
+            color={filter === option.value ? "primary" : undefined}
             aria-pressed={filter === option.value}
             onClick={() => setFilter(option.value)}
           >
@@ -557,22 +539,30 @@ export function DecisionInboxWorkspace({
       <div
         data-slot="ops-master-detail"
         data-pattern="master-detail-composition"
-        className="grid min-w-0 items-stretch overflow-hidden rounded-lg border bg-background xl:grid-cols-[22rem_minmax(0,1fr)]"
+        className="grid min-h-[34rem] min-w-0 items-stretch overflow-hidden rounded-lg border bg-background xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.55fr)]"
       >
         <aside
           data-slot="ops-rail"
           className="flex min-h-0 min-w-0 flex-col border-b xl:border-b-0 xl:border-r"
           aria-label={zh ? "决策队列" : "Decision queue"}
         >
-          <div className="shrink-0 border-b bg-muted/20 px-4 py-3">
-            <strong className="text-sm">
-              {zh ? "决策队列" : "Decision queue"}
-            </strong>
-            <Text size="xs" tone="muted" className="mt-0.5">
-              {zh
-                ? `${visibleItems.length} 项需要处理`
-                : `${visibleItems.length} items need attention`}
-            </Text>
+          <div className="shrink-0 border-b px-[18px] py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <strong className="type-body-sm type-weight-semibold">
+                  {zh ? "决策队列" : "Decision queue"}
+                </strong>
+                <Text size="xs" tone="muted">
+                  {zh
+                    ? `${visibleItems.length} 项符合当前筛选`
+                    : `${visibleItems.length} items match the current filter`}
+                </Text>
+              </div>
+              <Clock3
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+            </div>
           </div>
           <div
             role="list"
@@ -584,11 +574,15 @@ export function DecisionInboxWorkspace({
               visibleItems.map((item) => (
                 <div key={item.key} role="listitem">
                   <OperationsObjectRow
-                    leading={<DecisionIcon kind={item.kind} />}
                     title={item.title}
                     status={<DecisionStatus item={item} />}
-                    meta={`${item.meta} · ${formatDateTime(item.createdAt)}`}
+                    meta={item.meta}
                     summary={item.summary}
+                    signals={
+                      <OperationsMeta>
+                        {formatDateTime(item.createdAt)}
+                      </OperationsMeta>
+                    }
                     selected={selected?.key === item.key}
                     onClick={() => {
                       setSelectedKey(item.key);

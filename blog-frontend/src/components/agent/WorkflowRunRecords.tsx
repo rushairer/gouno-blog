@@ -1,4 +1,3 @@
-import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { operationsApi } from "../../api/operations";
 import type { ArticleImagePreview } from "../../api/operations";
@@ -10,11 +9,12 @@ import type {
   WorkflowRun,
   WorkflowStepRun,
 } from "../../types/agent";
-import { Alert, Button, Empty, Modal, Select, Text } from "@gouno/ui/core";
+import { Alert, Empty, Modal, Select, Text } from "@gouno/ui/core";
 import { ArticlePreviewModal } from "./ArticlePreviewModal";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunDetail } from "./WorkflowRunDetail";
 import type { WorkflowRunDetailData } from "./WorkflowRunDetail";
+import { OperationsMeta, OperationsObjectRow } from "./OperationsPatterns";
 
 function duration(start?: string, finish?: string): string {
   if (!start) return "—";
@@ -603,7 +603,7 @@ export function WorkflowRunRecords({
   }, [filtered, inspect, loadingID, selected]);
 
   return (
-    <div className="workflow-records flex min-w-0 flex-col gap-5">
+    <div className="workflow-records flex min-w-0 flex-col gap-4">
       {error ? <Alert type="error" showIcon title={error} /> : null}
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -648,179 +648,141 @@ export function WorkflowRunRecords({
         </Select>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-lg border bg-background p-8">
-          <Empty
-            title={
-              zh
-                ? "还没有符合条件的 Workflow 运行记录。"
-                : "No matching Workflow runs yet."
-            }
-          />
-        </div>
-      ) : (
-        <div
-          data-slot="ops-master-detail"
-          data-pattern="master-detail-composition"
-          className="grid min-w-0 items-stretch gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]"
+      <div
+        data-slot="ops-master-detail"
+        data-pattern="master-detail-composition"
+        className="grid min-w-0 items-stretch gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]"
+      >
+        <aside
+          data-slot="ops-rail"
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
+          aria-label={zh ? "Workflow Runs" : "Workflow Runs"}
         >
-          <aside
-            data-slot="ops-rail"
-            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
-            aria-label={zh ? "Workflow Runs" : "Workflow Runs"}
-          >
-            <div className="shrink-0 border-b px-[18px] py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <strong className="text-sm">Workflow Runs</strong>
-                  <Text size="xs" tone="muted" className="mt-0.5">
-                    {filtered.length} {zh ? "条运行证据" : "run records"}
-                  </Text>
-                </div>
-                {workflowID !== 0 || statusFilter !== "all" ? (
-                  <Button
-                    variant="ghost"
-                    size="small"
-                    type="button"
-                    onClick={() => {
-                      setWorkflowID(0);
-                      setStatusFilter("all");
-                      setSelected(null);
-                      autoInspectedRunID.current = null;
-                      const url = new URL(window.location.href);
-                      url.searchParams.delete("run");
-                      window.history.replaceState(null, "", url);
-                    }}
-                    icon={<X />}
-                  >
-                    {zh ? "清除" : "Clear"}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-            <div
-              role="list"
-              data-slot="ops-rail-body"
-              aria-label={zh ? "Workflow 运行列表" : "Workflow run list"}
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-            >
-              {filtered.map((run) => {
-                const runType = run.dry_run
-                  ? "Dry-run"
-                  : run.schedule_key
-                    ? (zh ? "计划 " : "Scheduled ") + run.schedule_key
-                    : zh
-                      ? "手动运行"
-                      : "Manual";
-                return (
-                  <div key={run.id} role="listitem">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      block
-                      aria-pressed={selected?.run.id === run.id}
-                      className={[
-                        "group h-auto items-stretch justify-start whitespace-normal rounded-none border-b edge-s-emphasis px-4 py-4 text-left last:border-b-0",
-                        selected?.run.id === run.id
-                          ? "border-s-primary bg-primary/[0.08] hover:bg-primary/[0.08]"
-                          : "border-s-transparent hover:bg-muted/45",
-                      ].join(" ")}
-                      disabled={loadingID === run.id}
-                      onClick={() => void inspect(run)}
-                    >
-                      <span className="flex w-full min-w-0 flex-col gap-1.5 text-left">
-                        <span className="flex min-w-0 items-start justify-between gap-3">
-                          <strong className="text-sm">Run #{run.id}</strong>
-                          <StatusPill status={run.status} locale={locale} />
-                        </span>
-                        <span className="text-xs leading-4 text-muted-foreground">
-                          {names.get(run.workflow_id) ||
-                            "Workflow #" + run.workflow_id}{" "}
-                          · v{run.workflow_version_id}
-                        </span>
-                        <span className="text-sm leading-5 text-foreground/80">
-                          {run.error_message ||
-                            (zh
-                              ? "查看本次执行证据。"
-                              : "Inspect this run's execution evidence.")}
-                        </span>
-                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span>{runType}</span>
-                          <span>
-                            {formatDateTime(run.started_at || run.created_at)}
-                          </span>
-                          <span>
-                            {duration(run.started_at, run.finished_at)}
-                          </span>
-                          <span>
-                            {(
-                              (run.input_tokens || 0) + (run.output_tokens || 0)
-                            ).toLocaleString()}{" "}
-                            Token
-                          </span>
-                        </span>
-                      </span>
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </aside>
-
-          <div className="min-w-0">
-            {selected ? (
-              <WorkflowRunDetail
-                selected={selected}
-                locale={locale}
-                workflowName={
-                  names.get(selected.run.workflow_id) ||
-                  "Workflow #" + selected.run.workflow_id
-                }
-                formatDateTime={formatDateTime}
-                cancelling={cancelling}
-                deleting={deleting}
-                retrying={retrying}
-                batchBusy={batchBusy}
-                generationNow={generationNow}
-                candidateSelections={candidateSelections}
-                setCandidateSelections={setCandidateSelections}
-                candidatePlacement={candidatePlacement}
-                setCandidatePlacement={setCandidatePlacement}
-                candidateAnchor={candidateAnchor}
-                setCandidateAnchor={setCandidateAnchor}
-                generationInstructions={generationInstructions}
-                setGenerationInstructions={setGenerationInstructions}
-                imagePreviews={imagePreviews}
-                onCancelRun={cancelRun}
-                onDeleteRun={deleteRun}
-                onResolveInteraction={resolveInteraction}
-                onCancelInteraction={cancelInteraction}
-                onBatchSelect={batchSelect}
-                onBatchPreview={batchPreview}
-                onBatchReject={batchReject}
-                onBatchApply={batchApply}
-                onCandidateAction={candidateAction}
-                onCancelGeneration={cancelGeneration}
-                onPreviewCandidate={previewCandidate}
-                onRetryStep={retryStep}
-                onRetryFailedGroup={retryFailedGroup}
-              />
-            ) : (
-              <div className="rounded-lg border bg-background p-8">
-                <Text tone="muted">
-                  {loadingID
-                    ? zh
-                      ? "正在载入 Run 证据…"
-                      : "Loading Run evidence…"
-                    : zh
-                      ? "选择一次 Run 查看完整执行证据。"
-                      : "Select a Run to inspect complete execution evidence."}
-                </Text>
-              </div>
-            )}
+          <div className="shrink-0 border-b px-[18px] py-4">
+            <strong className="type-body-sm type-weight-semibold">
+              Workflow Runs
+            </strong>
+            <Text size="xs" tone="muted">
+              {filtered.length} {zh ? "条运行记录" : "run records"}
+            </Text>
           </div>
+          <div
+            role="list"
+            data-slot="ops-rail-body"
+            aria-label={zh ? "Workflow 运行列表" : "Workflow run list"}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          >
+            {filtered.map((run) => {
+              const runType = run.dry_run
+                ? "Dry-run"
+                : run.schedule_key
+                  ? (zh ? "计划 " : "Scheduled ") + run.schedule_key
+                  : zh
+                    ? "手动运行"
+                    : "Manual";
+              return (
+                <div key={run.id} role="listitem">
+                  <OperationsObjectRow
+                    title={`Run #${run.id}`}
+                    status={<StatusPill status={run.status} locale={locale} />}
+                    meta={`${names.get(run.workflow_id) || `Workflow #${run.workflow_id}`} · v${run.workflow_version_id}`}
+                    summary={
+                      run.error_message ||
+                      (zh
+                        ? "查看本次执行证据。"
+                        : "Inspect this run's execution evidence.")
+                    }
+                    signals={
+                      <>
+                        <OperationsMeta>{runType}</OperationsMeta>
+                        <OperationsMeta>
+                          {formatDateTime(run.started_at || run.created_at)}
+                        </OperationsMeta>
+                        <OperationsMeta>
+                          {duration(run.started_at, run.finished_at)}
+                        </OperationsMeta>
+                        <OperationsMeta>
+                          {(
+                            (run.input_tokens || 0) + (run.output_tokens || 0)
+                          ).toLocaleString()}{" "}
+                          Token
+                        </OperationsMeta>
+                      </>
+                    }
+                    selected={selected?.run.id === run.id}
+                    disabled={loadingID === run.id}
+                    onClick={() => void inspect(run)}
+                  />
+                </div>
+              );
+            })}
+            {filtered.length === 0 ? (
+              <div className="p-8">
+                <Empty
+                  title={
+                    zh
+                      ? "没有符合条件的 Workflow Run"
+                      : "No matching Workflow Runs"
+                  }
+                />
+              </div>
+            ) : null}
+          </div>
+        </aside>
+
+        <div className="min-w-0">
+          {selected ? (
+            <WorkflowRunDetail
+              selected={selected}
+              locale={locale}
+              workflowName={
+                names.get(selected.run.workflow_id) ||
+                "Workflow #" + selected.run.workflow_id
+              }
+              formatDateTime={formatDateTime}
+              cancelling={cancelling}
+              deleting={deleting}
+              retrying={retrying}
+              batchBusy={batchBusy}
+              generationNow={generationNow}
+              candidateSelections={candidateSelections}
+              setCandidateSelections={setCandidateSelections}
+              candidatePlacement={candidatePlacement}
+              setCandidatePlacement={setCandidatePlacement}
+              candidateAnchor={candidateAnchor}
+              setCandidateAnchor={setCandidateAnchor}
+              generationInstructions={generationInstructions}
+              setGenerationInstructions={setGenerationInstructions}
+              imagePreviews={imagePreviews}
+              onCancelRun={cancelRun}
+              onDeleteRun={deleteRun}
+              onResolveInteraction={resolveInteraction}
+              onCancelInteraction={cancelInteraction}
+              onBatchSelect={batchSelect}
+              onBatchPreview={batchPreview}
+              onBatchReject={batchReject}
+              onBatchApply={batchApply}
+              onCandidateAction={candidateAction}
+              onCancelGeneration={cancelGeneration}
+              onPreviewCandidate={previewCandidate}
+              onRetryStep={retryStep}
+              onRetryFailedGroup={retryFailedGroup}
+            />
+          ) : (
+            <Empty
+              title={
+                loadingID
+                  ? zh
+                    ? "正在载入 Run 证据…"
+                    : "Loading Run evidence…"
+                  : zh
+                    ? "选择一个 Run 查看证据"
+                    : "Select a Run to inspect evidence"
+              }
+            />
+          )}
         </div>
-      )}
+      </div>
       <Modal
         open={confirmAction !== null}
         title={

@@ -247,75 +247,33 @@ export function ProviderForm({
           />
         ) : null}
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.82fr)_minmax(0,1.18fr)]">
-          <div className="flex min-w-0 flex-col gap-5">
-            <AISettingsEditorSection
-              title="连接身份"
-              description="名称和供应商类型用于识别连接；启停状态决定它是否可被 Agent 或默认模型选择。"
-            >
-              <div className="flex flex-col gap-5">
-                <Field label={labels.providerName}>
-                  <Input
-                    required
-                    value={value.name}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                  />
-                </Field>
-                <Field label={labels.providerType}>
-                  <Select
-                    value={value.provider_type}
-                    onChange={setProviderType}
-                  >
-                    <option value="openai">OpenAI / compatible</option>
-                    <option value="anthropic">Anthropic native</option>
-                    <option value="gemini">Gemini native</option>
-                  </Select>
-                </Field>
-                <Field label="状态">
-                  <label className="inline-flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={value.enabled}
-                      onChange={(event) =>
-                        setValue((current) => ({
-                          ...current,
-                          enabled: event.target.checked,
-                        }))
-                      }
-                    />
-                    {labels.providerEnabled}
-                  </label>
-                </Field>
-              </div>
-            </AISettingsEditorSection>
-
-            <AISettingsEditorSection
-              title="凭据与状态"
-              description="API Key 只用于服务端连接；编辑已有连接时留空即可保留当前凭据。"
-            >
-              <Field
-                label={`${labels.apiKey}${initial ? ` · ${labels.leaveBlank}` : ""}`}
-              >
+        <div className="grid gap-5 xl:grid-cols-2">
+          <AISettingsEditorSection
+            title="连接身份"
+            description="名称和供应商类型用于识别连接；启停状态决定它是否可被 Agent 或默认模型选择。"
+          >
+            <FormGrid columns={2}>
+              <Field label={labels.providerName}>
                 <Input
-                  className="font-mono"
-                  type="password"
-                  required={!initial}
-                  autoComplete="new-password"
-                  value={value.api_key}
+                  required
+                  value={value.name}
                   onChange={(event) =>
                     setValue((current) => ({
                       ...current,
-                      api_key: event.target.value,
+                      name: event.target.value,
                     }))
                   }
                 />
               </Field>
-            </AISettingsEditorSection>
-          </div>
+              <Field label={labels.providerType}>
+                <Select value={value.provider_type} onChange={setProviderType}>
+                  <option value="openai">OpenAI / compatible</option>
+                  <option value="anthropic">Anthropic native</option>
+                  <option value="gemini">Gemini native</option>
+                </Select>
+              </Field>
+            </FormGrid>
+          </AISettingsEditorSection>
 
           <AISettingsEditorSection
             title="模型与端点"
@@ -397,6 +355,45 @@ export function ProviderForm({
             </div>
           </AISettingsEditorSection>
         </div>
+
+        <AISettingsEditorSection
+          title="凭据与状态"
+          description="API Key 只用于服务端连接；编辑已有连接时留空即可保留当前凭据。"
+        >
+          <FormGrid columns={2}>
+            <Field
+              label={`${labels.apiKey}${initial ? ` · ${labels.leaveBlank}` : ""}`}
+            >
+              <Input
+                className="font-mono"
+                type="password"
+                required={!initial}
+                autoComplete="new-password"
+                value={value.api_key}
+                onChange={(event) =>
+                  setValue((current) => ({
+                    ...current,
+                    api_key: event.target.value,
+                  }))
+                }
+              />
+            </Field>
+            <Field label="状态">
+              <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
+                <Checkbox
+                  checked={value.enabled}
+                  onChange={(event) =>
+                    setValue((current) => ({
+                      ...current,
+                      enabled: event.target.checked,
+                    }))
+                  }
+                />
+                {labels.providerEnabled}
+              </label>
+            </Field>
+          </FormGrid>
+        </AISettingsEditorSection>
 
         {surface === "page" ? (
           <FormActions>

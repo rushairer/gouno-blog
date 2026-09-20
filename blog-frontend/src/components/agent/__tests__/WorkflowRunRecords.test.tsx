@@ -125,10 +125,13 @@ describe("WorkflowRunRecords", () => {
     expect(screen.getByText(/"retry_count": 2/)).toBeInTheDocument();
     expect(screen.getAllByText("2.0 s")).toHaveLength(2);
     expect(screen.getByText("Structured AI inputs")).toBeInTheDocument();
-    expect(screen.getByText("手选")).toBeInTheDocument();
+    expect(screen.getByText(/手选/)).toBeInTheDocument();
     expect(screen.getByText("目标")).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "运行证据" }),
+      screen.getByRole("region", { name: "运行资源" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "人工交互" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "运行事件" }),

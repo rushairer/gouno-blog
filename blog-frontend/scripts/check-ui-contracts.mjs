@@ -89,6 +89,40 @@ function location(sourceFile, node) {
   );
 }
 
+function isCanonicalTrailingNavigationAffordance(node, sourceFile) {
+  const tag = jsxTagName(node, sourceFile);
+  if (tag !== "ChevronRight") return false;
+  const attributes = ts.isJsxElement(node)
+    ? node.openingElement.attributes
+    : ts.isJsxSelfClosingElement(node)
+      ? node.attributes
+      : null;
+  if (!attributes) return false;
+
+  let ariaHidden = false;
+  let responsiveClass = false;
+  for (const attribute of attributes.properties) {
+    if (!ts.isJsxAttribute(attribute)) continue;
+    if (
+      attribute.name.text === "aria-hidden" &&
+      attribute.initializer &&
+      ts.isStringLiteral(attribute.initializer) &&
+      attribute.initializer.text === "true"
+    ) {
+      ariaHidden = true;
+    }
+    if (
+      attribute.name.text === "className" &&
+      attribute.initializer &&
+      ts.isStringLiteral(attribute.initializer)
+    ) {
+      const value = attribute.initializer.text;
+      responsiveClass = value.includes("hidden") && value.includes("xl:block");
+    }
+  }
+  return ariaHidden && responsiveClass;
+}
+
 function buttonChildIcon(node, sourceFile, iconComponentNames) {
   let icon = null;
   function visitChild(child) {
@@ -352,7 +386,10 @@ function checkTsxContracts(name, source) {
       ) {
         for (const child of node.children) {
           const icon = buttonChildIcon(child, sourceFile, iconComponentNames);
-          if (icon) {
+          if (
+            icon &&
+            !isCanonicalTrailingNavigationAffordance(icon, sourceFile)
+          ) {
             failures.push(
               `${name}:${location(sourceFile, icon)} ${tag} icons must use the icon prop, not children`,
             );

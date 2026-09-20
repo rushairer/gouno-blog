@@ -63,15 +63,20 @@ describe("AI Operations unified decision workbench", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "人工决策队列" }),
+      screen.getByText(
+        /把审批、选择、确认、运营建议和后续编辑任务放进同一人工决策队列/,
+      ),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "人工决策队列" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("list", { name: "待处理列表" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: "选择文章封面方向" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Run #18 · choose-cover")).toBeInTheDocument();
+    expect(screen.getAllByText("Run #18 · choose-cover")).toHaveLength(2);
 
     await user.click(screen.getByRole("button", { name: "审批" }));
 
