@@ -135,6 +135,9 @@ async function openPair(
   const product = await context.newPage();
   await setTheme(showcase, theme);
   await setTheme(product, theme);
+  await product.addInitScript(() => {
+    localStorage.setItem("gouno-blog:locale", "zh");
+  });
   const unknown = await installApiFixtures(product);
   await showcase.goto(
     `${showcaseOrigin}/?embedded=1&workspace=blog-admin&brand=blog-admin#${fixtureId}`,
@@ -383,6 +386,20 @@ for (const theme of ["light", "dark"]) {
     expect(await styleFingerprint(productFilter)).toEqual(
       await styleFingerprint(showcaseFilter),
     );
+
+    for (const label of ["文章状态", "文章分类", "文章标签"]) {
+      const showcaseSelect = showcase.getByRole("combobox", {
+        name: label,
+        exact: true,
+      });
+      const productSelect = product.getByRole("combobox", {
+        name: label,
+        exact: true,
+      });
+      expect(await productSelect.textContent()).toBe(
+        await showcaseSelect.textContent(),
+      );
+    }
 
     const showcasePostRow = showcase.getByRole("row").nth(1);
     const productPostRow = product.getByRole("row").nth(1);
