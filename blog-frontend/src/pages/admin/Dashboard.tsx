@@ -111,7 +111,9 @@ function MetricCard({
             {icon}
           </span>
         </div>
-        <div className="mt-auto text-xs text-muted-foreground">{detail}</div>
+        <div className="mt-auto type-caption text-muted-foreground">
+          {detail}
+        </div>
       </div>
     </Card>
   );
@@ -300,7 +302,7 @@ export default function Dashboard() {
               <CardHeader className="border-b p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex flex-col gap-1">
-                    <CardTitle className="flex items-center gap-2 text-base">
+                    <CardTitle className="flex items-center gap-2">
                       <TrendingUp className="size-4 text-primary" />
                       30 天访问趋势
                     </CardTitle>
@@ -340,7 +342,7 @@ export default function Dashboard() {
                             className="w-full rounded-t-sm bg-primary/65 transition-opacity hover:bg-primary"
                             style={{ height: `${height}%` }}
                           />
-                          <span className="hidden truncate text-[10px] text-muted-foreground sm:block">
+                          <span className="hidden truncate type-caption text-muted-foreground sm:block">
                             {item.date.slice(-2)}
                           </span>
                         </div>
@@ -354,7 +356,7 @@ export default function Dashboard() {
             <Card padding="none" className="overflow-hidden">
               <CardHeader className="border-b p-6">
                 <div className="flex flex-col gap-1">
-                  <CardTitle className="text-base">内容治理与指标</CardTitle>
+                  <CardTitle>内容治理与指标</CardTitle>
                   <Text size="xs" tone="muted">
                     关键待办事项与健康指标
                   </Text>
@@ -366,7 +368,7 @@ export default function Dashboard() {
                     <Text size="xs" tone="muted">
                       待审核评论
                     </Text>
-                    <div className="mt-1 text-xl font-semibold">
+                    <div className="mt-1 type-metric-compact">
                       {summary.pending_comments}
                     </div>
                   </div>
@@ -374,7 +376,7 @@ export default function Dashboard() {
                     <Text size="xs" tone="muted">
                       被举报内容
                     </Text>
-                    <div className="mt-1 text-xl font-semibold">
+                    <div className="mt-1 type-metric-compact">
                       {summary.reported_items}
                     </div>
                   </div>
@@ -382,7 +384,7 @@ export default function Dashboard() {
                     <Text size="xs" tone="muted">
                       已发布文章
                     </Text>
-                    <div className="mt-1 text-xl font-semibold">
+                    <div className="mt-1 type-metric-compact">
                       {summary.published_posts}
                     </div>
                   </div>
@@ -390,7 +392,7 @@ export default function Dashboard() {
                     <Text size="xs" tone="muted">
                       草稿待发布
                     </Text>
-                    <div className="mt-1 text-xl font-semibold">
+                    <div className="mt-1 type-metric-compact">
                       {draftsCount}
                     </div>
                   </div>
@@ -420,7 +422,7 @@ export default function Dashboard() {
               <CardHeader className="border-b p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col gap-1">
-                    <CardTitle className="flex items-center gap-2 text-base">
+                    <CardTitle className="flex items-center gap-2">
                       <AlertTriangle className="size-4 text-warning" />
                       AI 运营提醒
                     </CardTitle>
@@ -457,18 +459,18 @@ export default function Dashboard() {
                     <Link
                       key={alert.id}
                       to={presentation.destination}
-                      className="group flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/40 sm:p-6"
+                      className="flex w-full items-start justify-between gap-4 p-4 text-left transition-colors hover:bg-muted/40 sm:p-6"
                     >
-                      <div className="flex min-w-0 flex-1 items-start gap-3">
-                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
                           {presentation.icon}
                         </span>
-                        <div className="min-w-0 space-y-1">
+                        <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">
+                            <strong className="type-body-sm type-weight-semibold text-foreground">
                               {presentation.label}
-                            </span>
-                            <span className="text-xs font-medium text-warning">
+                            </strong>
+                            <span className="type-caption type-weight-medium text-warning">
                               {alert.title
                                 .replace(
                                   /^(?:AI 自动化|Workflow|Agent)\s*运行失败：?\s*/,
@@ -477,17 +479,21 @@ export default function Dashboard() {
                                 .trim()}
                             </span>
                           </div>
-                          <Text size="xs" tone="muted" className="line-clamp-1">
+                          <Text
+                            size="xs"
+                            tone="muted"
+                            className="mt-1 line-clamp-1"
+                          >
                             {alert.body
                               ? `失败原因：${alert.body}`
                               : "运行未完成，请打开记录查看失败步骤。"}
                           </Text>
-                          <time className="block text-[11px] text-muted-foreground">
+                          <time className="mt-1 block type-caption text-muted-foreground">
                             {new Date(alert.created_at).toLocaleString("zh-CN")}
                           </time>
                         </div>
                       </div>
-                      <span className="shrink-0 text-xs font-medium text-primary transition-transform group-hover:translate-x-0.5">
+                      <span className="shrink-0 type-caption type-weight-medium text-primary">
                         {presentation.action}
                       </span>
                     </Link>
@@ -501,7 +507,7 @@ export default function Dashboard() {
             <CardHeader className="border-b p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-col gap-1">
-                  <CardTitle className="text-base">表现最佳文章</CardTitle>
+                  <CardTitle>表现最佳文章</CardTitle>
                   <Text size="xs" tone="muted">
                     按全站阅读量与点赞数排序的热门内容
                   </Text>
@@ -542,16 +548,16 @@ export default function Dashboard() {
                       const canEdit = can("edit", "post", post);
                       return (
                         <TableRow key={post.id}>
-                          <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                          <TableCell className="text-center font-mono type-caption text-muted-foreground">
                             {index + 1}
                           </TableCell>
                           <TableCell className="font-medium">
                             {post.title}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          <TableCell className="text-right font-mono type-caption text-muted-foreground">
                             {post.views_count.toLocaleString()}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          <TableCell className="text-right font-mono type-caption text-muted-foreground">
                             {post.likes_count.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-right">
