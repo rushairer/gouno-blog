@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: ".",
   testMatch: [
     "showcase-parity.pw.mjs",
+    "support-showcase-parity.pw.mjs",
     "privileged-access-parity.pw.mjs",
     "public-showcase-parity.pw.mjs",
     "users-showcase-parity.pw.mjs",
