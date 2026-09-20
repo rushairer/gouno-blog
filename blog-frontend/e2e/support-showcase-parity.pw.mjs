@@ -68,9 +68,15 @@ for (const theme of ["light", "dark"]) {
       theme,
     );
 
+    const showcaseTable = showcase.getByRole("table");
+    const productTable = product.getByRole("table");
+    await expectStyleParity(showcaseTable, productTable);
+
     const showcaseRow = showcase.getByRole("row").nth(1);
     const productRow = product.getByRole("row").nth(1);
-    await expectStyleParity(showcaseRow, productRow);
+    // Row bottom borders are data-count dependent: Product fixture has one
+    // category (therefore :last-child), while Showcase intentionally has
+    // several. Compare the table owner plus the reviewed cell typography.
     for (const selector of [
       "td:nth-child(2) span",
       "td:nth-child(3) strong",
@@ -252,10 +258,15 @@ for (const theme of ["light", "dark"]) {
     );
 
     await expect(product.getByText("高权限操作已解锁")).toBeVisible();
+    const showcaseTable = showcase.getByRole("table");
+    const productTable = product.getByRole("table");
+    await expectStyleParity(showcaseTable, productTable);
+
     const showcaseRow = showcase.getByRole("row").nth(1);
     const productRow = product.getByRole("row").nth(1);
-    await expectStyleParity(showcaseRow, productRow);
-
+    // Product fixture has a single member, so the first data row is also the
+    // last row and correctly drops its bottom border. The table owner and
+    // semantic typography remain the parity contract.
     const showcaseWeights = showcaseRow.locator(".type-weight-semibold");
     const productWeights = productRow.locator(".type-weight-semibold");
     expect(await productWeights.count()).toBe(await showcaseWeights.count());
