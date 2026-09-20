@@ -182,20 +182,6 @@ export function EmbeddingForm({
                   />
                 </Field>
               </FormGrid>
-              <Field label={locale === "zh" ? "状态" : "Status"}>
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={value.enabled}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        enabled: event.target.checked,
-                      }))
-                    }
-                  />
-                  {labels.enabled}
-                </label>
-              </Field>
             </div>
           </AISettingsEditorSection>
 
@@ -224,23 +210,39 @@ export function EmbeddingForm({
                   }
                 />
               </Field>
-              <Field
-                label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}
-              >
-                <Input
-                  className="font-mono"
-                  type="password"
-                  required={!initial}
-                  autoComplete="new-password"
-                  value={value.api_key}
-                  onChange={(event) =>
-                    setValue((current) => ({
-                      ...current,
-                      api_key: event.target.value,
-                    }))
-                  }
-                />
-              </Field>
+              <FormGrid columns={2}>
+                <Field
+                  label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}
+                >
+                  <Input
+                    className="font-mono"
+                    type="password"
+                    required={!initial}
+                    autoComplete="new-password"
+                    value={value.api_key}
+                    onChange={(event) =>
+                      setValue((current) => ({
+                        ...current,
+                        api_key: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label={locale === "zh" ? "状态" : "Status"}>
+                  <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
+                    <Checkbox
+                      checked={value.enabled}
+                      onChange={(event) =>
+                        setValue((current) => ({
+                          ...current,
+                          enabled: event.target.checked,
+                        }))
+                      }
+                    />
+                    {labels.enabled}
+                  </label>
+                </Field>
+              </FormGrid>
               <Field label={labels.timeout}>
                 <Input
                   type="number"
