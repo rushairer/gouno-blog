@@ -104,6 +104,14 @@
       "reviewMethod": "manual-first",
       "legacyHardeningDoc": "docs/ui-redesign/blog-public-account-showcase-parity-hardening.md",
       "reason": "Historical hardening predates the manual-first certification protocol."
+    },
+    {
+      "id": "blog-admin-core-wave1",
+      "scope": "Blog Admin Dashboard + Posts + Pages",
+      "status": "needs-manual-recertification",
+      "reviewMethod": "manual-first",
+      "manualReview": "docs/ui-redesign/blog-admin-core-wave1-manual-parity-review.md",
+      "reason": "Manual implementation review is complete; paired browser evidence is pending."
     }
   ]
 }
