@@ -528,9 +528,7 @@ export default function AdminPosts() {
                           <span className="type-weight-semibold">
                             {post.title}
                           </span>
-                          <span
-                            className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground"
-                          >
+                          <span className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
                             <code className="type-family-mono">
                               /{post.slug}
                             </code>
@@ -544,9 +542,7 @@ export default function AdminPosts() {
                         <PostStatusTag status={post.status} />
                       </TableCell>
                       <TableCell>
-                        <time
-                          className="type-family-mono type-caption text-muted-foreground"
-                        >
+                        <time className="type-family-mono type-caption text-muted-foreground">
                           {new Date(
                             post.updated_at || post.created_at,
                           ).toLocaleDateString("zh-CN")}

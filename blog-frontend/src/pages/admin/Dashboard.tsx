@@ -111,7 +111,9 @@ function MetricCard({
             {icon}
           </span>
         </div>
-        <div className="mt-auto type-caption text-muted-foreground">{detail}</div>
+        <div className="mt-auto type-caption text-muted-foreground">
+          {detail}
+        </div>
       </div>
     </Card>
   );
@@ -460,16 +462,12 @@ export default function Dashboard() {
                       className="flex w-full items-start justify-between gap-4 p-4 text-left transition-colors hover:bg-muted/40 sm:p-6"
                     >
                       <div className="flex min-w-0 items-start gap-3">
-                        <span
-                          className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground"
-                        >
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
                           {presentation.icon}
                         </span>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <strong
-                              className="type-body-sm type-weight-semibold text-foreground"
-                            >
+                            <strong className="type-body-sm type-weight-semibold text-foreground">
                               {presentation.label}
                             </strong>
                             <span className="type-caption type-weight-medium text-warning">
