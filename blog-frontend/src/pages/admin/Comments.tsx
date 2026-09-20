@@ -174,7 +174,7 @@ export default function AdminComments() {
     : "确认永久删除这条评论？此操作无法撤销。";
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-pattern="collection-composition" className="flex flex-col gap-6">
       <PageHeader
         title="评论"
         description="审核讨论、处理举报，并维护高质量的交流空间。"
