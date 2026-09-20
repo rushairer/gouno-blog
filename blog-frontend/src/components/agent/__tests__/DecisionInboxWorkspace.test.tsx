@@ -76,7 +76,7 @@ describe("AI Operations unified decision workbench", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "选择文章封面方向" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Run #18 · choose-cover")).toBeInTheDocument();
+    expect(screen.getAllByText("Run #18 · choose-cover")).toHaveLength(2);
 
     await user.click(screen.getByRole("button", { name: "审批" }));
 
