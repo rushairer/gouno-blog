@@ -544,7 +544,9 @@ export default function AdminPosts() {
                         <PostStatusTag status={post.status} />
                       </TableCell>
                       <TableCell>
-                        <time className="type-family-mono type-caption text-muted-foreground">
+                        <time
+                          className="type-family-mono type-caption text-muted-foreground"
+                        >
                           {new Date(
                             post.updated_at || post.created_at,
                           ).toLocaleDateString("zh-CN")}
