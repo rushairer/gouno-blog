@@ -35,6 +35,42 @@ if (!/<ButtonLink\s+[\s\S]{0,240}?variant="outline"[\s\S]{0,240}?打开 GOSSO Ad
   failures.push("Users.tsx: GOSSO PageHeader handoff must remain a real outline ButtonLink");
 }
 
+const selectedResourceAIHandoffCollections = [
+  "Posts.tsx",
+  "Pages.tsx",
+  "Categories.tsx",
+  "Tags.tsx",
+  "Comments.tsx",
+  "MediaLibrary.tsx",
+];
+for (const fileName of selectedResourceAIHandoffCollections) {
+  const collection = await source(`pages/admin/${fileName}`);
+  const labelIndex = collection.indexOf("交给 AI");
+  if (labelIndex < 0) {
+    failures.push(`${fileName}: selected-resource AI handoff action is missing`);
+    continue;
+  }
+
+  const buttonStart = collection.lastIndexOf("<Button", labelIndex);
+  const buttonEnd = collection.indexOf("</Button>", labelIndex);
+  if (buttonStart < 0 || buttonEnd < labelIndex) {
+    failures.push(`${fileName}: cannot resolve the 交给 AI Button source`);
+    continue;
+  }
+
+  const buttonSource = collection.slice(buttonStart, buttonEnd + "</Button>".length);
+  requireText(
+    buttonSource,
+    "icon={<Sparkles />}",
+    `${fileName}: selected-resource 交给 AI action must use the canonical Sparkles icon`,
+  );
+  forbidText(
+    buttonSource,
+    "icon={<Bot />}",
+    `${fileName}: Bot is reserved for Agent/AI entity semantics, not selected-resource AI handoff actions`,
+  );
+}
+
 const settings = await source("pages/Settings.tsx");
 requireText(settings, 't("accountSettings")', "Settings.tsx: account title must come from the locale resource instead of a locale-specific component literal");
 forbidText(settings, 'locale === "zh" ? "账户设置"', "Settings.tsx: do not bypass canonical locale vocabulary with a component-level Chinese title override");
