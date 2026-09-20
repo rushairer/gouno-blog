@@ -550,6 +550,156 @@ for (const theme of ["light", "dark"]) {
     await context.close();
   });
 
+  test(`Categories collection and Drawer composition match Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      "blog-admin-categories",
+      "/admin/categories",
+      theme,
+    );
+
+    const showcaseCollection = showcase.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    const productCollection = product.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    expect(await styleFingerprint(productCollection)).toEqual(
+      await styleFingerprint(showcaseCollection),
+    );
+
+    const showcaseRow = showcaseCollection.getByRole("row").nth(1);
+    const productRow = productCollection.getByRole("row").nth(1);
+    for (const selector of [
+      "td:nth-child(2)",
+      "td:nth-child(3) strong",
+      "td:nth-child(3) .type-caption",
+      "td:nth-child(4) code",
+      "td:nth-child(5)",
+    ]) {
+      expect(
+        await typographyFingerprint(productRow.locator(selector)),
+      ).toEqual(
+        await typographyFingerprint(showcaseRow.locator(selector)),
+      );
+    }
+
+    await showcase
+      .getByRole("button", { name: "新建分类", exact: true })
+      .click();
+    await product
+      .getByRole("button", { name: "新建分类", exact: true })
+      .click();
+
+    const showcaseDialog = showcase.getByRole("dialog", { name: "新建分类" });
+    const productDialog = product.getByRole("dialog", { name: "新建分类" });
+    const showcaseForm = showcaseDialog.locator(
+      '[data-pattern="editor-form-composition"]',
+    );
+    const productForm = productDialog.locator(
+      '[data-pattern="editor-form-composition"]',
+    );
+    expect(await styleFingerprint(productForm)).toEqual(
+      await styleFingerprint(showcaseForm),
+    );
+    expect(
+      await typographyFingerprint(productDialog.getByLabel("Slug 标识")),
+    ).toEqual(
+      await typographyFingerprint(showcaseDialog.getByLabel("Slug 标识")),
+    );
+
+    expect(unknown).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `categories-drawer-${theme}`,
+      testInfo,
+    );
+    await context.close();
+  });
+
+  test(`Tags collection typography matches Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      "blog-admin-tags",
+      "/admin/tags",
+      theme,
+    );
+
+    const showcaseCollection = showcase.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    const productCollection = product.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    expect(await styleFingerprint(productCollection)).toEqual(
+      await styleFingerprint(showcaseCollection),
+    );
+
+    const showcaseCard = showcaseCollection
+      .getByRole("checkbox", { name: /选择标签/ })
+      .first()
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    const productCard = productCollection
+      .getByRole("checkbox", { name: /选择标签/ })
+      .first()
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    expect(await styleFingerprint(productCard)).toEqual(
+      await styleFingerprint(showcaseCard),
+    );
+    expect(
+      await typographyFingerprint(productCard.locator("strong").first()),
+    ).toEqual(
+      await typographyFingerprint(showcaseCard.locator("strong").first()),
+    );
+
+    expect(unknown).toEqual([]);
+    await pairScreenshot(showcase, product, `tags-${theme}`, testInfo);
+    await context.close();
+  });
+
+  test(`Comments collection typography matches Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      "blog-admin-comments",
+      "/admin/comments",
+      theme,
+    );
+
+    const showcaseCollection = showcase.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    const productCollection = product.locator(
+      '[data-pattern="collection-composition"]',
+    );
+    expect(await styleFingerprint(productCollection)).toEqual(
+      await styleFingerprint(showcaseCollection),
+    );
+
+    const showcaseItem = showcaseCollection.getByRole("listitem").first();
+    const productItem = productCollection.getByRole("listitem").first();
+    expect(await styleFingerprint(productItem)).toEqual(
+      await styleFingerprint(showcaseItem),
+    );
+    for (const selector of ["strong", "time", "p"]) {
+      expect(
+        await typographyFingerprint(productItem.locator(selector).first()),
+      ).toEqual(
+        await typographyFingerprint(showcaseItem.locator(selector).first()),
+      );
+    }
+
+    expect(unknown).toEqual([]);
+    await pairScreenshot(showcase, product, `comments-${theme}`, testInfo);
+    await context.close();
+  });
+
   for (const viewport of [
     { name: "desktop", width: 1440, height: 1000 },
     { name: "tablet", width: 768, height: 900 },
@@ -609,6 +759,67 @@ for (const theme of ["light", "dark"]) {
       await context.close();
     });
   }
+}
+
+for (const surface of [
+  {
+    name: "categories",
+    fixture: "blog-admin-categories",
+    path: "/admin/categories",
+    firstItem: (page) => page.getByRole("listitem").first(),
+    title: (item) => item.locator("strong").first(),
+  },
+  {
+    name: "tags",
+    fixture: "blog-admin-tags",
+    path: "/admin/tags",
+    firstItem: (page) =>
+      page
+        .getByRole("checkbox", { name: /选择标签/ })
+        .first()
+        .locator('xpath=ancestor::*[@data-slot="card"][1]'),
+    title: (item) => item.locator("strong").first(),
+  },
+  {
+    name: "comments",
+    fixture: "blog-admin-comments",
+    path: "/admin/comments",
+    firstItem: (page) => page.getByRole("listitem").first(),
+    title: (item) => item.locator("strong").first(),
+  },
+]) {
+  test(`Wave 2 ${surface.name} mobile composition matches Showcase`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      surface.fixture,
+      surface.path,
+      "light",
+      { width: 390, height: 844 },
+    );
+
+    const showcaseItem = surface.firstItem(showcase);
+    const productItem = surface.firstItem(product);
+    expect(await styleFingerprint(productItem)).toEqual(
+      await styleFingerprint(showcaseItem),
+    );
+    expect(
+      await typographyFingerprint(surface.title(productItem)),
+    ).toEqual(
+      await typographyFingerprint(surface.title(showcaseItem)),
+    );
+    await expectNoHorizontalOverflow(showcase);
+    await expectNoHorizontalOverflow(product);
+    expect(unknown).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `wave2-${surface.name}-mobile-light`,
+      testInfo,
+    );
+    await context.close();
+  });
 }
 
 test("AI Settings tab leads and section rhythm match Showcase", async ({
