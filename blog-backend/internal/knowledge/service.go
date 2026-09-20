@@ -361,6 +361,63 @@ func (s *Service) indexPost(ctx context.Context, postID int64, action, version s
 	return nil
 }
 
+type IndexedContent struct {
+	PostID        int64      `json:"post_id"`
+	Title         string     `json:"title"`
+	Slug          string     `json:"slug"`
+	Chunks        int64      `json:"chunks"`
+	Status        string     `json:"status"`
+	LastIndexedAt *time.Time `json:"last_indexed_at,omitempty"`
+}
+
+func (s *Service) ListIndexedContent(ctx context.Context, limit int) ([]IndexedContent, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		return nil, fmt.Errorf("%w: limit exceeds 200", ErrInvalid)
+	}
+
+	var profileID sql.NullInt64
+	if err := s.db.QueryRowContext(ctx, `SELECT id FROM ai_embedding_profiles
+		WHERE enabled=true AND deleted_at IS NULL ORDER BY id LIMIT 1`).Scan(&profileID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	rows, err := s.db.QueryContext(ctx, `SELECT p.id, p.title, p.slug,
+		COUNT(c.id) AS chunks, MAX(c.created_at) AS last_indexed_at
+		FROM posts p
+		LEFT JOIN ai_content_chunks c ON c.post_id=p.id
+			AND ($1::bigint IS NOT NULL AND c.embedding_profile_id=$1)
+		WHERE p.status='published'
+		GROUP BY p.id, p.title, p.slug
+		ORDER BY MAX(c.created_at) DESC NULLS LAST, p.updated_at DESC
+		LIMIT $2`, profileID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]IndexedContent, 0)
+	for rows.Next() {
+		var item IndexedContent
+		var lastIndexed sql.NullTime
+		if err := rows.Scan(&item.PostID, &item.Title, &item.Slug, &item.Chunks, &lastIndexed); err != nil {
+			return nil, err
+		}
+		item.Status = "pending"
+		if item.Chunks > 0 {
+			item.Status = "ready"
+		}
+		if lastIndexed.Valid {
+			value := lastIndexed.Time
+			item.LastIndexedAt = &value
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 type SearchResult struct {
 	CitationID    string  `json:"citation_id"`
 	ChunkID       int64   `json:"chunk_id"`
@@ -440,7 +497,7 @@ func (s *Service) Search(ctx context.Context, query string, limit int, excludePo
 }
 
 func (s *Service) Status(ctx context.Context) (map[string]any, error) {
-	var queued, failed, chunks int64
+	var queued, failed, chunks, indexedPosts int64
 	var oldest sql.NullTime
 	if err := s.db.QueryRowContext(ctx, `SELECT
 		COUNT(*) FILTER (WHERE status IN ('queued','running')),
@@ -450,6 +507,9 @@ func (s *Service) Status(ctx context.Context) (map[string]any, error) {
 		return nil, err
 	}
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_content_chunks`).Scan(&chunks); err != nil {
+		return nil, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(DISTINCT post_id) FROM ai_content_chunks`).Scan(&indexedPosts); err != nil {
 		return nil, err
 	}
 	var lag any
@@ -465,7 +525,7 @@ func (s *Service) Status(ctx context.Context) (map[string]any, error) {
 	if p95.Valid {
 		p95Value = p95.Float64
 	}
-	return map[string]any{"queued": queued, "failed": failed, "chunks": chunks,
+	return map[string]any{"indexed_posts": indexedPosts, "queued": queued, "failed": failed, "chunks": chunks,
 		"oldest_job_age_ms": lag, "retrieval_p95_ms_24h": p95Value}, nil
 }
 
