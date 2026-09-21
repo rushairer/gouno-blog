@@ -36,6 +36,20 @@ async function openPublic(
   return { problems, unknown };
 }
 
+async function captureCertificationEvidence(page, testInfo, name) {
+  const screenshotPath = testInfo.outputPath(name);
+  await page.screenshot({
+    path: screenshotPath,
+    fullPage: true,
+    animations: "disabled",
+    caret: "hide",
+  });
+  await testInfo.attach(name, {
+    path: screenshotPath,
+    contentType: "image/png",
+  });
+}
+
 function expectClean(
   { problems, unknown },
   { allowInjected503 = false } = {},
@@ -109,7 +123,7 @@ test("discovery failure is recoverable and never masquerades as Empty", async ({
   expectClean(state, { allowInjected503: true });
 });
 
-test("article detail stays contained on phone width and related navigation works", async ({ page }) => {
+test("article detail stays contained on phone width and related navigation works", async ({ page }, testInfo) => {
   const state = await openPublic(page, "/articles/canonical-oauth2", {
     width: 390,
     height: 844,
@@ -125,6 +139,11 @@ test("article detail stays contained on phone width and related navigation works
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   );
   expect(overflow).toBe(false);
+  await captureCertificationEvidence(
+    page,
+    testInfo,
+    "public-cert-article-detail-mobile.png",
+  );
 
   await page
     .getByRole("link", { name: "React 页面如何避免历史 CSS 污染" })
@@ -252,7 +271,7 @@ test("custom page transport failure is recoverable and never masquerades as NotF
   expectClean(state, { allowInjected503: true });
 });
 
-test("account notifications mark-one failure preserves the loaded list", async ({ page }) => {
+test("account notifications mark-one failure preserves the loaded list", async ({ page }, testInfo) => {
   const state = await openPublic(page, "/account/notifications", undefined, {
     fail: new Set(["PUT /api/me/notifications/301/read"]),
   });
@@ -263,10 +282,15 @@ test("account notifications mark-one failure preserves the loaded list", async (
     .click();
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.getByText("Fixture Reader 回复了你的评论")).toBeVisible();
+  await captureCertificationEvidence(
+    page,
+    testInfo,
+    "public-cert-account-notifications-mutation-error.png",
+  );
   expectClean(state, { allowInjected503: true });
 });
 
-test("account notifications support the real mark-all mutation", async ({ page }) => {
+test("account notifications support the real mark-all mutation", async ({ page }, testInfo) => {
   const state = await openPublic(page, "/account/notifications");
 
   const markAll = page.getByRole("button", { name: "全部标为已读" });
@@ -276,10 +300,15 @@ test("account notifications support the real mark-all mutation", async ({ page }
   await expect(
     page.getByRole("button", { name: "标为已读", exact: true }),
   ).toHaveCount(0);
+  await captureCertificationEvidence(
+    page,
+    testInfo,
+    "public-cert-account-notifications-all-read.png",
+  );
   expectClean(state);
 });
 
-test("account settings remains an identity handoff instead of a Blog security form", async ({ page }) => {
+test("account settings remains an identity handoff instead of a Blog security form", async ({ page }, testInfo) => {
   const state = await openPublic(page, "/account/settings");
   const main = page.locator("#public-main");
 
@@ -291,11 +320,24 @@ test("account settings remains an identity handoff instead of a Blog security fo
   await expect(
     main.getByRole("button", { name: /密码|MFA|Passkey/ }),
   ).toHaveCount(0);
+  await captureCertificationEvidence(
+    page,
+    testInfo,
+    "public-cert-account-settings-identity-boundary.png",
+  );
   expectClean(state);
 });
 
-test("NotFound canonical navigation returns to a public route", async ({ page }) => {
-  const state = await openPublic(page, "/missing/route");
+test("NotFound canonical navigation returns to a public route", async ({ page }, testInfo) => {
+  const state = await openPublic(page, "/missing/route", {
+    width: 390,
+    height: 844,
+  });
+  await captureCertificationEvidence(
+    page,
+    testInfo,
+    "public-cert-not-found-mobile.png",
+  );
 
   await page.getByRole("link", { name: "浏览文章", exact: true }).click();
   await expect(page).toHaveURL(/\/articles$/);
