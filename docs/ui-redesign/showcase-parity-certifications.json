@@ -104,10 +104,97 @@
     {
       "id": "blog-public-account",
       "scope": "Public Blog + Blog Account",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
-      "legacyHardeningDoc": "docs/ui-redesign/blog-public-account-showcase-parity-hardening.md",
-      "reason": "Historical hardening predates the manual-first certification protocol."
+      "reviewDate": "2026-09-22",
+      "manualReview": "docs/ui-redesign/blog-public-account-manual-parity-review.md",
+      "reviewedRefs": {
+        "blog": "0d4e0b1e9dc42cf2a3adc9fae1903e1484287ad5",
+        "gounoUi": "059bc2806689f70be7178c16fc50a339f6526405"
+      },
+      "gounoUiPackageVersion": "0.4.8",
+      "stateCoverage": [
+        "default",
+        "loading",
+        "empty",
+        "error",
+        "feedback",
+        "mutation-feedback",
+        "detail",
+        "drawer",
+        "responsive",
+        "dark-mode"
+      ],
+      "reviewDimensions": [
+        "composition",
+        "typography",
+        "spacing",
+        "feedback",
+        "interaction",
+        "responsive"
+      ],
+      "ownedPaths": [
+        "blog-frontend/src/layouts/PublicShell.tsx",
+        "blog-frontend/src/pages/Home.tsx",
+        "blog-frontend/src/pages/ArticleIndex.tsx",
+        "blog-frontend/src/pages/Categories.tsx",
+        "blog-frontend/src/pages/Tags.tsx",
+        "blog-frontend/src/pages/Archive.tsx",
+        "blog-frontend/src/pages/PostDetail.tsx",
+        "blog-frontend/src/pages/CustomPageView.tsx",
+        "blog-frontend/src/pages/AccountNotifications.tsx",
+        "blog-frontend/src/pages/Settings.tsx",
+        "blog-frontend/src/pages/NotFound.tsx",
+        "blog-frontend/src/components/MarkdownRenderer.tsx",
+        "blog-frontend/src/components/reading/ArticleTeaser.tsx",
+        "blog-frontend/src/components/reading/DiscoveryIndexLoading.tsx"
+      ],
+      "canonicalPaths": [
+        "showcase/demos/products/blog/",
+        "showcase/app/page-router.tsx"
+      ],
+      "browserEvidence": {
+        "runs": [
+          {
+            "name": "CI",
+            "id": 35626915555,
+            "result": "success"
+          },
+          {
+            "name": "Images",
+            "id": 35626915593,
+            "result": "success"
+          },
+          {
+            "name": "Blog Showcase Parity",
+            "id": 35626915579,
+            "result": "success"
+          },
+          {
+            "name": "UI Browser Acceptance",
+            "id": 35626915548,
+            "result": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10652708296,
+            "name": "blog-showcase-parity-35626915579",
+            "sha256": "f866fefa7e2da7fc49390ffef7681c52a96dd60863f15d4f6db2294146d02342"
+          },
+          {
+            "id": 10652463948,
+            "name": "blog-browser-acceptance-35626915548",
+            "sha256": "2c860766e8becd7a30c7ad276dfb666478001e149bc59b41fb911d0f6c6ffb56"
+          }
+        ]
+      },
+      "intentionalDivergences": [
+        "Public Blog renders real Product data, navigation, comments, likes, notifications and account session state instead of Showcase fixture copy and counts.",
+        "Category and tag detail routes remain Product instances of the shared Article Index family rather than additional frozen Showcase page ids.",
+        "Custom page slugs/content and PublicShell navigation entries come from Product APIs while keeping the reviewed document/discovery grammar.",
+        "Account Settings stays a Blog-to-GOSSO identity/security handoff and does not absorb password, MFA, Passkey or identity-session forms."
+      ]
     },
     {
       "id": "blog-admin-core-wave1",
