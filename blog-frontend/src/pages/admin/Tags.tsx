@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bot, Merge, Save, Trash2 } from "lucide-react";
+import { Merge, Save, Sparkles, Trash2 } from "lucide-react";
 import { siteApi } from "../../api/site";
 import type { TagSummary } from "../../api/site";
 import {
@@ -211,7 +211,11 @@ export default function Tags() {
             setAIOpen(false);
           }}
         >
-          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+          <Button
+            size="small"
+            icon={<Sparkles />}
+            onClick={() => setAIOpen(true)}
+          >
             交给 AI
           </Button>
           <Button

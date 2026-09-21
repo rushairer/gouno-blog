@@ -192,13 +192,13 @@
     {
       "id": "blog-admin-core-wave2",
       "scope": "Blog Admin Categories + Tags + Comments",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-20",
+      "reviewDate": "2026-09-21",
       "manualReview": "docs/ui-redesign/blog-admin-core-wave2-manual-parity-review.md",
       "reviewedRefs": {
-        "blog": "979902532d309cf4da4c35fffe85fcd6c5c71989",
-        "gounoUi": "c64c19f1a045545f54d988609a6ad2e80f2dfe6c"
+        "blog": "d93c12a0309c9d037ee6506770200b30303c2068",
+        "gounoUi": "8d5c9e605ceee37303e551d71de87bdfec876b2e"
       },
       "gounoUiPackageVersion": "0.4.8",
       "stateCoverage": [
@@ -232,35 +232,35 @@
         "runs": [
           {
             "name": "CI",
-            "id": 35495441658,
+            "id": 35522836690,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 35495441659,
+            "id": 35522836698,
             "result": "success"
           },
           {
             "name": "Blog Showcase Parity",
-            "id": 35495441667,
+            "id": 35522836688,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35495441666,
+            "id": 35522836678,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10600359041,
-            "name": "blog-showcase-parity-35495441667",
-            "sha256": "0c10da0e8c2e513743e6b0571c00ea0db14e13fa1688c7254251575cf717e73a"
+            "id": 10608943106,
+            "name": "blog-showcase-parity-35522836688",
+            "sha256": "70b6cc1eec8b28764267bc7492656ed88204be21d9bec642217fb7b6a655e6f1"
           },
           {
-            "id": 10600920008,
-            "name": "blog-browser-acceptance-35495441666",
-            "sha256": "1119a522b24a9d5bbbd10a3b408200a40bcf4658f10f27dce797f80d58bf27d4"
+            "id": 10608758622,
+            "name": "blog-browser-acceptance-35522836678",
+            "sha256": "050f8ef49c1ececa08413413e03b7380c81e899dd19344fb65ee85d3cbc712f8"
           }
         ]
       },
@@ -269,12 +269,7 @@
         "Tags retains real rename/merge/delete API state and AI workflow launching.",
         "Comments retains URL-backed filters, real moderation/delete operations, real errors and Product notifications.",
         "Concrete data, counts, timestamps and list lengths may differ from Fixture data while the reviewed composition remains canonical."
-      ],
-      "invalidation": {
-        "date": "2026-09-20",
-        "reason": "Canonical Blog Admin selected-resource AI handoff icon grammar changed: 交给 AI now uses Sparkles consistently across sibling Collections; Product Tags/Comments are synchronized and paired browser/manual recertification is pending after the canonical change lands.",
-        "canonicalPullRequest": "rushairer/gouno-ui#122"
-      }
+      ]
     }
   ]
 }
