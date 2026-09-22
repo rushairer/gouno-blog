@@ -77,4 +77,14 @@ They remain useful for understanding previous work and regression history. Curre
 
 ## Current rollout
 
-The first surface family certified under this protocol is Blog Admin AI Settings + AI Operations. Existing Blog Admin core/support and Public/Account hardening passes predate this protocol and therefore remain `needs-manual-recertification` until they are reviewed with the same method.
+The completed Blog corpus is now fully covered by manual-first certification against the frozen CSA-5 matrix:
+
+- Blog Admin AI Settings + AI Operations;
+- Blog Admin Core Wave 1: Dashboard + Posts + Pages;
+- Blog Admin Core Wave 2: Categories + Tags + Comments;
+- Blog Admin Core Wave 3: Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users;
+- Public Blog + Blog Account.
+
+`blog-admin-core-support` remains only as legacy engineering evidence and is not an active certification owner.
+
+The certification ledger must account losslessly for all frozen Blog Admin and Public Blog product ids. A `verified` entry is current only while its reviewed Product paths, canonical Showcase paths, exact `@gouno/ui` baseline and retained browser evidence remain fresh. Any certified Product change or package upgrade must either carry a new manual review, reviewed ref and browser evidence in the same PR, or demote the affected entry to `needs-manual-recertification`.
