@@ -7,6 +7,20 @@ async function enableSudoUiState(page) {
   });
 }
 
+async function captureWave3Evidence(page, testInfo, name) {
+  const screenshotPath = testInfo.outputPath(name);
+  await page.screenshot({
+    path: screenshotPath,
+    fullPage: true,
+    animations: "disabled",
+    caret: "hide",
+  });
+  await testInfo.attach(name, {
+    path: screenshotPath,
+    contentType: "image/png",
+  });
+}
+
 test("Admin shell uses a title-free header and single-language navigation groups", async ({
   page,
 }, testInfo) => {
@@ -69,7 +83,7 @@ test("Admin shell uses a title-free header and single-language navigation groups
   expect(unknown).toEqual([]);
 });
 
-test("Media Library selection uses compact canonical checkbox geometry", async ({ page }) => {
+test("Media Library selection uses compact canonical checkbox geometry", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setTheme(page, "dark");
   const unknown = await installApiFixtures(page);
@@ -85,10 +99,48 @@ test("Media Library selection uses compact canonical checkbox geometry", async (
   expect(box.width).toBeLessThanOrEqual(28);
   await checkbox.click();
   await expect(checkbox).toBeChecked();
+  await captureWave3Evidence(
+    page,
+    testInfo,
+    "wave3-media-selection-mobile-dark.png",
+  );
   expect(unknown).toEqual([]);
 });
 
-test("Site Settings fails closed and recovers through retry", async ({ page }) => {
+test("Notifications selected batch action keeps canonical BulkActionBar state", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setTheme(page, "dark");
+  const unknown = await installApiFixtures(page);
+  await page.goto("/admin/notifications", { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByText("Browser Acceptance Notification")).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: "选择通知 Browser Acceptance Notification" })
+    .check();
+
+  const bulkBar = page.getByRole("toolbar", { name: "批量操作" });
+  await expect(bulkBar).toBeVisible();
+  await expect(bulkBar).toContainText("已选择 1 条通知");
+  await expect(bulkBar.getByRole("button", { name: "标为已读" })).toBeVisible();
+  await expect(bulkBar.getByRole("button", { name: "批量删除" })).toBeVisible();
+  await expect(bulkBar.getByRole("button", { name: "取消" })).toBeVisible();
+
+  await captureWave3Evidence(
+    page,
+    testInfo,
+    "wave3-notifications-selection-mobile-dark.png",
+  );
+
+  await bulkBar.getByRole("button", { name: "标为已读" }).click();
+  await expect(bulkBar).toHaveCount(0);
+  await expect(
+    page.getByRole("checkbox", { name: "选择通知 Browser Acceptance Notification" }),
+  ).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "全部标为已读" })).toHaveCount(0);
+  expect(unknown).toEqual([]);
+});
+
+test("Site Settings fails closed and recovers through retry", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await setTheme(page, "light");
   await enableSudoUiState(page);
@@ -97,14 +149,25 @@ test("Site Settings fails closed and recovers through retry", async ({ page }) =
 
   await expect(page.getByText("站点设置加载失败")).toBeVisible();
   await expect(page.getByText("browser injected settings failure")).toBeVisible();
+  await captureWave3Evidence(
+    page,
+    testInfo,
+    "wave3-site-settings-load-error.png",
+  );
+
   await page.getByRole("button", { name: "重新载入" }).click();
   await expect(page.locator("input").first()).toHaveValue(
     "Browser Acceptance Blog",
   );
+  await captureWave3Evidence(
+    page,
+    testInfo,
+    "wave3-site-settings-recovered.png",
+  );
   expect(unknown).toEqual([]);
 });
 
-test("Users edit action opens the canonical modal without writing", async ({ page }) => {
+test("Users edit action opens the canonical modal without writing", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setTheme(page, "light");
   await enableSudoUiState(page);
@@ -115,5 +178,10 @@ test("Users edit action opens the canonical modal without writing", async ({ pag
     .getByRole("button", { name: "编辑 Fixture Member 成员与权限" })
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
+  await captureWave3Evidence(
+    page,
+    testInfo,
+    "wave3-users-edit-modal.png",
+  );
   expect(unknown).toEqual([]);
 });
