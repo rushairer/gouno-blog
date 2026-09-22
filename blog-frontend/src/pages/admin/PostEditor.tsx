@@ -1419,13 +1419,13 @@ export default function PostEditor() {
       {latestPost ? (
         <Card padding="base">
           <div className="flex flex-col gap-3">
-            <Text className="font-semibold">
+            <Text weight="semibold">
               服务器最新版本：{latestPost.title || "无标题"}
             </Text>
             <Text size="sm" tone="muted">
               Revision {latestPost.revision ?? "-"}
             </Text>
-            <div className="max-h-48 overflow-auto rounded-md bg-muted/20 p-3 text-sm">
+            <div className="max-h-48 overflow-auto rounded-md bg-muted/20 p-3 type-body-sm">
               <MarkdownRenderer content={latestPost.content || "暂无正文"} />
             </div>
             <div className="flex justify-end">

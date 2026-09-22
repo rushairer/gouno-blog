@@ -392,7 +392,7 @@ export default function MediaLibrary() {
               {references.map((item) => (
                 <li key={item.post_id}>
                   <a
-                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    className="type-weight-medium text-primary underline-offset-4 hover:underline"
                     href={`/admin/posts/${item.post_id}/edit`}
                   >
                     {item.post_title}

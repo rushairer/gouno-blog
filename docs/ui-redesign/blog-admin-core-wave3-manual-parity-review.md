@@ -26,6 +26,15 @@ The legacy `blog-admin-core-support` umbrella remains historical hardening evide
 
 Both the historical canonical and Product implementations changed after the 2026-09-15 hardening pass, so old artifacts are not used as current certification evidence.
 
+## Manual preflight findings
+
+Before accepting browser evidence, source-by-source manual review found two Product-only typography drifts that were not safe to waive:
+
+- Post Editor revision-conflict content used raw `font-semibold` / `text-sm` instead of semantic typography roles.
+- Media Library blocked-reference links used raw `font-medium` while the frozen Showcase uses `type-weight-medium`.
+
+The candidate fixes both and extends `check-admin-parity-contracts.mjs` so these reviewed drifts cannot silently return. Page Editor's Inspector summary `text-sm font-semibold` is intentionally unchanged because it is identical to the frozen Showcase source; changing only the Consumer would create a new parity drift.
+
 ## Fresh evidence required
 
 The same candidate head must pass:
