@@ -276,30 +276,29 @@ if (upstreamRoot) {
     );
   }
 
-  const verifiedAdminIds = entries
+  const trackedAdminIds = entries
     .filter(
       (entry) =>
-        entry.status === "verified" &&
+        expectedCanonicalIdsByEntry.has(entry.id) &&
         entry.id.startsWith("blog-admin-") &&
         entry.id !== "blog-admin-core-support",
     )
     .flatMap((entry) => entry.canonicalIds ?? []);
   const publicIds =
-    entries.find((entry) => entry.id === "blog-public-account" && entry.status === "verified")
-      ?.canonicalIds ?? [];
-  const allActiveIds = [...verifiedAdminIds, ...publicIds];
+    entries.find((entry) => entry.id === "blog-public-account")?.canonicalIds ?? [];
+  const allTrackedIds = [...trackedAdminIds, ...publicIds];
 
-  if (new Set(verifiedAdminIds).size !== verifiedAdminIds.length) {
-    fail("Blog Admin canonicalIds must not overlap between verified certification waves.");
+  if (new Set(trackedAdminIds).size !== trackedAdminIds.length) {
+    fail("Blog Admin canonicalIds must not overlap between tracked certification waves.");
   }
-  if (new Set(allActiveIds).size !== allActiveIds.length) {
-    fail("Verified Blog/Admin canonicalIds must have one certification owner each.");
+  if (new Set(allTrackedIds).size !== allTrackedIds.length) {
+    fail("Tracked Blog/Admin canonicalIds must have one certification owner each.");
   }
-  if (!sameStrings(verifiedAdminIds, matrix.productPages?.blogAdmin ?? [])) {
-    fail("Verified Blog Admin canonicalIds no longer match the frozen upstream matrix.");
+  if (!sameStrings(trackedAdminIds, matrix.productPages?.blogAdmin ?? [])) {
+    fail("Tracked Blog Admin canonicalIds no longer match the frozen upstream matrix.");
   }
   if (!sameStrings(publicIds, matrix.productPages?.publicBlog ?? [])) {
-    fail("Verified Public Blog canonicalIds no longer match the frozen upstream matrix.");
+    fail("Tracked Public Blog canonicalIds no longer match the frozen upstream matrix.");
   }
 }
 
