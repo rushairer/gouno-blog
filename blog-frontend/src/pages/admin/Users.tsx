@@ -583,7 +583,7 @@ export default function AdminUsers() {
               </Select>
             </FormField>
 
-            <Text size="xs" tone="muted" className="leading-relaxed">
+            <Text size="xs" tone="muted" leading="relaxed">
               {editing.roles.includes("owner")
                 ? "拥有 Blog 最高管理权限；所有权仅可通过“移交所有权”操作转让。"
                 : roleDescriptions[editableRole(editing)]}

@@ -16,6 +16,20 @@ async function expectNoHorizontalOverflow(page) {
   expect(overflow).toBe(false);
 }
 
+async function captureWave3Evidence(page, testInfo, name) {
+  const screenshotPath = testInfo.outputPath(name);
+  await page.screenshot({
+    path: screenshotPath,
+    fullPage: true,
+    animations: "disabled",
+    caret: "hide",
+  });
+  await testInfo.attach(name, {
+    path: screenshotPath,
+    contentType: "image/png",
+  });
+}
+
 test("Post editor binds canonical AI review, media, outline, history and save workflows", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const unknown = await openAdmin(page, "/admin/posts/101/edit");
@@ -121,7 +135,7 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
   expect(unknown).toEqual([]);
 });
 
-test("Post editor exposes revision conflict without dropping the working draft", async ({ page }) => {
+test("Post editor exposes revision conflict without dropping the working draft", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 768, height: 900 });
   const unknown = await openAdmin(page, "/admin/posts/101/edit", {
     conflictPostSaveRequests: 1,
@@ -133,10 +147,15 @@ test("Post editor exposes revision conflict without dropping the working draft",
   await expect(page.getByText("文章已有新版本")).toBeVisible();
   await expect(title).toHaveValue("Unsaved conflict draft");
   await expectNoHorizontalOverflow(page);
+  await captureWave3Evidence(
+    page,
+    testInfo,
+    "wave3-post-editor-conflict-768.png",
+  );
   expect(unknown).toEqual([]);
 });
 
-test("Page editor keeps Post-only navigator out and reviews title summary metadata before save", async ({ page }) => {
+test("Page editor keeps Post-only navigator out and reviews title summary metadata before save", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const unknown = await openAdmin(page, "/admin/pages/201/edit", { theme: "dark" });
 
@@ -161,6 +180,11 @@ test("Page editor keeps Post-only navigator out and reviews title summary metada
   await page.getByRole("button", { name: "更新单页" }).click();
   await expect(page.locator('[data-slot="notification"]')).toContainText("单页已成功发布");
   await expectNoHorizontalOverflow(page);
+  await captureWave3Evidence(
+    page,
+    testInfo,
+    "wave3-page-editor-mobile-dark.png",
+  );
   expect(unknown).toEqual([]);
 });
 

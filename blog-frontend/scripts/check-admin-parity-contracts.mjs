@@ -368,6 +368,8 @@ const reviewedEditorTypographyContracts = new Map([
         "type-caption type-weight-regular",
         '<Text weight="semibold">属性</Text>',
         '<Text weight="medium">正文</Text>',
+        '<Text weight="semibold">\n              服务器最新版本：',
+        "max-h-48 overflow-auto rounded-md bg-muted/20 p-3 type-body-sm",
       ],
       forbidden: [
         'className="text-sm font-medium"',
@@ -375,6 +377,8 @@ const reviewedEditorTypographyContracts = new Map([
         "line-clamp-2 text-xs font-normal leading-5",
         '<Text className="font-semibold">属性</Text>',
         '<Text className="font-medium">正文</Text>',
+        '<Text className="font-semibold">',
+        "bg-muted/20 p-3 text-sm",
       ],
     },
   ],
@@ -444,8 +448,14 @@ const reviewedSupportTypographyContracts = new Map([
         "type-body-sm type-weight-semibold",
         "type-family-mono type-caption",
         "type-family-sans text-primary",
+        "type-weight-medium text-primary underline-offset-4 hover:underline",
       ],
-      forbidden: ["truncate text-sm font-semibold", "font-mono text-xs", "font-sans text-primary"],
+      forbidden: [
+        "truncate text-sm font-semibold",
+        "font-mono text-xs",
+        "font-sans text-primary",
+        "font-medium text-primary underline-offset-4 hover:underline",
+      ],
     },
   ],
   [
@@ -466,8 +476,13 @@ const reviewedSupportTypographyContracts = new Map([
         "type-body-sm type-weight-semibold text-primary",
         "type-weight-semibold",
         "type-family-mono type-caption",
+        '<Text size="xs" tone="muted" leading="relaxed">',
       ],
-      forbidden: ["text-sm font-semibold text-primary", "font-mono text-xs"],
+      forbidden: [
+        "text-sm font-semibold text-primary",
+        "font-mono text-xs",
+        'className="leading-relaxed"',
+      ],
     },
   ],
 ]);

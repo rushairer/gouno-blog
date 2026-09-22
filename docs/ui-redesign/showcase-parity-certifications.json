@@ -96,10 +96,9 @@
     {
       "id": "blog-admin-core-support",
       "scope": "Blog Admin non-AI core/support routes",
-      "status": "needs-manual-recertification",
+      "status": "legacy-hardening-complete",
       "reviewMethod": "manual-first",
-      "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
-      "reason": "Historical hardening predates the manual-first certification protocol."
+      "reason": "Historical umbrella retained only as engineering evidence. Current manual-first ownership is split across blog-admin-core-wave1, blog-admin-core-wave2 and blog-admin-core-wave3; this entry is not an active certification."
     },
     {
       "id": "blog-public-account",
@@ -356,6 +355,104 @@
         "Tags retains real rename/merge/delete API state and AI workflow launching.",
         "Comments retains URL-backed filters, real moderation/delete operations, real errors and Product notifications.",
         "Concrete data, counts, timestamps and list lengths may differ from Fixture data while the reviewed composition remains canonical."
+      ]
+    },
+    {
+      "id": "blog-admin-core-wave3",
+      "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
+      "status": "verified",
+      "reviewMethod": "manual-first",
+      "reviewDate": "2026-09-22",
+      "manualReview": "docs/ui-redesign/blog-admin-core-wave3-manual-parity-review.md",
+      "reviewedRefs": {
+        "blog": "6abbecef22b85e9ee87f86c7efda28e55761cba0",
+        "gounoUi": "059bc2806689f70be7178c16fc50a339f6526405"
+      },
+      "gounoUiPackageVersion": "0.4.8",
+      "stateCoverage": [
+        "default",
+        "feedback",
+        "error",
+        "selection-bulk",
+        "editor",
+        "modal",
+        "privileged",
+        "responsive",
+        "dark-mode"
+      ],
+      "reviewDimensions": [
+        "composition",
+        "typography",
+        "spacing",
+        "feedback",
+        "interaction",
+        "responsive"
+      ],
+      "ownedPaths": [
+        "blog-frontend/src/pages/admin/PostEditor.tsx",
+        "blog-frontend/src/pages/admin/PageEditor.tsx",
+        "blog-frontend/src/pages/admin/Notifications.tsx",
+        "blog-frontend/src/pages/admin/MediaLibrary.tsx",
+        "blog-frontend/src/pages/admin/SiteSettings.tsx",
+        "blog-frontend/src/pages/admin/Users.tsx",
+        "blog-frontend/src/components/editor/",
+        "blog-frontend/src/components/MarkdownRenderer.tsx",
+        "blog-frontend/src/components/auth/StepUpMfaModal.tsx",
+        "blog-frontend/src/components/auth/SudoGate.tsx",
+        "blog-frontend/src/components/patterns/TabPanelLead.tsx"
+      ],
+      "canonicalPaths": [
+        "showcase/demos/products/blog-admin/post-editor.tsx",
+        "showcase/demos/products/blog-admin/page-editor.tsx",
+        "showcase/demos/products/blog-admin/notifications.tsx",
+        "showcase/demos/products/blog-admin/media-library.tsx",
+        "showcase/demos/products/blog-admin/site-settings.tsx",
+        "showcase/demos/products/blog-admin/users.tsx",
+        "showcase/components/patterns/admin-data-composition.tsx",
+        "showcase/components/tab-panel-lead.tsx"
+      ],
+      "browserEvidence": {
+        "runs": [
+          {
+            "name": "CI",
+            "id": 35671991349,
+            "result": "success"
+          },
+          {
+            "name": "Images",
+            "id": 35671991280,
+            "result": "success"
+          },
+          {
+            "name": "Blog Showcase Parity",
+            "id": 35671991294,
+            "result": "success"
+          },
+          {
+            "name": "UI Browser Acceptance",
+            "id": 35671991273,
+            "result": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10671088064,
+            "name": "blog-showcase-parity-35671991294",
+            "sha256": "4daa17b792d64b4cd29730f55d8912ffbce894a8154d414a1e5fa0d3d2b9ad4a"
+          },
+          {
+            "id": 10671143226,
+            "name": "blog-browser-acceptance-35671991273",
+            "sha256": "9a65d519e9a2a7282b5d7999b4a1bd99d40c6bb1c0f27e580e0e94b34d4238ab"
+          }
+        ]
+      },
+      "intentionalDivergences": [
+        "Post/Page editors bind real permissions, Blog APIs, revision/history state, AI requests, media workflows and save/conflict semantics while preserving the frozen editor composition.",
+        "Notifications renders real notification cardinality, timestamps, destinations and mutation results while preserving the canonical filter, Card and BulkActionBar grammar.",
+        "Media Library renders real assets, permissions, upload/AI/Alt Text/reference-aware deletion and workflow behavior while preserving canonical collection and selected-resource action grammar.",
+        "Site Settings uses real stored configuration plus Sudo/recent-MFA protection and retry behavior while preserving the canonical settings composition.",
+        "Users binds the real Blog member/role model, GOSSO ownership boundary and Step-Up MFA workflow; concrete member counts and role data differ from Showcase fixtures."
       ]
     }
   ]
