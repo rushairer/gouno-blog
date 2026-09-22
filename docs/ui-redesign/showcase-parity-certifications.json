@@ -14,14 +14,14 @@
       "scope": "Blog Admin AI Settings + AI Operations",
       "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-20",
-      "manualReview": "docs/ui-redesign/blog-admin-ai-manual-parity-review.md",
+      "reviewDate": "2026-09-22",
+      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
-        "blog": "29451582d5c812642402d19c16dff3ed535b0ef1",
-        "gounoUi": "c64c19f1a045545f54d988609a6ad2e80f2dfe6c"
+        "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
+        "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
       },
-      "gounoUiPackageVersion": "0.4.8",
+      "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
         "default",
         "feedback",
@@ -46,37 +46,35 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 35486707373,
+            "id": 35721612018,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35486707428,
+            "id": 35721612060,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 35486707395,
+            "id": 35721612086,
             "result": "success"
           },
           {
-            "name": "Gouno UI Blog Consumer Parity",
-            "id": 35486806069,
+            "name": "Images",
+            "id": 35721611974,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10597571973,
-            "sha256": "77ac5621bd47f21326bb899bfcc52eace9b6c9339aae2c890eaf72faeb521375"
+            "id": 10692410965,
+            "name": "blog-showcase-parity-35721612018",
+            "sha256": "ee2e73a1df99eb70eaa98a994d237961a14040c846787d20969b95f02413d012"
           },
           {
-            "id": 10598310684,
-            "sha256": "d574cebeae52fdf71bc77f0ab19eea59202a80b87df5d6ae84aab7069a76ed9e"
-          },
-          {
-            "id": 10597542294,
-            "sha256": "5751fe1b628f99f10878e0e2490e175f5c25cb177ee132d1060d1d838829683d"
+            "id": 10691856972,
+            "name": "blog-browser-acceptance-35721612060",
+            "sha256": "d6296f9eb13d3092c8d93d9d873ef3b0e1bbc0715dfeb9afb73da2a028f2ba71"
           }
         ]
       },
@@ -110,12 +108,12 @@
       "status": "verified",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-22",
-      "manualReview": "docs/ui-redesign/blog-public-account-manual-parity-review.md",
+      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
       "reviewedRefs": {
-        "blog": "0d4e0b1e9dc42cf2a3adc9fae1903e1484287ad5",
-        "gounoUi": "059bc2806689f70be7178c16fc50a339f6526405"
+        "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
+        "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
       },
-      "gounoUiPackageVersion": "0.4.8",
+      "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
         "default",
         "loading",
@@ -159,36 +157,36 @@
       "browserEvidence": {
         "runs": [
           {
-            "name": "CI",
-            "id": 35626915555,
-            "result": "success"
-          },
-          {
-            "name": "Images",
-            "id": 35626915593,
-            "result": "success"
-          },
-          {
             "name": "Blog Showcase Parity",
-            "id": 35626915579,
+            "id": 35721612018,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35626915548,
+            "id": 35721612060,
+            "result": "success"
+          },
+          {
+            "name": "CI",
+            "id": 35721612086,
+            "result": "success"
+          },
+          {
+            "name": "Images",
+            "id": 35721611974,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10652708296,
-            "name": "blog-showcase-parity-35626915579",
-            "sha256": "f866fefa7e2da7fc49390ffef7681c52a96dd60863f15d4f6db2294146d02342"
+            "id": 10692410965,
+            "name": "blog-showcase-parity-35721612018",
+            "sha256": "ee2e73a1df99eb70eaa98a994d237961a14040c846787d20969b95f02413d012"
           },
           {
-            "id": 10652463948,
-            "name": "blog-browser-acceptance-35626915548",
-            "sha256": "2c860766e8becd7a30c7ad276dfb666478001e149bc59b41fb911d0f6c6ffb56"
+            "id": 10691856972,
+            "name": "blog-browser-acceptance-35721612060",
+            "sha256": "d6296f9eb13d3092c8d93d9d873ef3b0e1bbc0715dfeb9afb73da2a028f2ba71"
           }
         ]
       },
@@ -218,13 +216,13 @@
       "scope": "Blog Admin Dashboard + Posts + Pages",
       "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-20",
-      "manualReview": "docs/ui-redesign/blog-admin-core-wave1-manual-parity-review.md",
+      "reviewDate": "2026-09-22",
+      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
       "reviewedRefs": {
-        "blog": "87800efa1d80a2f698a3d4e279b2825b4361188a",
-        "gounoUi": "c64c19f1a045545f54d988609a6ad2e80f2dfe6c"
+        "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
+        "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
       },
-      "gounoUiPackageVersion": "0.4.8",
+      "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
         "default",
         "feedback",
@@ -255,35 +253,35 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 35488456854,
+            "id": 35721612018,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35488456853,
+            "id": 35721612060,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 35488456855,
+            "id": 35721612086,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 35488456865,
+            "id": 35721611974,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10598047486,
-            "name": "blog-showcase-parity-35488456854",
-            "sha256": "92e8bf79a65317cf07077f300356f23ee1a8222552ab0d110325a06a94dbe720"
+            "id": 10692410965,
+            "name": "blog-showcase-parity-35721612018",
+            "sha256": "ee2e73a1df99eb70eaa98a994d237961a14040c846787d20969b95f02413d012"
           },
           {
-            "id": 10597529814,
-            "name": "blog-browser-acceptance-35488456853",
-            "sha256": "3ebfd10be2104d2996717f4ec8224d9539b027b31f1434d5a154235fc128a45c"
+            "id": 10691856972,
+            "name": "blog-browser-acceptance-35721612060",
+            "sha256": "d6296f9eb13d3092c8d93d9d873ef3b0e1bbc0715dfeb9afb73da2a028f2ba71"
           }
         ]
       },
@@ -303,13 +301,13 @@
       "scope": "Blog Admin Categories + Tags + Comments",
       "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-21",
-      "manualReview": "docs/ui-redesign/blog-admin-core-wave2-manual-parity-review.md",
+      "reviewDate": "2026-09-22",
+      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
       "reviewedRefs": {
-        "blog": "d93c12a0309c9d037ee6506770200b30303c2068",
-        "gounoUi": "8d5c9e605ceee37303e551d71de87bdfec876b2e"
+        "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
+        "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
       },
-      "gounoUiPackageVersion": "0.4.8",
+      "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
         "default",
         "feedback",
@@ -340,36 +338,36 @@
       "browserEvidence": {
         "runs": [
           {
-            "name": "CI",
-            "id": 35522836690,
-            "result": "success"
-          },
-          {
-            "name": "Images",
-            "id": 35522836698,
-            "result": "success"
-          },
-          {
             "name": "Blog Showcase Parity",
-            "id": 35522836688,
+            "id": 35721612018,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35522836678,
+            "id": 35721612060,
+            "result": "success"
+          },
+          {
+            "name": "CI",
+            "id": 35721612086,
+            "result": "success"
+          },
+          {
+            "name": "Images",
+            "id": 35721611974,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10608943106,
-            "name": "blog-showcase-parity-35522836688",
-            "sha256": "70b6cc1eec8b28764267bc7492656ed88204be21d9bec642217fb7b6a655e6f1"
+            "id": 10692410965,
+            "name": "blog-showcase-parity-35721612018",
+            "sha256": "ee2e73a1df99eb70eaa98a994d237961a14040c846787d20969b95f02413d012"
           },
           {
-            "id": 10608758622,
-            "name": "blog-browser-acceptance-35522836678",
-            "sha256": "050f8ef49c1ececa08413413e03b7380c81e899dd19344fb65ee85d3cbc712f8"
+            "id": 10691856972,
+            "name": "blog-browser-acceptance-35721612060",
+            "sha256": "d6296f9eb13d3092c8d93d9d873ef3b0e1bbc0715dfeb9afb73da2a028f2ba71"
           }
         ]
       },
@@ -391,12 +389,12 @@
       "status": "verified",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-22",
-      "manualReview": "docs/ui-redesign/blog-admin-core-wave3-manual-parity-review.md",
+      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
       "reviewedRefs": {
-        "blog": "6abbecef22b85e9ee87f86c7efda28e55761cba0",
-        "gounoUi": "059bc2806689f70be7178c16fc50a339f6526405"
+        "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
+        "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
       },
-      "gounoUiPackageVersion": "0.4.8",
+      "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
         "default",
         "feedback",
@@ -442,36 +440,36 @@
       "browserEvidence": {
         "runs": [
           {
-            "name": "CI",
-            "id": 35671991349,
-            "result": "success"
-          },
-          {
-            "name": "Images",
-            "id": 35671991280,
-            "result": "success"
-          },
-          {
             "name": "Blog Showcase Parity",
-            "id": 35671991294,
+            "id": 35721612018,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35671991273,
+            "id": 35721612060,
+            "result": "success"
+          },
+          {
+            "name": "CI",
+            "id": 35721612086,
+            "result": "success"
+          },
+          {
+            "name": "Images",
+            "id": 35721611974,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10671088064,
-            "name": "blog-showcase-parity-35671991294",
-            "sha256": "4daa17b792d64b4cd29730f55d8912ffbce894a8154d414a1e5fa0d3d2b9ad4a"
+            "id": 10692410965,
+            "name": "blog-showcase-parity-35721612018",
+            "sha256": "ee2e73a1df99eb70eaa98a994d237961a14040c846787d20969b95f02413d012"
           },
           {
-            "id": 10671143226,
-            "name": "blog-browser-acceptance-35671991273",
-            "sha256": "9a65d519e9a2a7282b5d7999b4a1bd99d40c6bb1c0f27e580e0e94b34d4238ab"
+            "id": 10691856972,
+            "name": "blog-browser-acceptance-35721612060",
+            "sha256": "d6296f9eb13d3092c8d93d9d873ef3b0e1bbc0715dfeb9afb73da2a028f2ba71"
           }
         ]
       },
