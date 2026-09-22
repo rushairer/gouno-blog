@@ -476,8 +476,13 @@ const reviewedSupportTypographyContracts = new Map([
         "type-body-sm type-weight-semibold text-primary",
         "type-weight-semibold",
         "type-family-mono type-caption",
+        '<Text size="xs" tone="muted" leading="relaxed">',
       ],
-      forbidden: ["text-sm font-semibold text-primary", "font-mono text-xs"],
+      forbidden: [
+        "text-sm font-semibold text-primary",
+        "font-mono text-xs",
+        'className="leading-relaxed"',
+      ],
     },
   ],
 ]);

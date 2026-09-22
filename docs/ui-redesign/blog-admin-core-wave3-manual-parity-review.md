@@ -32,8 +32,9 @@ Before accepting browser evidence, source-by-source manual review found two Prod
 
 - Post Editor revision-conflict content used raw `font-semibold` / `text-sm` instead of semantic typography roles.
 - Media Library blocked-reference links used raw `font-medium` while the frozen Showcase uses `type-weight-medium`.
+- Users role-description text used a raw `leading-relaxed` utility even though Core `Text` owns the semantic `leading="relaxed"` API.
 
-The candidate fixes both and extends `check-admin-parity-contracts.mjs` so these reviewed drifts cannot silently return. Page Editor's Inspector summary `text-sm font-semibold` is intentionally unchanged because it is identical to the frozen Showcase source; changing only the Consumer would create a new parity drift.
+The candidate fixes all three and extends `check-admin-parity-contracts.mjs` so these reviewed drifts cannot silently return. Page Editor's Inspector summary `text-sm font-semibold` is intentionally unchanged because it is identical to the frozen Showcase source; changing only the Consumer would create a new parity drift.
 
 ## Fresh evidence required
 
@@ -46,7 +47,9 @@ The same candidate head must pass:
 
 The human review must inspect the new artifacts directly.
 
-Existing paired parity already covers the six frozen pages:
+Existing paired parity covers the six frozen pages, and this candidate strengthens the states that were previously only Product-side evidence: Notifications selection/BulkActionBar, Media selected-resource AI handoff (including Sparkles semantics), and the Users edit-permissions Modal.
+
+The paired coverage includes:
 
 - Post Editor and Page Editor canonical editor shells across light/dark and responsive viewport contracts;
 - Notifications filter/object Card in light/dark;

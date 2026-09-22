@@ -328,6 +328,133 @@ for (const theme of ["light", "dark"]) {
   });
 }
 
+test("Notifications selected batch action matches Showcase (mobile dark)", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown } = await openPair(
+    browser,
+    "blog-admin-notifications",
+    "/admin/notifications",
+    "dark",
+    { viewport: { width: 390, height: 844 } },
+  );
+
+  await showcase.getByRole("checkbox", { name: /^选择通知 / }).first().check();
+  await product.getByRole("checkbox", { name: /^选择通知 / }).first().check();
+
+  const showcaseToolbar = showcase.getByRole("toolbar", { name: "批量操作" });
+  const productToolbar = product.getByRole("toolbar", { name: "批量操作" });
+  await expect(showcaseToolbar).toBeVisible();
+  await expect(productToolbar).toBeVisible();
+  await expectStyleParity(showcaseToolbar, productToolbar);
+
+  for (const label of ["标为已读", "批量删除", "取消"]) {
+    await expectStyleParity(
+      showcaseToolbar.getByRole("button", { name: label, exact: true }),
+      productToolbar.getByRole("button", { name: label, exact: true }),
+    );
+  }
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+  expect(unknown).toEqual([]);
+  await pairScreenshot(
+    showcase,
+    product,
+    "support-notifications-selection-mobile-dark",
+    testInfo,
+  );
+  await context.close();
+});
+
+test("Media selected-resource AI handoff matches Showcase (mobile dark)", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown } = await openPair(
+    browser,
+    "blog-admin-media-library",
+    "/admin/media",
+    "dark",
+    { viewport: { width: 390, height: 844 } },
+  );
+
+  await showcase.getByRole("checkbox", { name: /^选择媒体 / }).first().check();
+  await product.getByRole("checkbox", { name: /^选择媒体 / }).first().check();
+
+  const showcaseToolbar = showcase.getByRole("toolbar", { name: "批量操作" });
+  const productToolbar = product.getByRole("toolbar", { name: "批量操作" });
+  await expectStyleParity(showcaseToolbar, productToolbar);
+
+  const showcaseAi = showcaseToolbar.getByRole("button", {
+    name: "交给 AI",
+    exact: true,
+  });
+  const productAi = productToolbar.getByRole("button", {
+    name: "交给 AI",
+    exact: true,
+  });
+  await expect(showcaseAi.locator("svg.lucide-sparkles")).toHaveCount(1);
+  await expect(productAi.locator("svg.lucide-sparkles")).toHaveCount(1);
+  await expectStyleParity(showcaseAi, productAi);
+  await expect(
+    showcaseToolbar.getByRole("button", { name: "取消", exact: true }),
+  ).toBeVisible();
+  await expect(
+    productToolbar.getByRole("button", { name: "取消", exact: true }),
+  ).toBeVisible();
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+  expect(unknown).toEqual([]);
+  await pairScreenshot(
+    showcase,
+    product,
+    "support-media-ai-handoff-selection-mobile-dark",
+    testInfo,
+  );
+  await context.close();
+});
+
+test("Users edit-permissions modal matches Showcase", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown } = await openPair(
+    browser,
+    "blog-admin-users",
+    "/admin/users",
+    "light",
+    { activeSudo: true },
+  );
+
+  await showcase
+    .getByRole("button", { name: /^编辑 .* 成员与权限$/ })
+    .first()
+    .click();
+  await product
+    .getByRole("button", { name: /^编辑 .* 成员与权限$/ })
+    .first()
+    .click();
+
+  const showcaseDialog = showcase
+    .getByRole("dialog")
+    .filter({ hasText: "成员显示昵称 / 备注名" });
+  const productDialog = product
+    .getByRole("dialog")
+    .filter({ hasText: "成员显示昵称 / 备注名" });
+  await expect(showcaseDialog).toBeVisible();
+  await expect(productDialog).toBeVisible();
+  await expectStyleParity(showcaseDialog, productDialog);
+
+  expect(unknown).toEqual([]);
+  await pairScreenshot(
+    showcase,
+    product,
+    "support-users-edit-permissions-modal-light",
+    testInfo,
+  );
+  await context.close();
+});
+
 for (const surface of [
   {
     name: "categories",
