@@ -91,6 +91,10 @@
         "feedback",
         "interaction",
         "responsive"
+      ],
+      "canonicalIds": [
+        "blog-admin-ai-operations",
+        "blog-admin-ai-settings"
       ]
     },
     {
@@ -193,6 +197,20 @@
         "Category and tag detail routes remain Product instances of the shared Article Index family rather than additional frozen Showcase page ids.",
         "Custom page slugs/content and PublicShell navigation entries come from Product APIs while keeping the reviewed document/discovery grammar.",
         "Account Settings stays a Blog-to-GOSSO identity/security handoff and does not absorb password, MFA, Passkey or identity-session forms."
+      ],
+      "canonicalIds": [
+        "blog-home",
+        "blog-articles",
+        "blog-article-detail",
+        "blog-search",
+        "blog-categories",
+        "blog-tags",
+        "blog-archive",
+        "blog-about",
+        "blog-custom-page",
+        "blog-account-notifications",
+        "blog-account-settings",
+        "blog-not-found"
       ]
     },
     {
@@ -273,6 +291,11 @@
         "Real permissions, API data, router links, clipboard/delete behavior and AI workflow launching remain Product-owned behavior.",
         "Analytics values, dates, counts, list lengths and concrete fixture copy may differ while the reviewed composition contract remains the same.",
         "Dashboard AI alerts use real Product alert/run data while preserving the canonical object-row presentation."
+      ],
+      "canonicalIds": [
+        "blog-admin-dashboard",
+        "blog-admin-posts",
+        "blog-admin-pages"
       ]
     },
     {
@@ -355,6 +378,11 @@
         "Tags retains real rename/merge/delete API state and AI workflow launching.",
         "Comments retains URL-backed filters, real moderation/delete operations, real errors and Product notifications.",
         "Concrete data, counts, timestamps and list lengths may differ from Fixture data while the reviewed composition remains canonical."
+      ],
+      "canonicalIds": [
+        "blog-admin-categories",
+        "blog-admin-tags",
+        "blog-admin-comments"
       ]
     },
     {
@@ -453,6 +481,14 @@
         "Media Library renders real assets, permissions, upload/AI/Alt Text/reference-aware deletion and workflow behavior while preserving canonical collection and selected-resource action grammar.",
         "Site Settings uses real stored configuration plus Sudo/recent-MFA protection and retry behavior while preserving the canonical settings composition.",
         "Users binds the real Blog member/role model, GOSSO ownership boundary and Step-Up MFA workflow; concrete member counts and role data differ from Showcase fixtures."
+      ],
+      "canonicalIds": [
+        "blog-admin-post-editor",
+        "blog-admin-page-editor",
+        "blog-admin-notifications",
+        "blog-admin-media-library",
+        "blog-admin-users",
+        "blog-admin-site-settings"
       ]
     }
   ]

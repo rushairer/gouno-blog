@@ -15,10 +15,56 @@ const allowedStatuses = new Set([
   "verified",
   "blocked",
 ]);
-const requiredFamilies = new Set([
+const expectedCertificationIds = new Set([
   "blog-admin-ai",
   "blog-admin-core-support",
+  "blog-admin-core-wave1",
+  "blog-admin-core-wave2",
+  "blog-admin-core-wave3",
   "blog-public-account",
+]);
+
+const expectedCanonicalIdsByEntry = new Map([
+  [
+    "blog-admin-ai",
+    ["blog-admin-ai-operations", "blog-admin-ai-settings"],
+  ],
+  [
+    "blog-admin-core-wave1",
+    ["blog-admin-dashboard", "blog-admin-posts", "blog-admin-pages"],
+  ],
+  [
+    "blog-admin-core-wave2",
+    ["blog-admin-categories", "blog-admin-tags", "blog-admin-comments"],
+  ],
+  [
+    "blog-admin-core-wave3",
+    [
+      "blog-admin-post-editor",
+      "blog-admin-page-editor",
+      "blog-admin-notifications",
+      "blog-admin-media-library",
+      "blog-admin-users",
+      "blog-admin-site-settings",
+    ],
+  ],
+  [
+    "blog-public-account",
+    [
+      "blog-home",
+      "blog-articles",
+      "blog-article-detail",
+      "blog-search",
+      "blog-categories",
+      "blog-tags",
+      "blog-archive",
+      "blog-about",
+      "blog-custom-page",
+      "blog-account-notifications",
+      "blog-account-settings",
+      "blog-not-found",
+    ],
+  ],
 ]);
 
 function fail(message) {
@@ -54,11 +100,26 @@ function pathTouches(changed, prefixes) {
   );
 }
 
+function sorted(values) {
+  return [...new Set(values ?? [])].sort();
+}
+
+function sameStrings(left, right) {
+  return JSON.stringify(sorted(left)) === JSON.stringify(sorted(right));
+}
+
 const ledger = JSON.parse(await readFile(ledgerPath, "utf8"));
 if (ledger.schemaVersion !== 1) fail("Parity certification ledger schemaVersion must be 1.");
 if (ledger.policy !== "manual-first-v1") {
   fail("Parity certification ledger must use the manual-first-v1 policy.");
 }
+
+const packageJson = JSON.parse(
+  await readFile(resolve(frontendRoot, "package.json"), "utf8"),
+);
+const upstreamRoot = process.env.GOUNO_UI_CANONICAL_ROOT
+  ? resolve(frontendRoot, process.env.GOUNO_UI_CANONICAL_ROOT)
+  : "";
 
 const entries = ledger.certifications ?? [];
 const ids = new Set();
@@ -85,6 +146,7 @@ for (const entry of entries) {
       "gounoUiPackageVersion",
       "stateCoverage",
       "reviewDimensions",
+      "canonicalIds",
       "ownedPaths",
       "canonicalPaths",
       "browserEvidence",
@@ -116,6 +178,13 @@ for (const entry of entries) {
       if (!dimensions.has(required)) {
         fail(`${entry.id}: verified reviewDimensions must include ${required}.`);
       }
+    }
+
+    const expectedCanonicalIds = expectedCanonicalIdsByEntry.get(entry.id);
+    if (!expectedCanonicalIds) {
+      fail(`${entry.id}: verified certification has no frozen canonical-id mapping.`);
+    } else if (!sameStrings(entry.canonicalIds, expectedCanonicalIds)) {
+      fail(`${entry.id}: canonicalIds do not match the frozen ownership mapping.`);
     }
 
     if (!entry.reviewedRefs?.blog || !entry.reviewedRefs?.gounoUi) {
@@ -160,18 +229,12 @@ for (const entry of entries) {
       }
     }
 
-    const packageJson = JSON.parse(
-      await readFile(resolve(frontendRoot, "package.json"), "utf8"),
-    );
     if (packageJson.dependencies?.["@gouno/ui"] !== entry.gounoUiPackageVersion) {
       fail(
         `${entry.id}: certification was reviewed on @gouno/ui ${entry.gounoUiPackageVersion}, current package uses ${packageJson.dependencies?.["@gouno/ui"] ?? "missing"}.`,
       );
     }
 
-    const upstreamRoot = process.env.GOUNO_UI_CANONICAL_ROOT
-      ? resolve(frontendRoot, process.env.GOUNO_UI_CANONICAL_ROOT)
-      : "";
     if (upstreamRoot && requireHistoryRef(
       upstreamRoot,
       entry.reviewedRefs.gounoUi,
@@ -197,8 +260,47 @@ for (const entry of entries) {
   }
 }
 
-for (const family of requiredFamilies) {
-  if (!ids.has(family)) fail(`Missing required parity certification family: ${family}`);
+if (!sameStrings(ids, expectedCertificationIds)) {
+  fail(
+    "Parity certification entries must exactly match the completed AI, Core Wave 1-3, Public/Account and legacy-support records.",
+  );
+}
+
+if (upstreamRoot) {
+  const matrix = JSON.parse(
+    await readFile(resolve(upstreamRoot, "canonical-showcase.json"), "utf8"),
+  );
+  if (matrix.status !== "frozen") {
+    fail(
+      `Upstream canonical matrix must remain frozen, got ${matrix.status ?? "missing"}.`,
+    );
+  }
+
+  const verifiedAdminIds = entries
+    .filter(
+      (entry) =>
+        entry.status === "verified" &&
+        entry.id.startsWith("blog-admin-") &&
+        entry.id !== "blog-admin-core-support",
+    )
+    .flatMap((entry) => entry.canonicalIds ?? []);
+  const publicIds =
+    entries.find((entry) => entry.id === "blog-public-account" && entry.status === "verified")
+      ?.canonicalIds ?? [];
+  const allActiveIds = [...verifiedAdminIds, ...publicIds];
+
+  if (new Set(verifiedAdminIds).size !== verifiedAdminIds.length) {
+    fail("Blog Admin canonicalIds must not overlap between verified certification waves.");
+  }
+  if (new Set(allActiveIds).size !== allActiveIds.length) {
+    fail("Verified Blog/Admin canonicalIds must have one certification owner each.");
+  }
+  if (!sameStrings(verifiedAdminIds, matrix.productPages?.blogAdmin ?? [])) {
+    fail("Verified Blog Admin canonicalIds no longer match the frozen upstream matrix.");
+  }
+  if (!sameStrings(publicIds, matrix.productPages?.publicBlog ?? [])) {
+    fail("Verified Public Blog canonicalIds no longer match the frozen upstream matrix.");
+  }
 }
 
 for (const legacyDoc of [
@@ -226,12 +328,54 @@ if (baseSha) {
     );
     for (const entry of entries.filter((item) => item.status === "verified")) {
       const baseEntry = baseById.get(entry.id);
-      if (!baseEntry) continue;
-      if (!pathTouches(changed, entry.ownedPaths ?? [])) continue;
-      if (JSON.stringify(baseEntry) === JSON.stringify(entry)) {
+      if (!baseEntry || baseEntry.status !== "verified") continue;
+      if (!pathTouches(changed, baseEntry.ownedPaths ?? [])) continue;
+
+      if (entry.reviewedRefs?.blog === baseEntry.reviewedRefs?.blog) {
         fail(
-          `${entry.id}: this PR changes certified product paths but leaves the certification entry untouched. Re-review and refresh evidence, or demote it to needs-manual-recertification.`,
+          `${entry.id}: verified Product changes require a fresh Blog reviewed ref.`,
         );
+      }
+      if (
+        JSON.stringify(entry.browserEvidence) ===
+        JSON.stringify(baseEntry.browserEvidence)
+      ) {
+        fail(
+          `${entry.id}: verified Product changes require fresh browser/parity evidence.`,
+        );
+      }
+    }
+
+    const basePackageResult = git(repoRoot, [
+      "show",
+      `${baseSha}:blog-frontend/package.json`,
+    ]);
+    if (basePackageResult.ok && basePackageResult.output) {
+      const before = JSON.parse(basePackageResult.output).dependencies?.["@gouno/ui"];
+      const after = packageJson.dependencies?.["@gouno/ui"];
+      if (before !== after) {
+        for (const entry of entries.filter((item) => item.status === "verified")) {
+          const baseEntry = baseById.get(entry.id);
+          if (!baseEntry || baseEntry.status !== "verified") continue;
+          if (entry.gounoUiPackageVersion !== after) {
+            fail(
+              `${entry.id}: @gouno/ui changed but the certified package version was not refreshed.`,
+            );
+          }
+          if (entry.reviewedRefs?.blog === baseEntry.reviewedRefs?.blog) {
+            fail(
+              `${entry.id}: @gouno/ui upgrades require a fresh Blog reviewed ref.`,
+            );
+          }
+          if (
+            JSON.stringify(entry.browserEvidence) ===
+            JSON.stringify(baseEntry.browserEvidence)
+          ) {
+            fail(
+              `${entry.id}: @gouno/ui upgrades require fresh browser/parity evidence.`,
+            );
+          }
+        }
       }
     }
   }
