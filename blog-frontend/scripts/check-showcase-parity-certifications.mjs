@@ -283,14 +283,15 @@ if (upstreamRoot) {
 
     const affectedEntries = entries.filter(
       (entry) =>
-        entry.status === "verified" &&
+        ["verified", "needs-manual-recertification"].includes(entry.status) &&
+        entry.reviewedRefs?.gounoUi &&
         (entry.canonicalIds ?? []).some((id) => (amendment.scopes ?? []).includes(id)),
     );
 
     if (impact === "recertified") {
       if (!affectedEntries.length) {
         fail(
-          `${amendment.id}: upstream marks Blog recertified, but no verified Blog certification owns scopes ${(amendment.scopes ?? []).join(", ")}.`,
+          `${amendment.id}: upstream marks Blog recertified, but no reviewed Blog certification history owns scopes ${(amendment.scopes ?? []).join(", ")}.`,
         );
         continue;
       }
