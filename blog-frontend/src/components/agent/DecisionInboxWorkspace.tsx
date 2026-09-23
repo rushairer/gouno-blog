@@ -1,4 +1,4 @@
-import { Check, Clock3, Play, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Check, Clock3, Play, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { operationsApi } from "../../api/operations";
 import { workflowApi } from "../../api/workflows";
@@ -398,6 +398,8 @@ export function DecisionInboxWorkspace({
   const [selectedKey, setSelectedKey] = useState<string | null>(
     selectedApproval ? `approval-${selectedApproval.id}` : null,
   );
+  const [mobilePane, setMobilePane] =
+    useState<"master" | "detail">("master");
   const [actionError, setActionError] = useState("");
   const [deferTarget, setDeferTarget] = useState<OperationalSuggestion | null>(
     null,
@@ -529,7 +531,10 @@ export function DecisionInboxWorkspace({
             variant={filter === option.value ? "solid" : "outline"}
             color={filter === option.value ? "primary" : undefined}
             aria-pressed={filter === option.value}
-            onClick={() => setFilter(option.value)}
+            onClick={() => {
+              setFilter(option.value);
+              setMobilePane("master");
+            }}
           >
             {option.label}
           </Button>
@@ -539,11 +544,12 @@ export function DecisionInboxWorkspace({
       <div
         data-slot="ops-master-detail"
         data-pattern="master-detail-composition"
+        data-mobile-pane={mobilePane}
         className="grid min-h-[34rem] min-w-0 items-stretch overflow-hidden rounded-lg border bg-background xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.55fr)]"
       >
         <aside
           data-slot="ops-rail"
-          className="flex min-h-0 min-w-0 flex-col border-b xl:border-b-0 xl:border-r"
+          className={`${mobilePane === "detail" ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col border-b xl:border-b-0 xl:border-r`}
           aria-label={zh ? "决策队列" : "Decision queue"}
         >
           <div className="shrink-0 border-b px-[18px] py-4">
@@ -586,6 +592,7 @@ export function DecisionInboxWorkspace({
                     selected={selected?.key === item.key}
                     onClick={() => {
                       setSelectedKey(item.key);
+                      setMobilePane("detail");
                       if (item.kind === "approval")
                         onSelectApproval(item.payload as AgentApproval);
                     }}
@@ -608,9 +615,19 @@ export function DecisionInboxWorkspace({
         </aside>
 
         <main
-          className="min-w-0 p-6"
+          data-slot="ops-detail-pane"
+          className={`${mobilePane === "master" ? "hidden md:block" : "block"} min-w-0 p-6`}
           aria-label={zh ? "决策工作台" : "Decision workbench"}
         >
+          <div className="mb-4 md:hidden">
+            <Button
+              variant="ghost"
+              icon={<ArrowLeft />}
+              onClick={() => setMobilePane("master")}
+            >
+              {zh ? "返回决策队列" : "Back to decision queue"}
+            </Button>
+          </div>
           {!selected ? (
             <Empty
               title={zh ? "当前没有需要处理的事项" : "Nothing needs attention"}
