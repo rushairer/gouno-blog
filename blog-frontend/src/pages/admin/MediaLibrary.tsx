@@ -388,7 +388,7 @@ export default function MediaLibrary() {
       {error && assets.length > 0 ? (
         <Alert type="error" showIcon title={error}>
           {references.length ? (
-            <ul className="mt-2 flex flex-col gap-1 text-sm">
+            <ul className="mt-2 flex flex-col gap-1 type-body-sm">
               {references.map((item) => (
                 <li key={item.post_id}>
                   <a
