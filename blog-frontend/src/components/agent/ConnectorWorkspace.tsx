@@ -522,7 +522,7 @@ export function ConnectorWorkspace({
 
                     <Field label={zh ? "配置 JSON" : "Config JSON"}>
                       <Textarea
-                        className="font-mono"
+                        className="type-family-mono"
                         value={config}
                         onChange={(event) => setConfig(event.target.value)}
                         rows={6}
@@ -584,13 +584,13 @@ export function ConnectorWorkspace({
             </div>
             <FormGrid columns={2}>
               <Field label="State">
-                <Input value={state} readOnly className="font-mono" />
+                <Input value={state} readOnly className="type-family-mono" />
               </Field>
               <Field label="Mock code">
                 <Input
                   value={code}
                   onChange={(event) => setCode(event.target.value)}
-                  className="font-mono"
+                  className="type-family-mono"
                 />
               </Field>
             </FormGrid>
@@ -655,7 +655,7 @@ export function ConnectorWorkspace({
             </FormGrid>
             <Field label="Payload JSON">
               <Textarea
-                className="font-mono"
+                className="type-family-mono"
                 value={payload}
                 onChange={(event) => setPayload(event.target.value)}
                 rows={4}
