@@ -12,14 +12,14 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-22",
-      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
+      "reviewDate": "2026-09-23",
+      "manualReview": "docs/ui-redesign/blog-admin-ai-tool-identifier-overflow-recertification.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
-        "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
-        "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
+        "blog": "03d5083d4a19aa69a25b4d39293d724b9e878eba",
+        "gounoUi": "cb629669cf94ec2edced6543dfdafc7444f84c6d"
       },
       "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
@@ -45,36 +45,36 @@
       "browserEvidence": {
         "runs": [
           {
-            "name": "Blog Showcase Parity",
-            "id": 35721612018,
-            "result": "success"
-          },
-          {
-            "name": "UI Browser Acceptance",
-            "id": 35721612060,
-            "result": "success"
-          },
-          {
             "name": "CI",
-            "id": 35721612086,
+            "id": 35805670431,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 35721611974,
+            "id": 35805670340,
+            "result": "success"
+          },
+          {
+            "name": "Blog Showcase Parity",
+            "id": 35805670349,
+            "result": "success"
+          },
+          {
+            "name": "UI Browser Acceptance",
+            "id": 35805670320,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10692410965,
-            "name": "blog-showcase-parity-35721612018",
-            "sha256": "ee2e73a1df99eb70eaa98a994d237961a14040c846787d20969b95f02413d012"
+            "id": 10727563662,
+            "name": "blog-showcase-parity-35805670349",
+            "sha256": "a08c5e76e4b9cb7dc8a237cf70e221ecd5aa9383429add8fe551b336aa19fc2a"
           },
           {
-            "id": 10691856972,
-            "name": "blog-browser-acceptance-35721612060",
-            "sha256": "d6296f9eb13d3092c8d93d9d873ef3b0e1bbc0715dfeb9afb73da2a028f2ba71"
+            "id": 10728041551,
+            "name": "blog-browser-acceptance-35805670320",
+            "sha256": "6fcb651c126683f63b501a0c64fe67df1e58035388f35a505ca841397e09543d"
           }
         ]
       },
