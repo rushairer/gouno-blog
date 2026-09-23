@@ -161,10 +161,10 @@ export function FriendlyApprovalQueue({
                   >
                     <span className="flex w-full items-start justify-between gap-3 text-left">
                       <span className="min-w-0">
-                        <strong className="block text-sm">
+                        <strong className="block type-body-sm type-weight-semibold">
                           {summary.title}
                         </strong>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="type-caption text-muted-foreground">
                           {zh
                             ? `来自 AI 运行 #${approval.run_id}`
                             : `From AI run #${approval.run_id}`}
@@ -210,7 +210,7 @@ export function FriendlyApprovalQueue({
                       <Text size="xs" tone="muted">
                         {zh ? "批准后会发生什么" : "What happens if approved"}
                       </Text>
-                      <strong className="mt-1 block text-sm">
+                      <strong className="mt-1 block type-body-sm type-weight-semibold">
                         {selectedSummary.title}
                       </strong>
                     </Card>
@@ -218,7 +218,7 @@ export function FriendlyApprovalQueue({
                       <Text size="xs" tone="muted">
                         {zh ? "不会发生什么" : "What will not happen"}
                       </Text>
-                      <strong className="mt-1 block text-sm">
+                      <strong className="mt-1 block type-body-sm type-weight-semibold">
                         {selected.action_type === "create_content_candidates"
                           ? zh
                             ? "不会直接修改或发布文章"
@@ -251,7 +251,7 @@ export function FriendlyApprovalQueue({
                     </Card>
                   ) : null}
                   <details className="rounded-md border p-4">
-                    <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+                    <summary className="flex cursor-pointer items-center justify-between gap-3 type-body-sm type-weight-medium">
                       {zh ? "查看技术详情" : "View technical details"}
                       <ChevronRight className="size-4" />
                     </summary>
@@ -337,7 +337,7 @@ export function InteractionInbox({
           <div key={task.id} className="flex flex-col gap-3 p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <strong className="text-sm">
+                <strong className="type-body-sm type-weight-semibold">
                   {task.interaction_type === "choice"
                     ? zh
                       ? "选择项"
