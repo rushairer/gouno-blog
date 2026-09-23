@@ -12,10 +12,10 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-23",
-      "manualReview": "docs/ui-redesign/blog-admin-ai-tool-identifier-overflow-recertification.md",
+      "manualReview": "docs/ui-redesign/blog-admin-dl17-typography-recertification.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
         "blog": "03d5083d4a19aa69a25b4d39293d724b9e878eba",
@@ -93,7 +93,9 @@
       "canonicalIds": [
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
-      ]
+      ],
+      "previousManualReview": "docs/ui-redesign/blog-admin-ai-tool-identifier-overflow-recertification.md",
+      "recertificationReason": "DL-17 audit found residual raw Typography utilities in frozen AI Operations/AI Settings Canonical surfaces and corresponding Product bindings."
     },
     {
       "id": "blog-admin-core-support",
@@ -214,10 +216,10 @@
     {
       "id": "blog-admin-core-wave1",
       "scope": "Blog Admin Dashboard + Posts + Pages",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-22",
-      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
+      "reviewDate": "2026-09-23",
+      "manualReview": "docs/ui-redesign/blog-admin-dl17-typography-recertification.md",
       "reviewedRefs": {
         "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
         "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
@@ -294,15 +296,17 @@
         "blog-admin-dashboard",
         "blog-admin-posts",
         "blog-admin-pages"
-      ]
+      ],
+      "previousManualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
+      "recertificationReason": "DL-17 audit found residual raw Typography utilities in the frozen Dashboard Canonical surface and Product binding."
     },
     {
       "id": "blog-admin-core-wave2",
       "scope": "Blog Admin Categories + Tags + Comments",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-22",
-      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
+      "reviewDate": "2026-09-23",
+      "manualReview": "docs/ui-redesign/blog-admin-dl17-typography-recertification.md",
       "reviewedRefs": {
         "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
         "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
@@ -381,15 +385,17 @@
         "blog-admin-categories",
         "blog-admin-tags",
         "blog-admin-comments"
-      ]
+      ],
+      "previousManualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
+      "recertificationReason": "DL-17 audit found residual raw Typography utilities in frozen Categories/Tags Canonical surfaces and Product bindings."
     },
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-23",
-      "manualReview": "docs/ui-redesign/blog-admin-wave3-inspector-logical-direction-recertification.md",
+      "manualReview": "docs/ui-redesign/blog-admin-dl17-typography-recertification.md",
       "reviewedRefs": {
         "blog": "03e1b8330ccc8fda20634c3253776a3b0f869a7a",
         "gounoUi": "62259726174eef30e8c8088e7217d85ccb044056"
@@ -489,8 +495,8 @@
         "blog-admin-users",
         "blog-admin-site-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
-      "recertificationReason": "Canonical Blog Admin Post/Page Editor InspectorSection still used raw typography utilities and physical inline-end positioning; Media Library selection overlay used physical inline-start positioning. Canonical correction and Consumer re-review are required before restoring verified."
+      "previousManualReview": "docs/ui-redesign/blog-admin-wave3-inspector-logical-direction-recertification.md",
+      "recertificationReason": "DL-17 audit found residual raw Typography utilities in frozen Post/Page Editor, Media Library and Site Settings Canonical surfaces and Product bindings."
     }
   ]
 }
