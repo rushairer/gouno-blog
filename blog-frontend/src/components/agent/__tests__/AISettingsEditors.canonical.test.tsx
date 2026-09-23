@@ -108,9 +108,12 @@ describe("AI Settings canonical editors", () => {
       />,
     );
 
-    const longToolName = screen.getByText("analytics.list_low_engagement_posts", {
-      exact: true,
-    });
+    const longToolName = screen.getByText(
+      "analytics.list_low_engagement_posts",
+      {
+        exact: true,
+      },
+    );
     expect(longToolName.className).toContain("[overflow-wrap:anywhere]");
     expect(longToolName.parentElement?.className).toContain("flex-1");
     expect(screen.getByText("能力定义")).toBeInTheDocument();
