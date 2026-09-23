@@ -65,7 +65,7 @@ describe("WorkflowRunRecords canonical master detail", () => {
 
   it("keeps the Run rail visible while switching execution evidence", async () => {
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <WorkflowRunRecords
         locale="zh"
         workflows={[workflow]}
@@ -75,6 +75,8 @@ describe("WorkflowRunRecords canonical master detail", () => {
     );
 
     const rail = screen.getByRole("complementary", { name: "Workflow Runs" });
+    const frame = container.querySelector('[data-slot="ops-master-detail"]');
+    expect(frame).toHaveAttribute("data-mobile-pane", "master");
     const latestButton = within(rail).getByRole("button", { name: /Run #7/ });
     const failedButton = within(rail).getByRole("button", { name: /Run #6/ });
 
@@ -86,9 +88,12 @@ describe("WorkflowRunRecords canonical master detail", () => {
       ).toBeInTheDocument(),
     );
     expect(latestButton).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.queryByRole("button", { name: "返回运行记录列表" }),
-    ).toBeNull();
+    expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+    expect(new URL(window.location.href).searchParams.get("run")).toBe("7");
+
+    await user.click(screen.getByRole("button", { name: "返回运行列表" }));
+    expect(frame).toHaveAttribute("data-mobile-pane", "master");
+    expect(new URL(window.location.href).searchParams.get("run")).toBeNull();
 
     await user.click(failedButton);
 
@@ -102,6 +107,8 @@ describe("WorkflowRunRecords canonical master detail", () => {
     ).toBeInTheDocument();
     expect(failedButton).toHaveAttribute("aria-pressed", "true");
     expect(latestButton).toHaveAttribute("aria-pressed", "false");
+    expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+    expect(new URL(window.location.href).searchParams.get("run")).toBe("6");
     expect(screen.getByRole("alert")).toHaveTextContent("Provider timeout");
   });
 });
