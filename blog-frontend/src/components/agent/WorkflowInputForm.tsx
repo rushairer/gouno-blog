@@ -685,7 +685,7 @@ export function WorkflowInputForm({
             : "Advanced: view or edit input JSON"}
         </summary>
         <Textarea
-          className="font-mono"
+          className="type-family-mono"
           rows={7}
           value={raw}
           onChange={(event) => {
