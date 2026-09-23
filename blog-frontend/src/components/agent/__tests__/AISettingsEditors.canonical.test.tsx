@@ -91,9 +91,28 @@ describe("AI Settings canonical editors", () => {
 
   it("keeps Skill governance limits inside the execution boundary", () => {
     render(
-      <SkillForm tools={[]} locale="zh" onSave={vi.fn()} onCancel={vi.fn()} />,
+      <SkillForm
+        tools={[
+          {
+            name: "analytics.list_low_engagement_posts",
+            description: "List published posts with low engagement.",
+            description_zh: "列出浏览量足够但互动率较低的已发布文章。",
+            parameters: {},
+            surfaces: ["agent"],
+            risk_level: "read",
+          },
+        ]}
+        locale="zh"
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
     );
 
+    const longToolName = screen.getByText("analytics.list_low_engagement_posts", {
+      exact: true,
+    });
+    expect(longToolName.className).toContain("[overflow-wrap:anywhere]");
+    expect(longToolName.parentElement?.className).toContain("flex-1");
     expect(screen.getByText("能力定义")).toBeInTheDocument();
     expect(screen.getByText("执行与发布边界")).toBeInTheDocument();
     expect(screen.getByText("Max steps")).toBeInTheDocument();
