@@ -77,6 +77,7 @@ describe("WorkflowRunRecords canonical master detail", () => {
     const rail = screen.getByRole("complementary", { name: "Workflow Runs" });
     const frame = container.querySelector('[data-slot="ops-master-detail"]');
     expect(frame).toHaveAttribute("data-mobile-pane", "master");
+    expect(new URL(window.location.href).searchParams.get("run")).toBeNull();
     const latestButton = within(rail).getByRole("button", { name: /Run #7/ });
     const failedButton = within(rail).getByRole("button", { name: /Run #6/ });
 
