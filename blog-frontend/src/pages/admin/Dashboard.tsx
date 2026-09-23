@@ -548,16 +548,16 @@ export default function Dashboard() {
                       const canEdit = can("edit", "post", post);
                       return (
                         <TableRow key={post.id}>
-                          <TableCell className="text-center font-mono type-caption text-muted-foreground">
+                          <TableCell className="text-center type-family-mono type-caption text-muted-foreground">
                             {index + 1}
                           </TableCell>
-                          <TableCell className="font-medium">
+                          <TableCell className="type-weight-medium">
                             {post.title}
                           </TableCell>
-                          <TableCell className="text-right font-mono type-caption text-muted-foreground">
+                          <TableCell className="text-right type-family-mono type-caption text-muted-foreground">
                             {post.views_count.toLocaleString()}
                           </TableCell>
-                          <TableCell className="text-right font-mono type-caption text-muted-foreground">
+                          <TableCell className="text-right type-family-mono type-caption text-muted-foreground">
                             {post.likes_count.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-right">
