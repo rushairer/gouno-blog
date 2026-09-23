@@ -241,7 +241,7 @@ if (!categories.includes('data-pattern="editor-form-composition"')) {
 }
 for (const marker of [
   "flex items-center gap-2",
-  'className="min-w-0 flex-1 font-mono"',
+  'className="min-w-0 flex-1 type-family-mono"',
 ]) {
   if (!categories.includes(marker)) {
     failures.push(
@@ -314,7 +314,7 @@ const reviewedTypographyContracts = new Map([
         "type-metric-compact",
         "type-body-sm type-weight-semibold",
         "type-caption type-weight-medium",
-        "font-mono type-caption",
+        "type-family-mono type-caption",
       ],
       forbidden: [
         "text-xl font-semibold",
@@ -611,6 +611,97 @@ for (const name of await readdir(adminRoot)) {
   }
 
   visit(file);
+}
+
+
+const csaA003Bindings = [
+  {
+    path: "pages/admin/Dashboard.tsx",
+    required: ["type-family-mono type-caption", "type-weight-medium"],
+    retired: ["font-mono type-caption", 'className="font-medium"'],
+  },
+  {
+    path: "pages/admin/PostEditor.tsx",
+    required: [
+      "text-left type-body-sm whitespace-normal",
+      'className="type-family-mono"',
+    ],
+    retired: [
+      "text-left text-sm whitespace-normal",
+      'className="font-mono"',
+    ],
+  },
+  {
+    path: "pages/admin/PageEditor.tsx",
+    required: ['className="type-family-mono"'],
+    retired: ['className="font-mono"'],
+  },
+  {
+    path: "pages/admin/Categories.tsx",
+    required: ['className="min-w-0 flex-1 type-family-mono"'],
+    retired: ['className="min-w-0 flex-1 font-mono"'],
+  },
+  {
+    path: "pages/admin/Tags.tsx",
+    required: ['className="shrink-0 type-family-mono"'],
+    retired: ['className="shrink-0 font-mono"'],
+  },
+  {
+    path: "pages/admin/MediaLibrary.tsx",
+    required: ['className="mt-2 flex flex-col gap-1 type-body-sm"'],
+    retired: ['className="mt-2 flex flex-col gap-1 text-sm"'],
+  },
+  {
+    path: "pages/admin/SiteSettings.tsx",
+    required: ['className="type-family-mono"'],
+    retired: ['className="font-mono"'],
+  },
+];
+
+for (const contract of csaA003Bindings) {
+  const content = await readFile(path.join(root, contract.path), "utf8");
+  for (const marker of contract.required) {
+    if (!content.includes(marker)) {
+      failures.push(
+        `${contract.path}: CSA-A003 semantic Typography binding is missing ${marker}`,
+      );
+    }
+  }
+  for (const marker of contract.retired) {
+    if (content.includes(marker)) {
+      failures.push(
+        `${contract.path}: retired CSA-A003 raw Typography anatomy returned: ${marker}`,
+      );
+    }
+  }
+}
+
+for (const [componentPath, requiredMarker, retiredMarker, minimum] of [
+  [
+    "components/agent/SkillForm.tsx",
+    'className="type-family-mono"',
+    'className="font-mono"',
+    2,
+  ],
+  [
+    "components/agent/WorkflowWorkspace.tsx",
+    "text-left type-weight-regular transition-colors",
+    "text-left font-normal transition-colors",
+    2,
+  ],
+]) {
+  const content = await readFile(path.join(root, componentPath), "utf8");
+  const found = content.split(requiredMarker).length - 1;
+  if (found < minimum) {
+    failures.push(
+      `${componentPath}: CSA-A003 expected at least ${minimum} occurrences of ${requiredMarker}, found ${found}`,
+    );
+  }
+  if (content.includes(retiredMarker)) {
+    failures.push(
+      `${componentPath}: retired CSA-A003 raw Typography anatomy returned: ${retiredMarker}`,
+    );
+  }
 }
 
 if (failures.length) {
