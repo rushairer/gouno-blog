@@ -90,6 +90,38 @@ function firstMeaningfulChildIdentity(node) {
   return "";
 }
 
+const rawDl17Typography =
+  /(?<!type-)(?:text-(?:xs|sm|base|lg|xl|2xl|3xl|4xl|\[[^\]]+\])|font-(?:sans|serif|mono|normal|medium|semibold|bold|light|thin|black|\[[^\]]+\])|leading-(?:none|tight|snug|normal|relaxed|loose|\d+|\[[^\]]+\])|tracking-(?:tighter|tight|normal|wide|wider|widest|\[[^\]]+\]))(?![A-Za-z0-9_-])/g;
+
+function assertNoRawDl17Typography(sourcePath, source) {
+  for (const match of source.matchAll(rawDl17Typography)) {
+    failures.push(
+      `${sourcePath}: DL-17 raw Typography utility must use a semantic type-* role instead: ${match[0]}`,
+    );
+  }
+}
+
+async function productionTsxFiles(dir, prefix) {
+  const files = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (entry.name === "__tests__" || entry.name.startsWith(".")) continue;
+    const absolute = path.join(dir, entry.name);
+    const relative = path.posix.join(prefix, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await productionTsxFiles(absolute, relative)));
+      continue;
+    }
+    if (
+      entry.isFile() &&
+      entry.name.endsWith(".tsx") &&
+      !entry.name.includes(".test.")
+    ) {
+      files.push({ absolute, relative });
+    }
+  }
+  return files;
+}
+
 function assertCollectionStack(name, source) {
   const file = sourceFile(name, source);
   let stackCount = 0;
@@ -241,7 +273,7 @@ if (!categories.includes('data-pattern="editor-form-composition"')) {
 }
 for (const marker of [
   "flex items-center gap-2",
-  'className="min-w-0 flex-1 font-mono"',
+  'className="min-w-0 flex-1 type-family-mono"',
 ]) {
   if (!categories.includes(marker)) {
     failures.push(
@@ -314,7 +346,7 @@ const reviewedTypographyContracts = new Map([
         "type-metric-compact",
         "type-body-sm type-weight-semibold",
         "type-caption type-weight-medium",
-        "font-mono type-caption",
+        "type-family-mono type-caption",
       ],
       forbidden: [
         "text-xl font-semibold",
@@ -572,6 +604,81 @@ for (const [name, contract] of reviewedTypographyContracts) {
   for (const marker of contract.forbidden) {
     if (source.includes(marker)) {
       failures.push(`${name}: retired raw typography drift returned: ${marker}`);
+    }
+  }
+}
+
+const dl17AdminPages = [
+  "Dashboard.tsx",
+  "Posts.tsx",
+  "Pages.tsx",
+  "PostEditor.tsx",
+  "PageEditor.tsx",
+  "Categories.tsx",
+  "Tags.tsx",
+  "Comments.tsx",
+  "Notifications.tsx",
+  "MediaLibrary.tsx",
+  "SiteSettings.tsx",
+  "Users.tsx",
+  "AIOperations.tsx",
+  "AISettings.tsx",
+];
+
+for (const name of dl17AdminPages) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  assertNoRawDl17Typography(`pages/admin/${name}`, source);
+}
+
+for (const entry of await productionTsxFiles(
+  path.join(root, "components/agent"),
+  "components/agent",
+)) {
+  const source = await readFile(entry.absolute, "utf8");
+  assertNoRawDl17Typography(entry.relative, source);
+}
+
+for (const [sourcePath, requiredMarkers] of [
+  [
+    "components/agent/DecisionInboxWorkspace.tsx",
+    [
+      'data-mobile-pane={mobilePane}',
+      'data-slot="ops-detail-pane"',
+      'setMobilePane("detail")',
+      'setMobilePane("master")',
+      "返回决策队列",
+      '"hidden md:flex"',
+    ],
+  ],
+  [
+    "components/agent/WorkflowRunRecords.tsx",
+    [
+      'data-mobile-pane={mobilePane}',
+      'data-slot="ops-detail-pane"',
+      'inspect(run, true)',
+      'setMobilePane("master")',
+      "返回运行列表",
+      '"hidden md:flex"',
+    ],
+  ],
+  [
+    "components/agent/AgentRunRecords.tsx",
+    [
+      'data-mobile-pane={mobilePane}',
+      'data-slot="ops-detail-pane"',
+      'setMobilePane("detail")',
+      'setMobilePane("master")',
+      "返回运行列表",
+      '"hidden md:flex"',
+    ],
+  ],
+]) {
+  const source = await readFile(path.join(root, sourcePath), "utf8");
+  for (const marker of requiredMarkers) {
+    if (!source.includes(marker)) {
+      failures.push(
+        `${sourcePath}: mobile Master/Detail contract is missing ${marker}`,
+      );
     }
   }
 }
