@@ -186,7 +186,7 @@ export function SkillForm({
                     }
                   >
                     <Textarea
-                      className="font-mono"
+                      className="type-family-mono"
                       rows={7}
                       required
                       value={value.system_prompt}
@@ -283,7 +283,7 @@ export function SkillForm({
                   }
                 >
                   <Textarea
-                    className="font-mono"
+                    className="type-family-mono"
                     rows={7}
                     required
                     value={schemaText}
