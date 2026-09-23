@@ -95,7 +95,9 @@ test("failed approval drills from the mobile decision queue into one workbench p
   await expect(detailPane).toBeHidden();
 
   await rail
-    .getByRole("button", { name: /Long approval preview/ })
+    .getByRole("button", {
+      name: /Apply a content proposal to related content/,
+    })
     .click();
   await expect(frame).toHaveAttribute("data-mobile-pane", "detail");
   await expect(rail).toBeHidden();
