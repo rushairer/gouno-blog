@@ -376,6 +376,9 @@ function AgentConsoleContent() {
     try {
       await mutate(() => agentApi.deleteAgentRun(String(run.id)));
       setSelectedRun(null);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("run");
+      window.history.replaceState(null, "", url);
       setDeleteRunTarget(null);
       setNotice(locale === "zh" ? "运行记录已清理。" : "Run record deleted.");
     } catch (reason) {
