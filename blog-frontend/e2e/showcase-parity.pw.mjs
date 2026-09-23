@@ -967,3 +967,153 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
   await pairScreenshot(showcase, product, "ai-operations-parity", testInfo);
   await context.close();
 });
+
+
+test("AI Operations mobile Master/Detail drill-in matches Showcase", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown, unexpectedWrites } =
+    await openAiPair(
+      browser,
+      "blog-admin-ai-operations",
+      "/admin/ai-ops?tab=inbox",
+      "light",
+      { width: 390, height: 844 },
+    );
+
+  await showcase.getByRole("tab", { name: /待我处理/ }).click();
+  await product.getByRole("tab", { name: /待我处理/ }).click();
+
+  const showcaseInbox = showcase.locator('[data-slot="ops-master-detail"]').first();
+  const productInbox = product.locator('[data-slot="ops-master-detail"]').first();
+  const showcaseInboxRail = showcaseInbox.locator('[data-slot="ops-rail"]');
+  const productInboxRail = productInbox.locator('[data-slot="ops-rail"]');
+  const showcaseInboxDetail = showcaseInbox.locator('[data-slot="ops-detail-pane"]');
+  const productInboxDetail = productInbox.locator('[data-slot="ops-detail-pane"]');
+
+  for (const frame of [showcaseInbox, productInbox]) {
+    await expect(frame).toHaveAttribute("data-mobile-pane", "master");
+  }
+  await expect(showcaseInboxRail).toBeVisible();
+  await expect(productInboxRail).toBeVisible();
+  await expect(showcaseInboxDetail).toBeHidden();
+  await expect(productInboxDetail).toBeHidden();
+
+  await showcaseInboxRail.getByRole("button").first().click();
+  await productInboxRail.getByRole("button").first().click();
+  for (const frame of [showcaseInbox, productInbox]) {
+    await expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+  }
+  await expect(showcaseInboxRail).toBeHidden();
+  await expect(productInboxRail).toBeHidden();
+  await expect(showcaseInboxDetail).toBeVisible();
+  await expect(productInboxDetail).toBeVisible();
+  await expect(
+    showcaseInboxDetail.getByRole("button", {
+      name: "返回决策队列",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    productInboxDetail.getByRole("button", {
+      name: "返回决策队列",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await pairScreenshot(
+    showcase,
+    product,
+    "ai-operations-inbox-mobile-detail",
+    testInfo,
+  );
+
+  await showcaseInboxDetail
+    .getByRole("button", { name: "返回决策队列", exact: true })
+    .click();
+  await productInboxDetail
+    .getByRole("button", { name: "返回决策队列", exact: true })
+    .click();
+
+  await showcase.getByRole("tab", { name: /运行中心/ }).click();
+  await product.getByRole("tab", { name: /运行中心/ }).click();
+
+  const showcaseRuns = showcase.locator('[data-slot="ops-master-detail"]').first();
+  const productRuns = product.locator('[data-slot="ops-master-detail"]').first();
+  const showcaseRunRail = showcaseRuns.locator('[data-slot="ops-rail"]');
+  const productRunRail = productRuns.locator('[data-slot="ops-rail"]');
+  const showcaseRunDetail = showcaseRuns.locator('[data-slot="ops-detail-pane"]');
+  const productRunDetail = productRuns.locator('[data-slot="ops-detail-pane"]');
+
+  for (const frame of [showcaseRuns, productRuns]) {
+    await expect(frame).toHaveAttribute("data-mobile-pane", "master");
+  }
+  await showcaseRunRail.getByRole("button").first().click();
+  await productRunRail.getByRole("button").first().click();
+  for (const frame of [showcaseRuns, productRuns]) {
+    await expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+  }
+  await expect(showcaseRunRail).toBeHidden();
+  await expect(productRunRail).toBeHidden();
+  await expect(showcaseRunDetail).toBeVisible();
+  await expect(productRunDetail).toBeVisible();
+  await expect(
+    showcaseRunDetail.getByRole("button", {
+      name: "返回运行列表",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    productRunDetail.getByRole("button", {
+      name: "返回运行列表",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await pairScreenshot(
+    showcase,
+    product,
+    "ai-operations-run-center-mobile-detail",
+    testInfo,
+  );
+
+  await showcaseRunDetail
+    .getByRole("button", { name: "返回运行列表", exact: true })
+    .click();
+  await productRunDetail
+    .getByRole("button", { name: "返回运行列表", exact: true })
+    .click();
+
+  await showcase.getByRole("button", { name: "Agent 运行", exact: true }).click();
+  await product.getByRole("button", { name: "Agent 运行", exact: true }).click();
+
+  const showcaseAgent = showcase.locator('[data-slot="ops-master-detail"]').first();
+  const productAgent = product.locator('[data-slot="ops-master-detail"]').first();
+  const showcaseAgentRail = showcaseAgent.locator('[data-slot="ops-rail"]');
+  const productAgentRail = productAgent.locator('[data-slot="ops-rail"]');
+  const showcaseAgentDetail = showcaseAgent.locator('[data-slot="ops-detail-pane"]');
+  const productAgentDetail = productAgent.locator('[data-slot="ops-detail-pane"]');
+
+  for (const frame of [showcaseAgent, productAgent]) {
+    await expect(frame).toHaveAttribute("data-mobile-pane", "master");
+  }
+  await showcaseAgentRail.getByRole("button").first().click();
+  await productAgentRail.getByRole("button").first().click();
+  for (const frame of [showcaseAgent, productAgent]) {
+    await expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+  }
+  await expect(showcaseAgentRail).toBeHidden();
+  await expect(productAgentRail).toBeHidden();
+  await expect(showcaseAgentDetail).toBeVisible();
+  await expect(productAgentDetail).toBeVisible();
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+  expect(unknown).toEqual([]);
+  expect(unexpectedWrites).toEqual([]);
+  await pairScreenshot(
+    showcase,
+    product,
+    "ai-operations-agent-run-mobile-detail",
+    testInfo,
+  );
+  await context.close();
+});
