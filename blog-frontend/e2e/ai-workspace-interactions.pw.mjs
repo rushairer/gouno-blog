@@ -174,6 +174,7 @@ test("Workflow run detail drills from the mobile list and preserves run query st
   await expect(frame).toHaveAttribute("data-mobile-pane", "master");
   await expect(rail).toBeVisible();
   await expect(detail).toBeHidden();
+  expect(new URL(page.url()).searchParams.get("run")).toBeNull();
 
   const workflowRunRow = rail
     .getByRole("listitem")
