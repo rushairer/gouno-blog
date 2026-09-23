@@ -283,7 +283,7 @@ export function ProviderForm({
               <FormGrid columns={2}>
                 <Field label={labels.baseUrl}>
                   <Input
-                    className="font-mono"
+                    className="type-family-mono"
                     type="url"
                     required
                     value={value.base_url}
@@ -297,7 +297,7 @@ export function ProviderForm({
                 </Field>
                 <Field label={labels.model}>
                   <Input
-                    className="font-mono"
+                    className="type-family-mono"
                     required
                     placeholder={
                       value.provider_type === "openai"
@@ -365,7 +365,7 @@ export function ProviderForm({
               label={`${labels.apiKey}${initial ? ` · ${labels.leaveBlank}` : ""}`}
             >
               <Input
-                className="font-mono"
+                className="type-family-mono"
                 type="password"
                 required={!initial}
                 autoComplete="new-password"
