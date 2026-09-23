@@ -1,4 +1,5 @@
-import { ListChecks, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ListChecks, Trash2 } from "lucide-react";
 import type { Agent, AgentRun, AgentToolCall } from "../../types/agent";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { MarkdownRenderer } from "../MarkdownRenderer";
@@ -668,6 +669,15 @@ export function RecordsWorkspace({
 }) {
   const agentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const zh = locale === "zh";
+  const [mobilePane, setMobilePane] = useState<"master" | "detail">(() =>
+    new URLSearchParams(window.location.search).get("run") ? "detail" : "master",
+  );
+
+  useEffect(() => {
+    if (selectedRun) return;
+    if (new URLSearchParams(window.location.search).get("run")) return;
+    setMobilePane("master");
+  }, [selectedRun]);
 
   return (
     <div className="agent-runs-center flex min-w-0 flex-col gap-4">
@@ -681,11 +691,12 @@ export function RecordsWorkspace({
         <div
           data-slot="ops-master-detail"
           data-pattern="master-detail-composition"
+          data-mobile-pane={mobilePane}
           className="grid min-w-0 items-stretch gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]"
         >
           <section
             data-slot="ops-rail"
-            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
+            className={`${mobilePane === "detail" ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background`}
             aria-label="Agent Runs"
           >
             <div className="shrink-0 border-b px-[18px] py-4">
@@ -724,7 +735,13 @@ export function RecordsWorkspace({
                       </>
                     }
                     selected={selectedRun?.run?.id === run.id}
-                    onClick={() => onInspect(run)}
+                    onClick={() => {
+                      setMobilePane("detail");
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("run", String(run.id));
+                      window.history.replaceState(null, "", url);
+                      onInspect(run);
+                    }}
                     ariaLabel={
                       zh ? `查看 Run #${run.id}` : `Inspect Run #${run.id}`
                     }
@@ -734,7 +751,25 @@ export function RecordsWorkspace({
             </div>
           </section>
 
-          {selectedRun ? (
+          <div
+            data-slot="ops-detail-pane"
+            className={`${mobilePane === "master" ? "hidden md:block" : "block"} min-w-0`}
+          >
+            <div className="mb-4 md:hidden">
+              <Button
+                variant="ghost"
+                icon={<ArrowLeft />}
+                onClick={() => {
+                  setMobilePane("master");
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("run");
+                  window.history.replaceState(null, "", url);
+                }}
+              >
+                {zh ? "返回运行列表" : "Back to run list"}
+              </Button>
+            </div>
+            {selectedRun ? (
             <div
               data-slot="ops-detail-stack"
               data-pattern="record-detail-composition"
@@ -868,6 +903,7 @@ export function RecordsWorkspace({
               />
             </div>
           )}
+          </div>
         </div>
       )}
     </div>
