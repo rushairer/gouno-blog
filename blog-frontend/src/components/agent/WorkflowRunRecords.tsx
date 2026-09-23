@@ -79,7 +79,9 @@ export function WorkflowRunRecords({
   >(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [mobilePane, setMobilePane] = useState<"master" | "detail">(() =>
-    new URLSearchParams(window.location.search).get("run") ? "detail" : "master",
+    new URLSearchParams(window.location.search).get("run")
+      ? "detail"
+      : "master",
   );
   const [generationNow, setGenerationNow] = useState(() => Date.now());
   const inspectedFromURL = useRef(false);
