@@ -315,7 +315,7 @@ export function ToolBindingsEditor({
             }
           >
             <Textarea
-              className="font-mono"
+              className="type-family-mono"
               status={jsonError ? "error" : undefined}
               rows={8}
               value={jsonText}
