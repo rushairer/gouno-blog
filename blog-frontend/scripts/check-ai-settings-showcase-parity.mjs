@@ -18,6 +18,9 @@ const canonicalLead = await readCanonical(
 const canonicalEditors = await readCanonical(
   "showcase/demos/products/blog-admin/ai/settings/editors.tsx",
 );
+const canonicalFixtures = await readCanonical(
+  "showcase/demos/products/blog-admin/ai/settings/fixtures.ts",
+);
 const canonicalSections = await readCanonical(
   "showcase/demos/products/blog-admin/ai/settings/sections.tsx",
 );
@@ -187,6 +190,23 @@ for (const marker of [
 }
 if (!canonicalEditors.includes('data-pattern="editor-form-composition"')) {
   failures.push("Canonical AI Settings no longer exposes editor-form-composition");
+}
+for (const marker of [
+  "[overflow-wrap:anywhere]",
+  "min-w-0 flex-1",
+]) {
+  if (!canonicalEditors.includes(marker)) {
+    failures.push(`Canonical Skill Tool card lost long-identifier containment: ${marker}`);
+  }
+  requireBlog(marker, forms[1], "Skill Tool long-identifier containment");
+}
+for (const fixtureName of [
+  "analytics.list_low_engagement_posts",
+  "content.propose_distribution_draft",
+]) {
+  if (!canonicalFixtures.includes(fixtureName)) {
+    failures.push(`Canonical AI Settings lost Tool content-stress fixture: ${fixtureName}`);
+  }
 }
 requireBlog(
   'data-pattern="editor-form-section"',
