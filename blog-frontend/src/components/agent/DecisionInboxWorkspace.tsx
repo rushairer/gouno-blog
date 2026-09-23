@@ -620,7 +620,7 @@ export function DecisionInboxWorkspace({
               const task = selected.payload as WorkflowInteractionTask;
               return (
                 <div className="flex flex-col gap-5">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
                     <span>{selected.meta}</span>
                     <span aria-hidden="true">·</span>
                     <span>{formatDateTime(selected.createdAt)}</span>
@@ -691,7 +691,7 @@ export function DecisionInboxWorkspace({
               const impact = approvalImpact(approval, zh);
               return (
                 <div className="flex flex-col gap-5">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
                     <span>{selected.meta}</span>
                     <span aria-hidden="true">·</span>
                     <span>{formatDateTime(selected.createdAt)}</span>
@@ -722,7 +722,7 @@ export function DecisionInboxWorkspace({
                       <Text size="xs" tone="muted">
                         {zh ? "批准后会发生什么" : "What happens if approved"}
                       </Text>
-                      <strong className="mt-1 block text-sm">
+                      <strong className="mt-1 block type-body-sm type-weight-semibold">
                         {impact.happens}
                       </strong>
                     </div>
@@ -730,7 +730,7 @@ export function DecisionInboxWorkspace({
                       <Text size="xs" tone="muted">
                         {zh ? "不会发生什么" : "What will not happen"}
                       </Text>
-                      <strong className="mt-1 block text-sm">
+                      <strong className="mt-1 block type-body-sm type-weight-semibold">
                         {impact.safe}
                       </strong>
                     </div>
@@ -742,7 +742,7 @@ export function DecisionInboxWorkspace({
                   />
                   {approval.before_snapshot ? (
                     <details className="rounded-lg border p-4">
-                      <summary className="cursor-pointer text-sm font-medium">
+                      <summary className="cursor-pointer type-body-sm type-weight-medium">
                         {zh ? "查看变更前原始数据" : "View previous raw data"}
                       </summary>
                       <div className="mt-4">
@@ -781,7 +781,7 @@ export function DecisionInboxWorkspace({
               const suggestion = selected.payload as OperationalSuggestion;
               return (
                 <div className="flex flex-col gap-5">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
                     <span>{selected.meta}</span>
                     <span aria-hidden="true">·</span>
                     <span>{formatDateTime(selected.createdAt)}</span>
@@ -840,7 +840,7 @@ export function DecisionInboxWorkspace({
               const set = selected.payload as ContentCandidateSet;
               return (
                 <div className="flex flex-col gap-5">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
                     <span>{selected.meta}</span>
                     <span aria-hidden="true">·</span>
                     <span>{formatDateTime(selected.createdAt)}</span>
@@ -869,7 +869,7 @@ export function DecisionInboxWorkspace({
                           key={candidate.id}
                           className="rounded-lg border p-4"
                         >
-                          <strong className="text-sm">{candidate.value}</strong>
+                          <strong className="type-body-sm type-weight-semibold">{candidate.value}</strong>
                           {candidate.rationale ? (
                             <Text size="xs" tone="muted" className="mt-1">
                               {candidate.rationale}
@@ -906,7 +906,7 @@ export function DecisionInboxWorkspace({
               const ready = media.generation_status === "ready_to_generate";
               return (
                 <div className="flex flex-col gap-5">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
                     <span>{selected.meta}</span>
                     <span aria-hidden="true">·</span>
                     <span>{formatDateTime(selected.createdAt)}</span>
@@ -985,7 +985,7 @@ export function DecisionInboxWorkspace({
               const task = selected.payload as EditorialTask;
               return (
                 <div className="flex flex-col gap-5">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
                     <span>{selected.meta}</span>
                     <span aria-hidden="true">·</span>
                     <span>{formatDateTime(selected.createdAt)}</span>
