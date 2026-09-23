@@ -276,6 +276,65 @@ if (upstreamRoot) {
     );
   }
 
+  const upstreamAmendments = matrix.postFreezeAmendments ?? [];
+  for (const amendment of upstreamAmendments) {
+    const impact = amendment.consumerImpact?.["rushairer/gouno-blog"];
+    if (!impact) continue;
+
+    const affectedEntries = entries.filter(
+      (entry) =>
+        entry.status === "verified" &&
+        (entry.canonicalIds ?? []).some((id) => (amendment.scopes ?? []).includes(id)),
+    );
+
+    if (impact === "recertified") {
+      if (!affectedEntries.length) {
+        fail(
+          `${amendment.id}: upstream marks Blog recertified, but no verified Blog certification owns scopes ${(amendment.scopes ?? []).join(", ")}.`,
+        );
+        continue;
+      }
+
+      for (const entry of affectedEntries) {
+        if (
+          !entry.reviewedRefs?.gounoUi ||
+          !requireHistoryRef(
+            upstreamRoot,
+            entry.reviewedRefs.gounoUi,
+            `${entry.id} amendment coverage`,
+          )
+        ) {
+          continue;
+        }
+        if (
+          !requireHistoryRef(
+            upstreamRoot,
+            amendment.commit,
+            `${amendment.id} upstream amendment`,
+          )
+        ) {
+          continue;
+        }
+
+        const ancestry = git(upstreamRoot, [
+          "merge-base",
+          "--is-ancestor",
+          amendment.commit,
+          entry.reviewedRefs.gounoUi,
+        ]);
+        if (!ancestry.ok) {
+          fail(
+            `${entry.id}: upstream amendment ${amendment.id} is marked Blog recertified, but reviewed Gouno UI ref ${entry.reviewedRefs.gounoUi.slice(0, 12)} does not include amendment ${amendment.commit.slice(0, 12)}.`,
+          );
+        }
+      }
+    } else if (impact !== "not-affected") {
+      fail(
+        `${amendment.id}: unsupported Blog consumerImpact "${impact}"; expected recertified or not-affected.`,
+      );
+    }
+  }
+
   const trackedAdminIds = entries
     .filter(
       (entry) =>
