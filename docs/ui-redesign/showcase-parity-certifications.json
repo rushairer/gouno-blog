@@ -386,13 +386,13 @@
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-23",
       "manualReview": "docs/ui-redesign/blog-admin-wave3-inspector-logical-direction-recertification.md",
       "reviewedRefs": {
-        "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
-        "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
+        "blog": "03e1b8330ccc8fda20634c3253776a3b0f869a7a",
+        "gounoUi": "62259726174eef30e8c8088e7217d85ccb044056"
       },
       "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
@@ -430,6 +430,7 @@
       "canonicalPaths": [
         "showcase/demos/products/blog-admin/post-editor.tsx",
         "showcase/demos/products/blog-admin/page-editor.tsx",
+        "showcase/demos/products/blog-admin/editor-shared.tsx",
         "showcase/demos/products/blog-admin/notifications.tsx",
         "showcase/demos/products/blog-admin/media-library.tsx",
         "showcase/demos/products/blog-admin/site-settings.tsx",
@@ -441,35 +442,35 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 35721612018,
+            "id": 35840872826,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35721612060,
+            "id": 35840872978,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 35721612086,
+            "id": 35840872855,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 35721611974,
+            "id": 35840873018,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10692410965,
-            "name": "blog-showcase-parity-35721612018",
-            "sha256": "ee2e73a1df99eb70eaa98a994d237961a14040c846787d20969b95f02413d012"
+            "id": 10742055087,
+            "name": "blog-showcase-parity-35840872826",
+            "sha256": "23b759e4a235e339ef2c4b844693940930afe490eb496c33008c169869e9fe0f"
           },
           {
-            "id": 10691856972,
-            "name": "blog-browser-acceptance-35721612060",
-            "sha256": "d6296f9eb13d3092c8d93d9d873ef3b0e1bbc0715dfeb9afb73da2a028f2ba71"
+            "id": 10741906199,
+            "name": "blog-browser-acceptance-35840872978",
+            "sha256": "3eb8f2021bea360c0fa0b4eed020805cb571019ec8234d0bbe95f7d911739e1f"
           }
         ]
       },

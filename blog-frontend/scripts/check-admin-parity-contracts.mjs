@@ -358,12 +358,58 @@ const reviewedTypographyContracts = new Map([
   ],
 ]);
 
+const editorFieldChrome = await readFile(
+  path.join(root, "components/editor/EditorFieldChrome.tsx"),
+  "utf8",
+);
+
+for (const marker of [
+  'className="cursor-pointer select-none pe-12 type-body-sm type-weight-semibold"',
+  'className="absolute end-0 top-2.5 z-10"',
+  'className="type-body-sm type-weight-medium"',
+]) {
+  if (!editorFieldChrome.includes(marker)) {
+    failures.push(
+      `EditorFieldChrome.tsx: shared editor composition is missing canonical marker ${marker}`,
+    );
+  }
+}
+for (const retired of [
+  "pr-12 text-sm font-semibold",
+  "absolute right-0 top-2.5",
+]) {
+  if (editorFieldChrome.includes(retired)) {
+    failures.push(
+      `EditorFieldChrome.tsx: retired raw/physical editor anatomy returned: ${retired}`,
+    );
+  }
+}
+
+for (const name of ["PostEditor.tsx", "PageEditor.tsx"]) {
+  const source = await readFile(path.join(adminRoot, name), "utf8");
+  if (
+    !source.includes('from "../../components/editor/EditorFieldChrome";') ||
+    !source.includes("FieldActionHeader") ||
+    !source.includes("InspectorSection")
+  ) {
+    failures.push(
+      `${name}: Post/Page editor family must consume shared EditorFieldChrome composition`,
+    );
+  }
+  for (const duplicated of ["function InspectorSection", "function FieldActionHeader"]) {
+    if (source.includes(duplicated)) {
+      failures.push(
+        `${name}: duplicated page-private editor composition returned: ${duplicated}`,
+      );
+    }
+  }
+}
+
 const reviewedEditorTypographyContracts = new Map([
   [
     "PostEditor.tsx",
     {
       required: [
-        "type-body-sm type-weight-medium",
         "type-body-sm text-muted-foreground",
         "type-caption type-weight-regular",
         '<Text weight="semibold">属性</Text>',
@@ -386,7 +432,6 @@ const reviewedEditorTypographyContracts = new Map([
     "PageEditor.tsx",
     {
       required: [
-        "type-body-sm type-weight-medium",
         "type-body-sm text-muted-foreground",
         '<Text weight="semibold">属性</Text>',
         '<Text weight="medium">正文</Text>',
@@ -449,8 +494,10 @@ const reviewedSupportTypographyContracts = new Map([
         "type-family-mono type-caption",
         "type-family-sans text-primary",
         "type-weight-medium text-primary underline-offset-4 hover:underline",
+        "absolute start-2 top-2 z-10",
       ],
       forbidden: [
+        "absolute left-2 top-2",
         "truncate text-sm font-semibold",
         "font-mono text-xs",
         "font-sans text-primary",
