@@ -1,61 +1,114 @@
-# Blog Admin DL-17 Typography Recertification
+# Blog Admin CSA-A003 / CSA-A004 Recertification
 
-Status: **pending manual recertification**
+Status: **Product synchronized / manual browser recertification pending**
 
 Date: 2026-09-23
 
 ## Trigger
 
-The post-freeze Final Drift Audit found one coherent design-language defect family across several already-certified Blog Admin surfaces: residual raw typography utilities remain in Canonical Showcase code and, in several cases, in the Product bindings that correctly copied or evolved from that Canonical source.
+Two accepted post-freeze Canonical amendments now affect already-certified Blog Admin ownership and are intentionally being propagated as one Consumer batch to avoid repeated reverse-migration and CI cycles.
 
-DL-17 explicitly separates semantic typography roles from raw Tailwind metrics. Product and Canonical code must not rebuild governed font size, weight, family, line-height or tracking with raw `text-*`, `font-*`, `leading-*` or `tracking-*` utilities when semantic Typography roles already exist.
+### CSA-A003 — DL-17 semantic Typography hardening
 
-This is a Canonical-source hardening batch, not evidence that reverse migration generally failed.
+Canonical correction:
+
+- merge commit `39e781245082728aaf06141a81f26a9095f0eaf0`;
+- the frozen Blog Admin Canonical corpus no longer rebuilds governed font size, weight, family, line-height or tracking with raw `text-*`, `font-*`, `leading-*` or `tracking-*` utilities;
+- the Canonical guard now rejects those raw utilities across the complete Blog Admin Showcase ownership set.
+
+The Product audit confirmed the direct Canonical seams plus additional Product-owned raw typography inside the already-certified AI component corpus. Because `blog-admin-ai` owns `blog-frontend/src/components/agent/`, leaving those Product-only residuals in place would make a restored certification misleading even if the direct Canonical diff had been copied correctly.
+
+### CSA-A004 — Master/Detail mobile drill-in correction
+
+Canonical correction:
+
+- implementation merge `69019c4175bde817d56c5037f95fbc382b122c98`;
+- accepted governance/main ref `2ba6b3284e989f29d9501a1670f2494a44f9e670`;
+- desktop remains dual-pane;
+- tablet (768–1279) remains stacked;
+- mobile (<768) shows one active pane with an explicit return path;
+- AI Operations Decision Inbox uses Queue → Workbench drill-in;
+- Workflow/Agent Run Center uses Run List → Run Detail drill-in;
+- page-level filters remain outside the rail and stay visible.
 
 ## Affected certification waves
 
-- `blog-admin-ai`;
-- `blog-admin-core-wave1`;
-- `blog-admin-core-wave2`;
-- `blog-admin-core-wave3`.
+- `blog-admin-ai` — CSA-A003 + CSA-A004;
+- `blog-admin-core-wave1` — CSA-A003;
+- `blog-admin-core-wave2` — CSA-A003;
+- `blog-admin-core-wave3` — CSA-A003.
 
-## Confirmed Canonical residuals
+All four remain `needs-manual-recertification` until fresh Product browser evidence is retained and reviewed.
 
-The audit confirmed raw typography seams in:
+## Product synchronization in this branch
+
+### Core Blog Admin
+
+The A003 semantic substitutions are propagated to:
 
 - Dashboard Top Posts rank/title/metrics;
 - Post Editor history item density and Slug input;
 - Page Editor Slug input;
 - Categories Slug editor;
 - Tags count badge;
-- Media Library reference list;
-- Site Settings RSS input;
-- AI Operations workflow / run-row button weight;
-- AI Settings Skill editor technical text fields.
+- Media Library blocked-reference list;
+- Site Settings RSS input.
 
-The audit also found Product-side AI forms with additional raw mono/size/weight utilities. Those are not automatically classified as defects merely because they exist; only current-route bindings that violate the same DL-17 contract or diverge from Canonical will be included in this batch.
+The current frozen Core page corpus is guarded against new raw DL-17 utilities.
 
-## Non-goals
+### AI Settings / AI Operations
 
-This batch will not mechanically rewrite:
+The Product-owned AI corpus is migrated as an ownership unit rather than only copying two Canonical lines.
 
-- Skeleton dimensions;
-- intentional editor workspace heights;
-- overflow ownership;
-- code/JSON rendering that already uses semantic `type-family-mono` / `type-caption` roles;
-- public Blog typography;
-- unused or unrelated legacy components.
+Semantic substitutions follow the accepted Gouno UI roles:
 
-## Required correction flow
+- `text-xs` → `type-caption`;
+- `text-sm` → `type-body-sm`;
+- `font-medium` → `type-weight-medium`;
+- `font-normal` → `type-weight-regular`;
+- `font-mono` → `type-family-mono`;
+- the “items to decide” numeric summary uses `type-metric-value`.
 
-1. Keep all affected certifications demoted while Canonical authority is being changed.
-2. Correct all confirmed raw Typography residuals in one Gouno UI Canonical PR.
-3. Strengthen Canonical guards so raw utilities cannot silently return.
-4. Run Canonical CI / visual evidence once for the batch and manually inspect affected rendered states.
-5. Record the merged post-freeze amendment.
-6. Propagate the accepted semantic Typography anatomy to Blog Product in one Consumer PR.
-7. Strengthen Product parity guards, including any guard that currently pins a raw utility as required.
-8. Run reciprocal parity / browser acceptance once for the Consumer batch.
-9. Manually review retained evidence, then restore all affected certifications together.
+The Product parity guard recursively scans production `components/agent/**/*.tsx`, plus the governed Admin route pages, and rejects future raw DL-17 typography utilities.
 
-Previous certification documents remain historical evidence only while this batch is pending.
+### Mobile Master/Detail
+
+Product bindings preserve real API/data ownership while adopting the accepted A004 navigation contract:
+
+- Decision Inbox starts Queue-first on mobile even when desktop selection context is already preselected.
+- Selecting a decision switches to one Workbench pane; `返回决策队列 / Back to decision queue` returns to the rail.
+- Workflow Run Center may preload the first Run for desktop context without forcing mobile into Detail; a user row click or explicit `run=` deep link opens mobile Detail.
+- Workflow filters return mobile ownership to the Run list and clear the `run` deep link.
+- Agent Run Center keeps real loaded selection state while mobile pane navigation is independent; returning to the list clears `run=` without discarding loaded detail data.
+- Deleting the active Agent Run clears the stale `run=` URL state.
+- `md+` behavior is preserved so tablet stacked and desktop dual-pane layouts do not regress.
+
+## Regression protection prepared before PR
+
+- structural parity guard for the A004 `data-mobile-pane`, rail/detail ownership and explicit return actions;
+- recursive DL-17 corpus guard for AI production TSX;
+- DL-17 guard for the governed Core/Admin pages;
+- unit coverage for Decision Inbox, Workflow Run Center and Agent Run Center master → detail → master transitions;
+- Product browser acceptance coverage at 390px for Inbox, Workflow Run and Agent Run;
+- existing 768px Workflow evidence is retained to prove tablet behavior remains stacked rather than inheriting the mobile single-pane contract.
+
+## Pending acceptance
+
+No certification is restored by this implementation document alone.
+
+The next step is one Consumer PR that runs:
+
+- CI / Frontend quality;
+- Images;
+- Blog Showcase Parity;
+- UI Browser Acceptance.
+
+After the exact implementation head is green:
+
+1. download the retained Showcase/Product parity and Product browser artifacts;
+2. manually review the affected Typography states and the three mobile Master/Detail paths;
+3. update all four certification entries together with the exact Blog implementation ref, current Gouno UI Canonical ref, workflow IDs and artifact digests;
+4. restore `verified` only in that evidence-backed certification commit;
+5. run the certification/freshness gates once more, then merge.
+
+Previous certification documents remain historical evidence and are not rewritten.
