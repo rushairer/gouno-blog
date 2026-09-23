@@ -120,12 +120,17 @@ export function WorkflowRunRecords({
   }, [runs, selected]);
 
   const inspect = useCallback(
-    async (run: WorkflowRun) => {
+    async (
+      run: WorkflowRun,
+      syncRoute = new URLSearchParams(window.location.search).has("run"),
+    ) => {
       setLoadingID(run.id);
       setError("");
-      const url = new URL(window.location.href);
-      url.searchParams.set("run", String(run.id));
-      window.history.replaceState(null, "", url);
+      if (syncRoute) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("run", String(run.id));
+        window.history.replaceState(null, "", url);
+      }
       try {
         const [steps, resources, interactions, candidates, events] =
           await Promise.all([
@@ -580,14 +585,14 @@ export function WorkflowRunRecords({
           .getRuns()
           .then((allRuns) => {
             const found = allRuns.find((run) => run.id === requestedID);
-            if (found) void inspect(found);
+            if (found) void inspect(found, true);
           })
           .catch(() => {});
       }
       return;
     }
     inspectedFromURL.current = true;
-    void inspect(requested);
+    void inspect(requested, true);
   }, [inspect, runs]);
 
   useEffect(() => {
@@ -604,7 +609,7 @@ export function WorkflowRunRecords({
     )
       return;
     autoInspectedRunID.current = candidate.id;
-    void inspect(candidate);
+    void inspect(candidate, false);
   }, [filtered, inspect, loadingID, selected]);
 
   return (
@@ -721,7 +726,7 @@ export function WorkflowRunRecords({
                     disabled={loadingID === run.id}
                     onClick={() => {
                       setMobilePane("detail");
-                      void inspect(run);
+                      void inspect(run, true);
                     }}
                   />
                 </div>
