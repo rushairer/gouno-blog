@@ -162,7 +162,7 @@ function WorkflowAssetRow({
         (locale === "zh" ? "打开 Workflow：" : "Open Workflow: ") +
         workflow.name
       }
-      className="group grid h-auto w-full min-w-0 grid-cols-1 gap-4 whitespace-normal rounded-none border-b px-5 py-4 text-left font-normal transition-colors last:border-b-0 hover:bg-muted/30 xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem] xl:items-center [&>span]:contents"
+      className="group grid h-auto w-full min-w-0 grid-cols-1 gap-4 whitespace-normal rounded-none border-b px-5 py-4 text-left type-weight-regular transition-colors last:border-b-0 hover:bg-muted/30 xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem] xl:items-center [&>span]:contents"
       onClick={onSelect}
     >
       <span className="flex min-w-0 items-start gap-3">
@@ -1164,7 +1164,7 @@ export function WorkflowWorkspace({
                               type="button"
                               variant="ghost"
                               block
-                              className="grid h-auto w-full min-w-0 grid-cols-1 gap-3 whitespace-normal rounded-none px-6 py-3.5 text-left font-normal transition-colors hover:bg-muted/35 sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)] sm:items-center [&>span]:contents"
+                              className="grid h-auto w-full min-w-0 grid-cols-1 gap-3 whitespace-normal rounded-none px-6 py-3.5 text-left type-weight-regular transition-colors hover:bg-muted/35 sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)] sm:items-center [&>span]:contents"
                               onClick={() => onOpenRun?.(workflow.id, run.id)}
                               aria-label={
                                 (locale === "zh"
