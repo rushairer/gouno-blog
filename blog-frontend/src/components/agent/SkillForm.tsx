@@ -214,7 +214,7 @@ export function SkillForm({
                     {tools.map((item) => (
                       <label
                         key={item.name}
-                        className="flex items-start gap-3 rounded-md border p-4"
+                        className="flex min-w-0 items-start gap-3 rounded-md border p-4"
                       >
                         <Checkbox
                           disabled={
@@ -233,8 +233,8 @@ export function SkillForm({
                             }))
                           }
                         />
-                        <span className="min-w-0">
-                          <strong className="block type-family-mono type-body-sm type-weight-semibold">
+                        <span className="min-w-0 flex-1">
+                          <strong className="block min-w-0 type-family-mono type-body-sm type-weight-semibold [overflow-wrap:anywhere]">
                             {item.name}
                           </strong>
                           <Text size="xs" tone="muted">
