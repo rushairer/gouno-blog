@@ -3,7 +3,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import {
   ArrowLeft,
@@ -58,6 +57,7 @@ import {
   EditorWritingDialog,
   type WritingApplyMode,
 } from "../../components/editor/EditorWritingDialog";
+import { FieldActionHeader, InspectorSection } from "../../components/editor/EditorFieldChrome";
 import {
   cleanAiSuggestions,
   metadataFromAssist,
@@ -92,69 +92,6 @@ const emptyPage: CustomPage = {
 
 function selectValue(value: string | string[]) {
   return Array.isArray(value) ? (value[0] ?? "") : value;
-}
-
-function InspectorSection({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <details open className="relative border-b py-4 last:border-b-0">
-      <summary className="cursor-pointer select-none pr-12 text-sm font-semibold">
-        {title}
-      </summary>
-      {action ? (
-        <div className="absolute right-0 top-2.5 z-10">{action}</div>
-      ) : null}
-      <div className="mt-4 flex flex-col gap-4">{children}</div>
-    </details>
-  );
-}
-
-function FieldActionHeader({
-  label,
-  actionLabel,
-  onAction,
-  disabled = false,
-  loading = false,
-  required = false,
-}: {
-  label: string;
-  actionLabel: string;
-  onAction: () => void;
-  disabled?: boolean;
-  loading?: boolean;
-  required?: boolean;
-}) {
-  return (
-    <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
-      <div className="type-body-sm type-weight-medium">
-        {label}
-        {required ? (
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
-        ) : null}
-      </div>
-      <Button
-        type="button"
-        size="small"
-        variant="text"
-        icon={<Sparkles />}
-        onClick={onAction}
-        disabled={disabled || loading}
-        loading={loading}
-        aria-label={actionLabel}
-        title={actionLabel}
-        className="size-8 px-0"
-      />
-    </div>
-  );
 }
 
 export default function PageEditor() {
