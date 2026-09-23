@@ -217,6 +217,19 @@ for (const path of [
   );
 }
 
+const skillForm = await source("src/components/agent/SkillForm.tsx");
+requireCount(
+  skillForm,
+  'className="type-family-mono"',
+  2,
+  "SkillForm: CSA-A003 technical fields must preserve semantic mono Typography",
+);
+if (skillForm.includes('className="font-mono"')) {
+  failures.push(
+    "SkillForm: retired CSA-A003 raw mono Typography returned",
+  );
+}
+
 for (const path of [
   "src/components/agent/AgentForm.tsx",
   "src/components/agent/SkillForm.tsx",
