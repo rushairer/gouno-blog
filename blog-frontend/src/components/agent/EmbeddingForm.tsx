@@ -156,7 +156,7 @@ export function EmbeddingForm({
               <FormGrid columns={2}>
                 <Field label={labels.model}>
                   <Input
-                    className="font-mono"
+                    className="type-family-mono"
                     required
                     value={value.model}
                     onChange={(event) =>
@@ -198,7 +198,7 @@ export function EmbeddingForm({
             <div className="flex flex-col gap-5">
               <Field label={labels.base}>
                 <Input
-                  className="font-mono"
+                  className="type-family-mono"
                   type="url"
                   required
                   value={value.base_url}
@@ -215,7 +215,7 @@ export function EmbeddingForm({
                   label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}
                 >
                   <Input
-                    className="font-mono"
+                    className="type-family-mono"
                     type="password"
                     required={!initial}
                     autoComplete="new-password"
