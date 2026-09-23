@@ -777,110 +777,110 @@ export function RecordsWorkspace({
                 }
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Heading level={2}>
-                      Run #{selectedRun.run.id} ·{" "}
-                      {agentMap.get(selectedRun.run.agent_id)?.name ||
-                        `Agent #${selectedRun.run.agent_id}`}
-                    </Heading>
-                    <StatusPill
-                      status={selectedRun.run.status}
-                      locale={locale}
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Heading level={2}>
+                        Run #{selectedRun.run.id} ·{" "}
+                        {agentMap.get(selectedRun.run.agent_id)?.name ||
+                          `Agent #${selectedRun.run.agent_id}`}
+                      </Heading>
+                      <StatusPill
+                        status={selectedRun.run.status}
+                        locale={locale}
+                      />
+                    </div>
+                    <Text className="mt-2 max-w-4xl" tone="muted">
+                      {agentRunSummary(selectedRun.run, locale)}
+                    </Text>
+                    <Text size="xs" tone="muted" className="mt-1">
+                      {selectedRun.run.provider}
+                      {selectedRun.run.model ? ` · ${selectedRun.run.model}` : ""}
+                    </Text>
+                  </div>
+                  {["succeeded", "failed", "cancelled"].includes(
+                    selectedRun.run.status,
+                  ) ? (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => onDelete(selectedRun.run)}
+                      icon={<Trash2 />}
+                    >
+                      {zh ? "删除记录" : "Delete record"}
+                    </Button>
+                  ) : null}
+                </div>
+
+                <OperationsSummaryStrip
+                  ariaLabel={zh ? "Agent Run 摘要" : "Agent Run summary"}
+                  items={[
+                    {
+                      label: zh ? "开始时间" : "Started",
+                      value: formatDateTime(
+                        selectedRun.run.started_at || selectedRun.run.created_at,
+                      ),
+                      detail: selectedRun.run.finished_at
+                        ? `${zh ? "结束" : "Finished"} ${formatDateTime(selectedRun.run.finished_at)}`
+                        : zh
+                          ? "仍在执行 / 等待"
+                          : "Still running / waiting",
+                    },
+                    {
+                      label: "Token",
+                      value: (
+                        selectedRun.run.input_tokens +
+                        selectedRun.run.output_tokens
+                      ).toLocaleString(),
+                      detail: `${selectedRun.run.input_tokens} in / ${selectedRun.run.output_tokens} out`,
+                    },
+                    {
+                      label: zh ? "工具调用" : "Tool calls",
+                      value: selectedRun.tool_calls.length,
+                      detail: `${selectedRun.tool_calls.filter((call) => call.status === "failed").length} ${zh ? "个失败" : "failed"}`,
+                    },
+                    {
+                      label: zh ? "触发方式" : "Trigger",
+                      value:
+                        selectedRun.run.trigger_type === "cron"
+                          ? zh
+                            ? "计划触发"
+                            : "Cron"
+                          : zh
+                            ? "手动触发"
+                            : "Manual",
+                      detail: `Run #${selectedRun.run.id}`,
+                    },
+                  ]}
+                />
+
+                <section
+                  className="overflow-hidden rounded-lg border bg-background"
+                  aria-label={zh ? "AI 输出" : "AI output"}
+                >
+                  <div className="border-b px-5 py-4">
+                    <OperationsRegionHeading
+                      title={zh ? "AI 输出" : "AI output"}
+                      description={
+                        zh
+                          ? "输出属于当前 Run；完整 Tool Call、引用与失败证据继续保留在下方执行日志。"
+                          : "The output belongs to the current Run; Tool Calls, citations, and failure evidence remain in the execution log below."
+                      }
                     />
                   </div>
-                  <Text className="mt-2 max-w-4xl" tone="muted">
-                    {agentRunSummary(selectedRun.run, locale)}
-                  </Text>
-                  <Text size="xs" tone="muted" className="mt-1">
-                    {selectedRun.run.provider}
-                    {selectedRun.run.model ? ` · ${selectedRun.run.model}` : ""}
-                  </Text>
-                </div>
-                {["succeeded", "failed", "cancelled"].includes(
-                  selectedRun.run.status,
-                ) ? (
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => onDelete(selectedRun.run)}
-                    icon={<Trash2 />}
-                  >
-                    {zh ? "删除记录" : "Delete record"}
-                  </Button>
-                ) : null}
-              </div>
-
-              <OperationsSummaryStrip
-                ariaLabel={zh ? "Agent Run 摘要" : "Agent Run summary"}
-                items={[
-                  {
-                    label: zh ? "开始时间" : "Started",
-                    value: formatDateTime(
-                      selectedRun.run.started_at || selectedRun.run.created_at,
-                    ),
-                    detail: selectedRun.run.finished_at
-                      ? `${zh ? "结束" : "Finished"} ${formatDateTime(selectedRun.run.finished_at)}`
-                      : zh
-                        ? "仍在执行 / 等待"
-                        : "Still running / waiting",
-                  },
-                  {
-                    label: "Token",
-                    value: (
-                      selectedRun.run.input_tokens +
-                      selectedRun.run.output_tokens
-                    ).toLocaleString(),
-                    detail: `${selectedRun.run.input_tokens} in / ${selectedRun.run.output_tokens} out`,
-                  },
-                  {
-                    label: zh ? "工具调用" : "Tool calls",
-                    value: selectedRun.tool_calls.length,
-                    detail: `${selectedRun.tool_calls.filter((call) => call.status === "failed").length} ${zh ? "个失败" : "failed"}`,
-                  },
-                  {
-                    label: zh ? "触发方式" : "Trigger",
-                    value:
-                      selectedRun.run.trigger_type === "cron"
-                        ? zh
-                          ? "计划触发"
-                          : "Cron"
-                        : zh
-                          ? "手动触发"
-                          : "Manual",
-                    detail: `Run #${selectedRun.run.id}`,
-                  },
-                ]}
-              />
-
-              <section
-                className="overflow-hidden rounded-lg border bg-background"
-                aria-label={zh ? "AI 输出" : "AI output"}
-              >
-                <div className="border-b px-5 py-4">
-                  <OperationsRegionHeading
-                    title={zh ? "AI 输出" : "AI output"}
-                    description={
-                      zh
-                        ? "输出属于当前 Run；完整 Tool Call、引用与失败证据继续保留在下方执行日志。"
-                        : "The output belongs to the current Run; Tool Calls, citations, and failure evidence remain in the execution log below."
-                    }
-                  />
-                </div>
-                <div className="p-5">
-                  <div className="agent-output">
-                    {selectedRun.run.output_summary ? (
-                      <MarkdownRenderer
-                        content={selectedRun.run.output_summary}
-                      />
-                    ) : selectedRun.run.error_message ? (
-                      <pre>{selectedRun.run.error_message}</pre>
-                    ) : (
-                      "—"
-                    )}
+                  <div className="p-5">
+                    <div className="agent-output">
+                      {selectedRun.run.output_summary ? (
+                        <MarkdownRenderer
+                          content={selectedRun.run.output_summary}
+                        />
+                      ) : selectedRun.run.error_message ? (
+                        <pre>{selectedRun.run.error_message}</pre>
+                      ) : (
+                        "—"
+                      )}
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
 
                 <RecordEvidence
                   run={selectedRun}
