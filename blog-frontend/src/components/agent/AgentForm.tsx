@@ -400,7 +400,7 @@ export function AgentForm({
                     <FormGrid columns={2}>
                       <Field label={labels.cron}>
                         <Input
-                          className="font-mono"
+                          className="type-family-mono"
                           required
                           placeholder="0 9 * * 1"
                           value={value.cron_expression || ""}
@@ -414,7 +414,7 @@ export function AgentForm({
                       </Field>
                       <Field label={labels.timezone}>
                         <Input
-                          className="font-mono"
+                          className="type-family-mono"
                           required
                           value={value.timezone}
                           onChange={(event) =>
