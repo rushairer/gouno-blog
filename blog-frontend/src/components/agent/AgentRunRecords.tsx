@@ -670,7 +670,9 @@ export function RecordsWorkspace({
   const agentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const zh = locale === "zh";
   const [mobilePane, setMobilePane] = useState<"master" | "detail">(() =>
-    new URLSearchParams(window.location.search).get("run") ? "detail" : "master",
+    new URLSearchParams(window.location.search).get("run")
+      ? "detail"
+      : "master",
   );
 
   return (
@@ -774,7 +776,7 @@ export function RecordsWorkspace({
                     : `Agent Run #${selectedRun.run.id} details`
                 }
               >
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Heading level={2}>
