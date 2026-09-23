@@ -241,7 +241,7 @@ if (!categories.includes('data-pattern="editor-form-composition"')) {
 }
 for (const marker of [
   "flex items-center gap-2",
-  'className="min-w-0 flex-1 font-mono"',
+  'className="min-w-0 flex-1 type-family-mono"',
 ]) {
   if (!categories.includes(marker)) {
     failures.push(
@@ -314,7 +314,7 @@ const reviewedTypographyContracts = new Map([
         "type-metric-compact",
         "type-body-sm type-weight-semibold",
         "type-caption type-weight-medium",
-        "font-mono type-caption",
+        "type-family-mono type-caption",
       ],
       forbidden: [
         "text-xl font-semibold",
@@ -573,6 +573,54 @@ for (const [name, contract] of reviewedTypographyContracts) {
     if (source.includes(marker)) {
       failures.push(`${name}: retired raw typography drift returned: ${marker}`);
     }
+  }
+}
+
+const dl17ProductPaths = [
+  "pages/admin/Dashboard.tsx",
+  "pages/admin/Posts.tsx",
+  "pages/admin/Pages.tsx",
+  "pages/admin/PostEditor.tsx",
+  "pages/admin/PageEditor.tsx",
+  "pages/admin/Categories.tsx",
+  "pages/admin/Tags.tsx",
+  "pages/admin/Comments.tsx",
+  "pages/admin/Notifications.tsx",
+  "pages/admin/MediaLibrary.tsx",
+  "pages/admin/SiteSettings.tsx",
+  "pages/admin/Users.tsx",
+  "pages/admin/AIOperations.tsx",
+  "pages/admin/AISettings.tsx",
+  "components/agent/AISettingsEditorPatterns.tsx",
+  "components/agent/AdvancedWorkspace.tsx",
+  "components/agent/AgentForm.tsx",
+  "components/agent/AgentRunRecords.tsx",
+  "components/agent/ConnectorWorkspace.tsx",
+  "components/agent/DecisionInboxWorkspace.tsx",
+  "components/agent/DedicatedEditorPatterns.tsx",
+  "components/agent/EmbeddingForm.tsx",
+  "components/agent/InboxWorkspace.tsx",
+  "components/agent/KnowledgeWorkspace.tsx",
+  "components/agent/OperationsPatterns.tsx",
+  "components/agent/ProposalPreview.tsx",
+  "components/agent/ProviderForm.tsx",
+  "components/agent/SkillForm.tsx",
+  "components/agent/StatusPill.tsx",
+  "components/agent/WorkflowInputForm.tsx",
+  "components/agent/WorkflowRunRecords.tsx",
+  "components/agent/WorkflowWorkspace.tsx",
+  "components/agent/WorkspaceOverview.tsx",
+];
+
+const rawDl17Typography =
+  /(?<!type-)(?:text-(?:xs|sm|base|lg|xl|2xl|3xl|4xl|\[[^\]]+\])|font-(?:sans|serif|mono|normal|medium|semibold|bold|light|thin|black|\[[^\]]+\])|leading-(?:none|tight|snug|normal|relaxed|loose|\d+|\[[^\]]+\])|tracking-(?:tighter|tight|normal|wide|wider|widest|\[[^\]]+\]))(?![A-Za-z0-9_-])/g;
+
+for (const dl17Path of dl17ProductPaths) {
+  const dl17Source = await readFile(path.join(root, dl17Path), "utf8");
+  for (const match of dl17Source.matchAll(rawDl17Typography)) {
+    failures.push(
+      `${dl17Path}: DL-17 raw Typography utility must use a semantic type-* role instead: ${match[0]}`,
+    );
   }
 }
 
