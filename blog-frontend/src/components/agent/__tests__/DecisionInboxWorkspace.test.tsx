@@ -44,7 +44,7 @@ describe("AI Operations unified decision workbench", () => {
     const user = userEvent.setup();
     const onSelectApproval = vi.fn();
 
-    render(
+    const { container } = render(
       <DecisionInboxWorkspace
         locale="zh"
         approvals={[approval]}
@@ -77,8 +77,11 @@ describe("AI Operations unified decision workbench", () => {
       screen.getByRole("heading", { level: 2, name: "选择文章封面方向" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Run #18 · choose-cover")).toHaveLength(2);
+    const frame = container.querySelector('[data-slot="ops-master-detail"]');
+    expect(frame).toHaveAttribute("data-mobile-pane", "master");
 
     await user.click(screen.getByRole("button", { name: "审批" }));
+    expect(frame).toHaveAttribute("data-mobile-pane", "master");
 
     expect(
       screen.getByRole("heading", {
@@ -94,5 +97,11 @@ describe("AI Operations unified decision workbench", () => {
       screen.getByRole("button", { name: "处理：对文章 #4应用内容建议" }),
     );
     expect(onSelectApproval).toHaveBeenCalledWith(approval);
+    expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+
+    await user.click(
+      screen.getByRole("button", { name: "返回决策队列" }),
+    );
+    expect(frame).toHaveAttribute("data-mobile-pane", "master");
   });
 });
