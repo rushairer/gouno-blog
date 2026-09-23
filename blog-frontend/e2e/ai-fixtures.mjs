@@ -170,6 +170,12 @@ export const aiTools = [
     parameters: { type: "object", properties: { post_id: { type: "integer" } } },
     risk_level: "read",
   },
+  {
+    name: "analytics.list_low_engagement_posts",
+    description: "List published posts with enough traffic but low engagement.",
+    parameters: { type: "object", properties: {} },
+    risk_level: "read",
+  },
 ];
 
 export const longNarrative = [
