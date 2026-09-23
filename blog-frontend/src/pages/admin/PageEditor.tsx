@@ -57,7 +57,7 @@ import {
   EditorWritingDialog,
   type WritingApplyMode,
 } from "../../components/editor/EditorWritingDialog";
-import { FieldActionHeader, InspectorSection } from "../../components/editor/EditorFieldChrome";
+import {\n  FieldActionHeader,\n  InspectorSection,\n} from "../../components/editor/EditorFieldChrome";
 import {
   cleanAiSuggestions,
   metadataFromAssist,

@@ -388,9 +388,9 @@ for (const retired of [
 for (const name of ["PostEditor.tsx", "PageEditor.tsx"]) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
   if (
-    !source.includes(
-      'import { FieldActionHeader, InspectorSection } from "../../components/editor/EditorFieldChrome";',
-    )
+    !source.includes('from "../../components/editor/EditorFieldChrome";') ||
+    !source.includes("FieldActionHeader") ||
+    !source.includes("InspectorSection")
   ) {
     failures.push(
       `${name}: Post/Page editor family must consume shared EditorFieldChrome composition`,
