@@ -558,7 +558,7 @@ export default function AdminSiteSettings() {
           </FormField>
           <FormField label="RSS">
             <Input
-              className="font-mono"
+              className="type-family-mono"
               value={value.rss_url}
               onChange={(event) => field("rss_url", event.target.value)}
               placeholder="/feed.xml"
