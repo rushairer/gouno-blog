@@ -139,6 +139,43 @@ test("Workflow run detail contains long output and preserves run query state", a
   await attachScreenshot(page, testInfo, "u04a-workflow-long-output");
 });
 
+test("Skill Tool authorization contains long identifiers without overflow", async ({ page }, testInfo) => {
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-settings?section=skills",
+    { width: 1440, height: 900 },
+  );
+
+  await page.getByRole("button", { name: "Edit" }).first().click();
+  await expect(page.getByRole("heading", { level: 2, name: /Edit Skill/ })).toBeVisible();
+
+  const longToolName = page.getByText("analytics.list_low_engagement_posts", {
+    exact: true,
+  });
+  await expect(longToolName).toBeVisible();
+  const toolCard = longToolName.locator("xpath=ancestor::label[1]");
+  const toolNameGeometry = await longToolName.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    overflowWrap: getComputedStyle(element).overflowWrap,
+  }));
+  const toolCardGeometry = await toolCard.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+
+  expect(toolNameGeometry.overflowWrap).toBe("anywhere");
+  expect(toolNameGeometry.scrollWidth).toBeLessThanOrEqual(
+    toolNameGeometry.clientWidth + 1,
+  );
+  expect(toolCardGeometry.scrollWidth).toBeLessThanOrEqual(
+    toolCardGeometry.clientWidth + 1,
+  );
+  await expectNoDocumentOverflow(page);
+  expectFixtureHealth(fixtureState, consoleProblems);
+  await attachScreenshot(page, testInfo, "u04a-skill-long-tool-identifier");
+});
+
 test("Skill copy uses a controlled modal without submitting a mutation", async ({ page }, testInfo) => {
   const { consoleProblems, fixtureState } = await openAiPage(
     page,
