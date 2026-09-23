@@ -1,6 +1,6 @@
 # Blog Admin Core Wave 3 Inspector / Logical Direction Recertification
 
-Status: **pending manual recertification**
+Status: **verified**
 
 Date: 2026-09-23
 
@@ -8,33 +8,79 @@ Date: 2026-09-23
 
 The final drift audit found a Canonical-source defect rather than a Blog-only divergence.
 
-The frozen Blog Admin Post Editor and Page Editor fixtures define the shared `InspectorSection` title with raw `text-sm font-semibold` utilities and place its optional action with physical `right-0` plus compensating `pr-12`. The Product copied the same anatomy exactly.
+The frozen Blog Admin Post Editor and Page Editor fixtures had retained a pre-token Inspector seam: `InspectorSection` used raw `text-sm font-semibold` utilities and physical `pr-12/right-0` geometry. Media Library likewise anchored its batch-selection checkbox with physical `left-2`.
 
-The Media Library fixture likewise anchors the batch-selection checkbox with physical `left-2`, and the Product copied that placement.
+The Product had copied that Canonical anatomy faithfully, so Wave 3 was deliberately demoted before correction rather than treating the Product as independently defective.
 
-## Classification
+## Canonical correction
 
-This is not evidence that reverse migration failed. It is evidence that an accepted Canonical composition retained a small pre-Typography/logical-direction implementation seam.
+Gouno UI CSA-A002 corrected the Canonical owner first:
 
-Affected Canonical scopes:
+- Canonical correction merge: `a265ccf68b1fb05f54f137de3d836d8b647ced40`;
+- accepted Canonical main / amendment ledger ref: `62259726174eef30e8c8088e7217d85ccb044056`;
+- Post/Page Editor now share one Showcase-private `editor-shared.tsx` composition;
+- Inspector headings use semantic `type-body-sm type-weight-semibold`;
+- Inspector action geometry uses logical `pe-12` + `end-0`;
+- Media Library selection uses logical `start-2`;
+- Canonical source guards and browser evidence cover the corrected anatomy.
 
-- `blog-admin-post-editor`;
-- `blog-admin-page-editor`;
-- `blog-admin-media-library`.
+## Product propagation
 
-Affected Blog certification:
+Reviewed Blog implementation ref:
 
-- `blog-admin-core-wave3`.
+- `03e1b8330ccc8fda20634c3253776a3b0f869a7a`.
 
-## Required correction
+Product changes:
 
-1. Correct the Canonical Showcase owner first.
-2. Replace the Inspector title's raw font utilities with the established semantic Typography utilities.
-3. Express the Inspector action as inline-end (`end-0`) with matching logical padding (`pe-12`).
-4. Express the Media Library selection affordance as inline-start (`start-2`).
-5. Add source/browser regression evidence so the old physical/raw anatomy cannot silently return.
-6. Propagate the exact composition to Blog Product.
-7. Re-run reciprocal parity and browser acceptance.
-8. Manually review rendered Post Editor, Page Editor and Media Library evidence before restoring `verified`.
+- Post Editor and Page Editor no longer carry duplicated page-private `InspectorSection` / `FieldActionHeader` helpers.
+- Shared Product binding now lives at `blog-frontend/src/components/editor/EditorFieldChrome.tsx`.
+- Product-only asynchronous `loading` behavior remains owned by the Product helper while the visual composition follows Canonical.
+- Media Library selection is anchored at logical inline-start.
+- `check-admin-parity-contracts.mjs` rejects the retired raw/physical anatomy and duplicate helpers.
+- Wave 3 Canonical ownership now includes `showcase/demos/products/blog-admin/editor-shared.tsx`, so future shared-helper changes invalidate freshness correctly.
 
-The prior 2026-09-22 Wave 3 certification remains historical evidence only while this record is pending.
+## Automated evidence
+
+Exact-head workflows for `03e1b8330ccc8fda20634c3253776a3b0f869a7a`:
+
+- Blog Showcase Parity `35840872826` — success.
+- UI Browser Acceptance `35840872978` — success.
+- CI `35840872855` — success.
+- Images `35840873018` — success.
+
+Retained artifacts:
+
+- `10742055087` — `blog-showcase-parity-35840872826` — SHA-256 `23b759e4a235e339ef2c4b844693940930afe490eb496c33008c169869e9fe0f`.
+- `10741906199` — `blog-browser-acceptance-35840872978` — SHA-256 `3eb8f2021bea360c0fa0b4eed020805cb571019ec8234d0bbe95f7d911739e1f`.
+
+## Manual rendered review
+
+Manual review was performed on the retained exact-head screenshots, not inferred from CI alone.
+
+### Post Editor
+
+- desktop light paired Showcase/Product evidence preserves the Inspector hierarchy, disclosure marker alignment and inline-end AI actions;
+- 390px dark Product evidence keeps title/summary AI controls and all Inspector section actions inside the narrow editor surface;
+- no horizontal document overflow or action collision was observed.
+
+### Page Editor
+
+- desktop light paired Showcase/Product evidence preserves the same shared Inspector anatomy;
+- 390px dark Product evidence keeps Publish Settings, Page Configuration and Path/SEO headings/actions aligned after stacking;
+- no page-local geometry regression was observed.
+
+### Media Library
+
+- mobile dark paired Showcase/Product selection evidence keeps the selected checkbox at the card inline-start and preserves BulkActionBar geometry;
+- 390px dark Product acceptance evidence keeps the unselected checkbox at the same logical start edge;
+- no horizontal overflow or card/action collision was observed.
+
+## Result
+
+`blog-admin-core-wave3` is manually re-certified as **verified** against:
+
+- Blog Product ref `03e1b8330ccc8fda20634c3253776a3b0f869a7a`;
+- Gouno UI Canonical ref `62259726174eef30e8c8088e7217d85ccb044056`;
+- `@gouno/ui` package baseline `0.4.9`.
+
+The previous 2026-09-22 certification remains historical evidence; this document is the current manual-first authority for Wave 3 after CSA-A002.
