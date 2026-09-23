@@ -40,7 +40,8 @@
         "showcase/demos/products/blog-admin/ai/",
         "showcase/components/tab-panel-lead.tsx",
         "showcase/components/patterns/dedicated-editor.tsx",
-        "showcase/components/patterns/editor-form-composition.tsx"
+        "showcase/components/patterns/editor-form-composition.tsx",
+        "showcase/components/patterns/admin-data-composition.tsx"
       ],
       "browserEvidence": {
         "runs": [
@@ -95,7 +96,7 @@
         "blog-admin-ai-settings"
       ],
       "previousManualReview": "docs/ui-redesign/blog-admin-ai-tool-identifier-overflow-recertification.md",
-      "recertificationReason": "DL-17 audit found residual raw Typography utilities in frozen AI Operations/AI Settings Canonical surfaces and corresponding Product bindings."
+      "recertificationReason": "CSA-A003 DL-17 semantic Typography hardening plus CSA-A004 mobile Master/Detail correction require one combined Product recertification batch."
     },
     {
       "id": "blog-admin-core-support",
