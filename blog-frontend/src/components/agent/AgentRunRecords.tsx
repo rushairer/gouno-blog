@@ -766,14 +766,14 @@ export function RecordsWorkspace({
             {selectedRun ? (
               <div
                 data-slot="ops-detail-stack"
-              data-pattern="record-detail-composition"
-              className="flex min-w-0 flex-col gap-6"
-              aria-label={
-                zh
-                  ? `Agent Run #${selectedRun.run.id} 详情`
-                  : `Agent Run #${selectedRun.run.id} details`
-              }
-            >
+                data-pattern="record-detail-composition"
+                className="flex min-w-0 flex-col gap-6"
+                aria-label={
+                  zh
+                    ? `Agent Run #${selectedRun.run.id} 详情`
+                    : `Agent Run #${selectedRun.run.id} details`
+                }
+              >
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -880,11 +880,11 @@ export function RecordsWorkspace({
                 </div>
               </section>
 
-              <RecordEvidence
-                run={selectedRun}
-                locale={locale}
-                formatDateTime={formatDateTime}
-              />
+                <RecordEvidence
+                  run={selectedRun}
+                  locale={locale}
+                  formatDateTime={formatDateTime}
+                />
               </div>
             ) : (
               <div className="rounded-lg border bg-background p-8">
