@@ -181,7 +181,7 @@ export function RssFetchConfig({
             />
             <Input
               type="url"
-              className="font-mono"
+              className="type-family-mono"
               placeholder="https://example.com/feed.xml"
               value={feed.url}
               onChange={(e) => updateFeed(idx, "url", e.target.value)}

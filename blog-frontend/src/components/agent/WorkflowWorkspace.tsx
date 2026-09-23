@@ -162,7 +162,7 @@ function WorkflowAssetRow({
         (locale === "zh" ? "打开 Workflow：" : "Open Workflow: ") +
         workflow.name
       }
-      className="group grid h-auto w-full min-w-0 grid-cols-1 gap-4 whitespace-normal rounded-none border-b px-5 py-4 text-left font-normal transition-colors last:border-b-0 hover:bg-muted/30 xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem] xl:items-center [&>span]:contents"
+      className="group grid h-auto w-full min-w-0 grid-cols-1 gap-4 whitespace-normal rounded-none border-b px-5 py-4 text-left type-weight-regular transition-colors last:border-b-0 hover:bg-muted/30 xl:grid-cols-[minmax(17rem,1.45fr)_minmax(12rem,0.8fr)_minmax(16rem,1.15fr)_8rem_1.5rem] xl:items-center [&>span]:contents"
       onClick={onSelect}
     >
       <span className="flex min-w-0 items-start gap-3">
@@ -1164,7 +1164,7 @@ export function WorkflowWorkspace({
                               type="button"
                               variant="ghost"
                               block
-                              className="grid h-auto w-full min-w-0 grid-cols-1 gap-3 whitespace-normal rounded-none px-6 py-3.5 text-left font-normal transition-colors hover:bg-muted/35 sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)] sm:items-center [&>span]:contents"
+                              className="grid h-auto w-full min-w-0 grid-cols-1 gap-3 whitespace-normal rounded-none px-6 py-3.5 text-left type-weight-regular transition-colors hover:bg-muted/35 sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)] sm:items-center [&>span]:contents"
                               onClick={() => onOpenRun?.(workflow.id, run.id)}
                               aria-label={
                                 (locale === "zh"
@@ -2952,7 +2952,7 @@ function WorkflowEditor({
             hint="留空表示仅手动运行；例如每天 09:00：0 9 * * *"
           >
             <Input
-              className="font-mono"
+              className="type-family-mono"
               value={cronExpression}
               onChange={(event) => setCronExpression(event.target.value)}
               placeholder="0 9 * * *"
@@ -2960,7 +2960,7 @@ function WorkflowEditor({
           </Field>
           <Field label="时区" hint="使用 IANA 时区，例如 Asia/Shanghai">
             <Input
-              className="font-mono"
+              className="type-family-mono"
               required
               value={timezone}
               onChange={(event) => setTimezone(event.target.value)}
@@ -3092,7 +3092,7 @@ function WorkflowEditor({
                     </Field>
                     <Field label="输入 JSON Pointer">
                       <Input
-                        className="font-mono"
+                        className="type-family-mono"
                         value={step.input_pointer || ""}
                         onChange={(event) =>
                           updateStep(index, {
@@ -3140,7 +3140,7 @@ function WorkflowEditor({
                   <div className="form-grid">
                     <Field label="集合 JSON Pointer">
                       <Input
-                        className="font-mono"
+                        className="type-family-mono"
                         value={step.collection_pointer || ""}
                         onChange={(event) =>
                           updateStep(index, {
@@ -3303,7 +3303,7 @@ function WorkflowEditor({
                     label="输出 JSON Pointer"
                   >
                     <Input
-                      className="font-mono"
+                      className="type-family-mono"
                       value={step.output_pointer || ""}
                       onChange={(event) =>
                         updateStep(index, {
@@ -3432,7 +3432,7 @@ function WorkflowEditor({
             hint="JSON Schema。资源字段使用 x-gouno-resource 和 x-gouno-widget 扩展。"
           >
             <Textarea
-              className="font-mono"
+              className="type-family-mono"
               rows={8}
               value={schema}
               onChange={(event) => setSchema(event.target.value)}
@@ -3443,7 +3443,7 @@ function WorkflowEditor({
             hint="允许 resource_query、model、for_each、approval_gate、output；服务端会校验每个步骤。"
           >
             <Textarea
-              className="font-mono"
+              className="type-family-mono"
               rows={16}
               value={steps}
               onChange={(event) => setSteps(event.target.value)}

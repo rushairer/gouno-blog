@@ -250,7 +250,7 @@ export function WorkflowLauncher({
 
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Text size="sm" className="font-medium">
+            <Text size="sm" className="type-weight-medium">
               {resourceLabels[resourceType]}
             </Text>
             <Text size="xs" tone="muted">

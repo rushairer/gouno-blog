@@ -243,7 +243,7 @@ export function OperationsWorkspace({
         />
         <CardContent className="flex flex-col gap-2 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-baseline gap-2">
-            <strong className="text-2xl tabular-nums">{total}</strong>
+            <strong className="type-metric-value tabular-nums">{total}</strong>
             <Text size="sm" tone="muted">
               {zh ? "项待决定" : "items to decide"}
             </Text>
@@ -329,7 +329,7 @@ export function OperationsWorkspace({
                       <div className="min-w-0 flex-1 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <Lightbulb className="size-4 text-muted-foreground" />
-                          <strong className="text-sm">{item.title}</strong>
+                          <strong className="type-body-sm">{item.title}</strong>
                           <Tag color={priorityColor(item.priority)}>
                             {priorityLabel(item.priority, zh)}
                           </Tag>
@@ -338,11 +338,11 @@ export function OperationsWorkspace({
                           {item.description}
                         </Text>
                         <details className="rounded-md border p-3">
-                          <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+                          <summary className="flex cursor-pointer items-center justify-between gap-3 type-body-sm type-weight-medium">
                             {zh ? "查看 AI 的判断依据" : "View AI evidence"}
                             <ChevronDown className="size-4" />
                           </summary>
-                          <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
+                          <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-muted p-3 type-caption">
                             {JSON.stringify(item.evidence, null, 2)}
                           </pre>
                         </details>
@@ -402,7 +402,7 @@ export function OperationsWorkspace({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <Check className="size-4 text-muted-foreground" />
-                    <strong className="text-sm">
+                    <strong className="type-body-sm">
                       {zh
                         ? `为文章 #${set.post_id} 选择${fieldLabel(set.field_type, true)}`
                         : `Choose a ${fieldLabel(set.field_type, false)} for post #${set.post_id}`}
@@ -417,7 +417,7 @@ export function OperationsWorkspace({
                       : `AI prepared ${set.candidates.length} alternatives. Choosing one creates a separate change approval; it does not edit the post yet.`}
                   </Text>
                   <details className="rounded-md border p-3">
-                    <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+                    <summary className="flex cursor-pointer items-center justify-between gap-3 type-body-sm type-weight-medium">
                       {zh
                         ? `查看 ${set.candidates.length} 个候选`
                         : `View ${set.candidates.length} alternatives`}
@@ -429,7 +429,7 @@ export function OperationsWorkspace({
                           key={candidate.id}
                           className="rounded-md border p-4"
                         >
-                          <strong className="text-sm">{candidate.value}</strong>
+                          <strong className="type-body-sm">{candidate.value}</strong>
                           {candidate.rationale ? (
                             <Text size="xs" tone="muted" className="mt-1">
                               {candidate.rationale}
@@ -487,7 +487,7 @@ export function OperationsWorkspace({
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Image className="size-4 text-muted-foreground" />
-                      <strong className="text-sm">
+                      <strong className="type-body-sm">
                         {item.headline ||
                           (zh
                             ? `为文章 #${item.post_id} 准备配图`
@@ -549,7 +549,7 @@ export function OperationsWorkspace({
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Image className="size-4 text-muted-foreground" />
-                      <strong className="text-sm">
+                      <strong className="type-body-sm">
                         {item.headline ||
                           (zh
                             ? `为文章 #${item.post_id} 生成配图`
@@ -613,7 +613,7 @@ export function OperationsWorkspace({
                 <article key={task.id} className="flex flex-col gap-4 p-6">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <strong className="text-sm">{task.title}</strong>
+                      <strong className="type-body-sm">{task.title}</strong>
                       <Tag color={priorityColor(task.priority)}>
                         {priorityLabel(task.priority, zh)}
                       </Tag>
@@ -664,7 +664,7 @@ export function OperationsWorkspace({
       {handledSuggestions.length > 0 || closedTasks.length > 0 ? (
         <Card padding="none" className="overflow-hidden">
           <details>
-            <summary className="flex cursor-pointer items-center justify-between gap-3 border-b p-6 text-sm font-medium">
+            <summary className="flex cursor-pointer items-center justify-between gap-3 border-b p-6 type-body-sm type-weight-medium">
               <span>{zh ? "已处理记录" : "Handled records"}</span>
               <ChevronDown className="size-4" />
             </summary>
@@ -681,7 +681,7 @@ export function OperationsWorkspace({
                     className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
-                      <strong className="text-sm">{item.title}</strong>
+                      <strong className="type-body-sm">{item.title}</strong>
                       <Text size="xs" tone="muted">
                         {item.ignored_reason
                           ? zh
@@ -701,7 +701,7 @@ export function OperationsWorkspace({
                     className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
-                      <strong className="text-sm">{task.title}</strong>
+                      <strong className="type-body-sm">{task.title}</strong>
                       <Text size="xs" tone="muted">
                         {zh ? "编辑任务" : "Editorial task"}
                       </Text>
