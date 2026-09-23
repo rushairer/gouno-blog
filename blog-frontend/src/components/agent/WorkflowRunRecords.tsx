@@ -121,12 +121,14 @@ export function WorkflowRunRecords({
 
   const inspect = useCallback(
     async (run: WorkflowRun, openMobileDetail = false) => {
-      if (openMobileDetail) setMobilePane("detail");
+      if (openMobileDetail) {
+        setMobilePane("detail");
+        const url = new URL(window.location.href);
+        url.searchParams.set("run", String(run.id));
+        window.history.replaceState(null, "", url);
+      }
       setLoadingID(run.id);
       setError("");
-      const url = new URL(window.location.href);
-      url.searchParams.set("run", String(run.id));
-      window.history.replaceState(null, "", url);
       try {
         const [steps, resources, interactions, candidates, events] =
           await Promise.all([
