@@ -45,11 +45,12 @@ describe("RecordsWorkspace", () => {
   });
 
   it("renders Agent runs as a canonical list and preserves inspect/delete actions", async () => {
+    window.history.replaceState(null, "", "/admin/ai-ops?tab=records&record=agent");
     const user = userEvent.setup();
     const onInspect = vi.fn();
     const onDelete = vi.fn();
 
-    const { rerender } = render(
+    const { container, rerender } = render(
       <RecordsWorkspace
         locale="zh"
         runs={[run]}
@@ -66,8 +67,13 @@ describe("RecordsWorkspace", () => {
       screen.getByRole("list", { name: "Agent 运行列表" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    const frame = container.querySelector('[data-slot="ops-master-detail"]');
+    expect(frame).toHaveAttribute("data-mobile-pane", "master");
+
     await user.click(screen.getByRole("button", { name: "查看 Run #9" }));
     expect(onInspect).toHaveBeenCalledWith(run);
+    expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+    expect(new URL(window.location.href).searchParams.get("run")).toBe("9");
 
     rerender(
       <RecordsWorkspace
@@ -81,6 +87,10 @@ describe("RecordsWorkspace", () => {
         formatDateTime={(value) => value}
       />,
     );
+
+    await user.click(screen.getByRole("button", { name: "返回运行列表" }));
+    expect(frame).toHaveAttribute("data-mobile-pane", "master");
+    expect(new URL(window.location.href).searchParams.get("run")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "删除记录" }));
     expect(onDelete).toHaveBeenCalledWith(run);
