@@ -406,8 +406,7 @@ export function DecisionInboxWorkspace({
   const [selectedKey, setSelectedKey] = useState<string | null>(
     selectedApproval ? `approval-${selectedApproval.id}` : null,
   );
-  const [mobilePane, setMobilePane] =
-    useState<"master" | "detail">("master");
+  const [mobilePane, setMobilePane] = useState<"master" | "detail">("master");
   const [actionError, setActionError] = useState("");
   const [deferTarget, setDeferTarget] = useState<OperationalSuggestion | null>(
     null,

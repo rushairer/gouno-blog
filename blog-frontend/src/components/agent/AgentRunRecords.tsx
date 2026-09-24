@@ -669,10 +669,9 @@ export function RecordsWorkspace({
 }) {
   const agentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const zh = locale === "zh";
-  const [mobilePane, setMobilePane] = useState<"master" | "detail">(() =>
-    new URLSearchParams(window.location.search).get("run")
-      ? "detail"
-      : "master",
+  const hasRunDeepLink = new URLSearchParams(window.location.search).has("run");
+  const [mobilePane, setMobilePane] = useState<"master" | "detail">(
+    hasRunDeepLink ? "detail" : "master",
   );
 
   return (
