@@ -189,11 +189,19 @@ requireText(
   'useState<"master" | "detail">("master")',
   "DecisionInboxWorkspace: mobile Inbox must remain queue-first despite desktop preselection",
 );
-for (const content of [workflowRunRecords, agentRunRecordsMobile]) {
-  requireText(
+for (const [sourcePath, content] of [
+  ["WorkflowRunRecords.tsx", workflowRunRecords],
+  ["AgentRunRecords.tsx", agentRunRecordsMobile],
+]) {
+  requirePattern(
     content,
-    'new URLSearchParams(window.location.search).get("run") ? "detail" : "master"',
-    "Run Center mobile pane must only enter detail from an explicit run deep link",
+    /new URLSearchParams\(window\.location\.search\)\.(?:get|has)\("run"\)/,
+    `${sourcePath}: Run Center mobile pane must read the explicit run deep link`,
+  );
+  requirePattern(
+    content,
+    /useState<"master" \| "detail">\([\s\S]{0,220}(?:hasRunDeepLink|new URLSearchParams\(window\.location\.search\)\.(?:get|has)\("run"\))[\s\S]{0,120}\?\s*"detail"\s*:\s*"master"/,
+    `${sourcePath}: Run Center mobile pane must initialize detail only from an explicit run deep link`,
   );
 }
 requireText(
