@@ -669,12 +669,17 @@ export function RecordsWorkspace({
 }) {
   const agentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const zh = locale === "zh";
-  const hasRunDeepLink = new URLSearchParams(window.location.search).has(
-    "run",
-  );
+  const hasRunDeepLink = new URLSearchParams(window.location.search).has("run");
   const [mobilePane, setMobilePane] = useState<"master" | "detail">(
     hasRunDeepLink ? "detail" : "master",
   );
+
+  const returnToRunList = () => {
+    setMobilePane("master");
+    const url = new URL(window.location.href);
+    url.searchParams.delete("run");
+    window.history.replaceState(null, "", url);
+  };
 
   return (
     <div className="agent-runs-center flex min-w-0 flex-col gap-4">
@@ -748,160 +753,161 @@ export function RecordsWorkspace({
             </div>
           </section>
 
-          <div
-            data-slot="ops-detail-pane"
-            className={`${mobilePane === "master" ? "hidden md:block" : "block"} min-w-0`}
-          >
-            <div className="mb-4 md:hidden">
-              <Button
-                variant="ghost"
-                icon={<ArrowLeft />}
-                onClick={() => {
-                  setMobilePane("master");
-                  const url = new URL(window.location.href);
-                  url.searchParams.delete("run");
-                  window.history.replaceState(null, "", url);
-                }}
-              >
-                {zh ? "返回运行列表" : "Back to run list"}
-              </Button>
-            </div>
-            {selectedRun ? (
-              <div
-                data-slot="ops-detail-stack"
-                data-pattern="record-detail-composition"
-                className="flex min-w-0 flex-col gap-6"
-                aria-label={
-                  zh
-                    ? `Agent Run #${selectedRun.run.id} 详情`
-                    : `Agent Run #${selectedRun.run.id} details`
-                }
-              >
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Heading level={2}>
-                        Run #{selectedRun.run.id} ·{" "}
-                        {agentMap.get(selectedRun.run.agent_id)?.name ||
-                          `Agent #${selectedRun.run.agent_id}`}
-                      </Heading>
-                      <StatusPill
-                        status={selectedRun.run.status}
-                        locale={locale}
-                      />
-                    </div>
-                    <Text className="mt-2 max-w-4xl" tone="muted">
-                      {agentRunSummary(selectedRun.run, locale)}
-                    </Text>
-                    <Text size="xs" tone="muted" className="mt-1">
-                      {selectedRun.run.provider}
-                      {selectedRun.run.model ? ` · ${selectedRun.run.model}` : ""}
-                    </Text>
-                  </div>
-                  {["succeeded", "failed", "cancelled"].includes(
-                    selectedRun.run.status,
-                  ) ? (
-                    <Button
-                      variant="outline"
-                      type="button"
-                      onClick={() => onDelete(selectedRun.run)}
-                      icon={<Trash2 />}
-                    >
-                      {zh ? "删除记录" : "Delete record"}
-                    </Button>
-                  ) : null}
-                </div>
-
-                <OperationsSummaryStrip
-                  ariaLabel={zh ? "Agent Run 摘要" : "Agent Run summary"}
-                  items={[
-                    {
-                      label: zh ? "开始时间" : "Started",
-                      value: formatDateTime(
-                        selectedRun.run.started_at || selectedRun.run.created_at,
-                      ),
-                      detail: selectedRun.run.finished_at
-                        ? `${zh ? "结束" : "Finished"} ${formatDateTime(selectedRun.run.finished_at)}`
-                        : zh
-                          ? "仍在执行 / 等待"
-                          : "Still running / waiting",
-                    },
-                    {
-                      label: "Token",
-                      value: (
-                        selectedRun.run.input_tokens +
-                        selectedRun.run.output_tokens
-                      ).toLocaleString(),
-                      detail: `${selectedRun.run.input_tokens} in / ${selectedRun.run.output_tokens} out`,
-                    },
-                    {
-                      label: zh ? "工具调用" : "Tool calls",
-                      value: selectedRun.tool_calls.length,
-                      detail: `${selectedRun.tool_calls.filter((call) => call.status === "failed").length} ${zh ? "个失败" : "failed"}`,
-                    },
-                    {
-                      label: zh ? "触发方式" : "Trigger",
-                      value:
-                        selectedRun.run.trigger_type === "cron"
-                          ? zh
-                            ? "计划触发"
-                            : "Cron"
-                          : zh
-                            ? "手动触发"
-                            : "Manual",
-                      detail: `Run #${selectedRun.run.id}`,
-                    },
-                  ]}
-                />
-
-                <section
-                  className="overflow-hidden rounded-lg border bg-background"
-                  aria-label={zh ? "AI 输出" : "AI output"}
+          {selectedRun ? (
+            <div
+              data-slot="ops-detail-pane"
+              data-pattern="record-detail-composition"
+              className={`${mobilePane === "master" ? "hidden md:flex" : "flex"} min-w-0 flex-col gap-6`}
+              aria-label={
+                zh
+                  ? `Agent Run #${selectedRun.run.id} 详情`
+                  : `Agent Run #${selectedRun.run.id} details`
+              }
+            >
+              <div className="md:hidden">
+                <Button
+                  variant="ghost"
+                  icon={<ArrowLeft />}
+                  onClick={returnToRunList}
                 >
-                  <div className="border-b px-5 py-4">
-                    <OperationsRegionHeading
-                      title={zh ? "AI 输出" : "AI output"}
-                      description={
-                        zh
-                          ? "输出属于当前 Run；完整 Tool Call、引用与失败证据继续保留在下方执行日志。"
-                          : "The output belongs to the current Run; Tool Calls, citations, and failure evidence remain in the execution log below."
-                      }
+                  {zh ? "返回运行列表" : "Back to run list"}
+                </Button>
+              </div>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Heading level={2}>
+                      Run #{selectedRun.run.id} ·{" "}
+                      {agentMap.get(selectedRun.run.agent_id)?.name ||
+                        `Agent #${selectedRun.run.agent_id}`}
+                    </Heading>
+                    <StatusPill
+                      status={selectedRun.run.status}
+                      locale={locale}
                     />
                   </div>
-                  <div className="p-5">
-                    <div className="agent-output">
-                      {selectedRun.run.output_summary ? (
-                        <MarkdownRenderer
-                          content={selectedRun.run.output_summary}
-                        />
-                      ) : selectedRun.run.error_message ? (
-                        <pre>{selectedRun.run.error_message}</pre>
-                      ) : (
-                        "—"
-                      )}
-                    </div>
-                  </div>
-                </section>
+                  <Text className="mt-2 max-w-4xl" tone="muted">
+                    {agentRunSummary(selectedRun.run, locale)}
+                  </Text>
+                  <Text size="xs" tone="muted" className="mt-1">
+                    {selectedRun.run.provider}
+                    {selectedRun.run.model ? ` · ${selectedRun.run.model}` : ""}
+                  </Text>
+                </div>
+                {["succeeded", "failed", "cancelled"].includes(
+                  selectedRun.run.status,
+                ) ? (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => onDelete(selectedRun.run)}
+                    icon={<Trash2 />}
+                  >
+                    {zh ? "删除记录" : "Delete record"}
+                  </Button>
+                ) : null}
+              </div>
 
-                <RecordEvidence
-                  run={selectedRun}
-                  locale={locale}
-                  formatDateTime={formatDateTime}
-                />
+              <OperationsSummaryStrip
+                ariaLabel={zh ? "Agent Run 摘要" : "Agent Run summary"}
+                items={[
+                  {
+                    label: zh ? "开始时间" : "Started",
+                    value: formatDateTime(
+                      selectedRun.run.started_at || selectedRun.run.created_at,
+                    ),
+                    detail: selectedRun.run.finished_at
+                      ? `${zh ? "结束" : "Finished"} ${formatDateTime(selectedRun.run.finished_at)}`
+                      : zh
+                        ? "仍在执行 / 等待"
+                        : "Still running / waiting",
+                  },
+                  {
+                    label: "Token",
+                    value: (
+                      selectedRun.run.input_tokens +
+                      selectedRun.run.output_tokens
+                    ).toLocaleString(),
+                    detail: `${selectedRun.run.input_tokens} in / ${selectedRun.run.output_tokens} out`,
+                  },
+                  {
+                    label: zh ? "工具调用" : "Tool calls",
+                    value: selectedRun.tool_calls.length,
+                    detail: `${selectedRun.tool_calls.filter((call) => call.status === "failed").length} ${zh ? "个失败" : "failed"}`,
+                  },
+                  {
+                    label: zh ? "触发方式" : "Trigger",
+                    value:
+                      selectedRun.run.trigger_type === "cron"
+                        ? zh
+                          ? "计划触发"
+                          : "Cron"
+                        : zh
+                          ? "手动触发"
+                          : "Manual",
+                    detail: `Run #${selectedRun.run.id}`,
+                  },
+                ]}
+              />
+
+              <section
+                className="overflow-hidden rounded-lg border bg-background"
+                aria-label={zh ? "AI 输出" : "AI output"}
+              >
+                <div className="border-b px-5 py-4">
+                  <OperationsRegionHeading
+                    title={zh ? "AI 输出" : "AI output"}
+                    description={
+                      zh
+                        ? "输出属于当前 Run；完整 Tool Call、引用与失败证据继续保留在下方执行日志。"
+                        : "The output belongs to the current Run; Tool Calls, citations, and failure evidence remain in the execution log below."
+                    }
+                  />
+                </div>
+                <div className="p-5">
+                  <div className="agent-output">
+                    {selectedRun.run.output_summary ? (
+                      <MarkdownRenderer
+                        content={selectedRun.run.output_summary}
+                      />
+                    ) : selectedRun.run.error_message ? (
+                      <pre>{selectedRun.run.error_message}</pre>
+                    ) : (
+                      "—"
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <RecordEvidence
+                run={selectedRun}
+                locale={locale}
+                formatDateTime={formatDateTime}
+              />
+            </div>
+          ) : (
+            <div
+              data-slot="ops-detail-pane"
+              className={`${mobilePane === "master" ? "hidden md:block" : "block"} rounded-lg border bg-background p-8`}
+            >
+              <div className="mb-4 md:hidden">
+                <Button
+                  variant="ghost"
+                  icon={<ArrowLeft />}
+                  onClick={returnToRunList}
+                >
+                  {zh ? "返回运行列表" : "Back to run list"}
+                </Button>
               </div>
-            ) : (
-              <div className="rounded-lg border bg-background p-8">
-                <Empty
-                  title={
-                    zh
-                      ? "选择一个 Agent Run 查看证据"
-                      : "Select an Agent Run to inspect evidence"
-                  }
-                />
-              </div>
-            )}
-          </div>
-        </div>
+              <Empty
+                title={
+                  zh
+                    ? "选择一个 Agent Run 查看证据"
+                    : "Select an Agent Run to inspect evidence"
+                }
+              />
+            </div>
+          )}        </div>
       )}
     </div>
   );
