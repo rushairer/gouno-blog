@@ -907,7 +907,8 @@ export function RecordsWorkspace({
                 }
               />
             </div>
-          )}        </div>
+          )}
+        </div>
       )}
     </div>
   );
