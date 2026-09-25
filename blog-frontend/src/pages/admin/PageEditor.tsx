@@ -724,7 +724,7 @@ export default function PageEditor() {
         <Field label="访问路径 (Slug)" required hint="访问路径为 /<slug>">
           <Input
             aria-label="访问路径 (Slug)"
-            className="font-mono"
+            className="type-family-mono"
             value={page.slug}
             onChange={(event) => update("slug", event.target.value)}
             placeholder="about"

@@ -80,13 +80,34 @@ test("legacy advanced deep link redirects to the dedicated Provider settings sec
   await attachScreenshot(page, testInfo, "u04a-legacy-advanced-redirect");
 });
 
-test("failed approval keeps a long governed proposal readable on mobile", async ({ page }, testInfo) => {
+test("failed approval drills from the mobile decision queue into one workbench pane", async ({ page }, testInfo) => {
   const { consoleProblems, fixtureState } = await openAiPage(
     page,
     "/admin/ai-ops?tab=inbox",
     { width: 390, height: 844 },
   );
 
+  const frame = page.locator('[data-slot="ops-master-detail"]').first();
+  const rail = frame.locator('[data-slot="ops-rail"]');
+  const detailPane = frame.locator('[data-slot="ops-detail-pane"]');
+  await expect(frame).toHaveAttribute("data-mobile-pane", "master");
+  await expect(rail).toBeVisible();
+  await expect(detailPane).toBeHidden();
+
+  await rail
+    .getByRole("button", {
+      name: /Apply a content proposal to related content/,
+    })
+    .click();
+  await expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+  await expect(rail).toBeHidden();
+  await expect(detailPane).toBeVisible();
+  await expect(
+    detailPane.getByRole("button", {
+      name: "Back to decision queue",
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(
     page
       .getByRole("alert")
@@ -99,23 +120,90 @@ test("failed approval keeps a long governed proposal readable on mobile", async 
   await expectNoDocumentOverflow(page);
   expectFixtureHealth(fixtureState, consoleProblems);
   await attachScreenshot(page, testInfo, "u04a-mobile-approval-preview");
+
+  await detailPane
+    .getByRole("button", { name: "Back to decision queue", exact: true })
+    .click();
+  await expect(frame).toHaveAttribute("data-mobile-pane", "master");
+  await expect(rail).toBeVisible();
+  await expect(detailPane).toBeHidden();
 });
 
-test("Agent run detail contains long Markdown output on a narrow viewport", async ({ page }, testInfo) => {
+test("Agent run detail drills into one mobile evidence pane and preserves explicit run routing", async ({ page }, testInfo) => {
   const { consoleProblems, fixtureState } = await openAiPage(
     page,
     "/admin/ai-ops?tab=records&record=agent",
     { width: 390, height: 844 },
   );
 
+  const frame = page.locator('[data-slot="ops-master-detail"]').first();
+  const rail = frame.locator('[data-slot="ops-rail"]');
+  const detailPane = frame.locator('[data-slot="ops-detail-pane"]');
+  await expect(frame).toHaveAttribute("data-mobile-pane", "master");
   await expect(page.getByRole("list", { name: "Agent run list" })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("run")).toBeNull();
+
   await page.getByRole("button", { name: "Inspect" }).first().click();
+  await expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+  await expect(rail).toBeHidden();
+  await expect(detailPane).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("run")).not.toBeNull();
+  await expect(
+    detailPane.getByRole("button", { name: "Back to run list", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "AI output" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Long-form execution result" })).toBeVisible();
   await expect(page.locator(".agent-output pre").first()).toBeVisible();
   await expectNoDocumentOverflow(page);
   expectFixtureHealth(fixtureState, consoleProblems);
   await attachScreenshot(page, testInfo, "u04a-mobile-agent-long-output");
+
+  await detailPane
+    .getByRole("button", { name: "Back to run list", exact: true })
+    .click();
+  await expect(frame).toHaveAttribute("data-mobile-pane", "master");
+  await expect(rail).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("run")).toBeNull();
+});
+
+test("Workflow run center keeps preload on the mobile list until the user explicitly drills in", async ({ page }, testInfo) => {
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-ops?tab=records&record=workflow",
+    { width: 390, height: 844 },
+  );
+
+  const frame = page.locator('[data-slot="ops-master-detail"]').first();
+  const rail = frame.locator('[data-slot="ops-rail"]');
+  const detailPane = frame.locator('[data-slot="ops-detail-pane"]');
+  const workflowRunList = page.getByRole("list", { name: "Workflow run list" });
+  await expect(frame).toHaveAttribute("data-mobile-pane", "master");
+  await expect(workflowRunList).toBeVisible();
+  await expect(detailPane).toBeHidden();
+  expect(new URL(page.url()).searchParams.get("run")).toBeNull();
+
+  const workflowRunRow = workflowRunList
+    .getByRole("listitem")
+    .filter({ hasText: "Run #201" });
+  await workflowRunRow.getByRole("button").click();
+  await expect(frame).toHaveAttribute("data-mobile-pane", "detail");
+  await expect(rail).toBeHidden();
+  await expect(detailPane).toBeVisible();
+  await expect(
+    detailPane.getByRole("button", { name: "Back to run list", exact: true }),
+  ).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("run")).toBe("201");
+  await expect(page.getByRole("heading", { name: "Run summary" })).toBeVisible();
+  await expectNoDocumentOverflow(page);
+  expectFixtureHealth(fixtureState, consoleProblems);
+  await attachScreenshot(page, testInfo, "u04a-mobile-workflow-run-detail");
+
+  await detailPane
+    .getByRole("button", { name: "Back to run list", exact: true })
+    .click();
+  await expect(frame).toHaveAttribute("data-mobile-pane", "master");
+  await expect(rail).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("run")).toBeNull();
 });
 
 test("Workflow run detail contains long output and preserves run query state", async ({ page }, testInfo) => {

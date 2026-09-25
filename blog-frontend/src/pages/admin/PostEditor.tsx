@@ -893,7 +893,7 @@ export default function PostEditor() {
               <ChoiceButton
                 key={version.id}
                 type="button"
-                className="h-auto min-h-0 w-full items-start rounded-md px-2.5 py-2.5 text-left text-sm whitespace-normal transition-colors hover:bg-muted/70 [&>span]:min-w-0 [&>span]:w-full"
+                className="h-auto min-h-0 w-full items-start rounded-md px-2.5 py-2.5 text-left type-body-sm whitespace-normal transition-colors hover:bg-muted/70 [&>span]:min-w-0 [&>span]:w-full"
                 onClick={() => setRestoreTarget(version)}
                 aria-label={`查看 ${version.title || "无标题草稿"} 历史版本`}
               >
@@ -1189,7 +1189,7 @@ export default function PostEditor() {
         >
           <Input
             aria-label="访问路径 (Slug)"
-            className="font-mono"
+            className="type-family-mono"
             value={post.slug}
             onChange={(event) => update("slug", event.target.value)}
             required

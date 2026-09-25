@@ -128,6 +128,88 @@ for (const path of railFiles) {
 const workflowWorkspace = await source(
   "src/components/agent/WorkflowWorkspace.tsx",
 );
+const decisionInbox = await source(
+  "src/components/agent/DecisionInboxWorkspace.tsx",
+);
+const workflowRunRecords = await source(
+  "src/components/agent/WorkflowRunRecords.tsx",
+);
+const agentRunRecordsMobile = await source(
+  "src/components/agent/AgentRunRecords.tsx",
+);
+
+for (const marker of [
+  "text-left type-weight-regular transition-colors",
+]) {
+  requireText(
+    workflowWorkspace,
+    marker,
+    `WorkflowWorkspace: CSA-A003 semantic Typography binding is missing ${marker}`,
+  );
+}
+if (workflowWorkspace.includes("text-left font-normal transition-colors")) {
+  failures.push(
+    "WorkflowWorkspace: retired CSA-A003 raw row weight returned",
+  );
+}
+
+for (const [sourcePath, content, backLabel] of [
+  [
+    "DecisionInboxWorkspace.tsx",
+    decisionInbox,
+    "返回决策队列",
+  ],
+  [
+    "WorkflowRunRecords.tsx",
+    workflowRunRecords,
+    "返回运行列表",
+  ],
+  [
+    "AgentRunRecords.tsx",
+    agentRunRecordsMobile,
+    "返回运行列表",
+  ],
+]) {
+  for (const marker of [
+    'data-mobile-pane={mobilePane}',
+    'data-slot="ops-detail-pane"',
+    'setMobilePane("detail")',
+    backLabel,
+  ]) {
+    requireText(
+      content,
+      marker,
+      `${sourcePath}: CSA-A004 mobile Master/Detail contract is missing ${marker}`,
+    );
+  }
+}
+
+requireText(
+  decisionInbox,
+  'useState<"master" | "detail">("master")',
+  "DecisionInboxWorkspace: mobile Inbox must remain queue-first despite desktop preselection",
+);
+for (const [sourcePath, content] of [
+  ["WorkflowRunRecords.tsx", workflowRunRecords],
+  ["AgentRunRecords.tsx", agentRunRecordsMobile],
+]) {
+  requirePattern(
+    content,
+    /new URLSearchParams\(window\.location\.search\)\.(?:get|has)\("run"\)/,
+    `${sourcePath}: Run Center mobile pane must read the explicit run deep link`,
+  );
+  requirePattern(
+    content,
+    /useState<"master" \| "detail">\([\s\S]{0,220}(?:hasRunDeepLink|new URLSearchParams\(window\.location\.search\)\.(?:get|has)\("run"\))[\s\S]{0,120}\?\s*"detail"\s*:\s*"master"/,
+    `${sourcePath}: Run Center mobile pane must initialize detail only from an explicit run deep link`,
+  );
+}
+requireText(
+  workflowRunRecords,
+  "void inspect(candidate, false)",
+  "WorkflowRunRecords: background first-run preload must not manufacture a mobile run deep link",
+);
+
 requireText(
   workflowWorkspace,
   'data-slot="workflow-list-toolbar"',

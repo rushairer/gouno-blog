@@ -1,4 +1,5 @@
-import { ListChecks, Trash2 } from "lucide-react";
+import { ArrowLeft, ListChecks, Trash2 } from "lucide-react";
+import { useState } from "react";
 import type { Agent, AgentRun, AgentToolCall } from "../../types/agent";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { MarkdownRenderer } from "../MarkdownRenderer";
@@ -668,6 +669,17 @@ export function RecordsWorkspace({
 }) {
   const agentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const zh = locale === "zh";
+  const hasRunDeepLink = new URLSearchParams(window.location.search).has("run");
+  const [mobilePane, setMobilePane] = useState<"master" | "detail">(
+    hasRunDeepLink ? "detail" : "master",
+  );
+
+  const returnToRunList = () => {
+    setMobilePane("master");
+    const url = new URL(window.location.href);
+    url.searchParams.delete("run");
+    window.history.replaceState(null, "", url);
+  };
 
   return (
     <div className="agent-runs-center flex min-w-0 flex-col gap-4">
@@ -681,11 +693,12 @@ export function RecordsWorkspace({
         <div
           data-slot="ops-master-detail"
           data-pattern="master-detail-composition"
+          data-mobile-pane={mobilePane}
           className="grid min-w-0 items-stretch gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]"
         >
           <section
             data-slot="ops-rail"
-            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
+            className={`${mobilePane === "detail" ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background`}
             aria-label="Agent Runs"
           >
             <div className="shrink-0 border-b px-[18px] py-4">
@@ -724,7 +737,13 @@ export function RecordsWorkspace({
                       </>
                     }
                     selected={selectedRun?.run?.id === run.id}
-                    onClick={() => onInspect(run)}
+                    onClick={() => {
+                      setMobilePane("detail");
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("run", String(run.id));
+                      window.history.replaceState(null, "", url);
+                      onInspect(run);
+                    }}
                     ariaLabel={
                       zh ? `查看 Run #${run.id}` : `Inspect Run #${run.id}`
                     }
@@ -736,15 +755,24 @@ export function RecordsWorkspace({
 
           {selectedRun ? (
             <div
-              data-slot="ops-detail-stack"
+              data-slot="ops-detail-pane"
               data-pattern="record-detail-composition"
-              className="flex min-w-0 flex-col gap-6"
+              className={`${mobilePane === "master" ? "hidden md:flex" : "flex"} min-w-0 flex-col gap-6`}
               aria-label={
                 zh
                   ? `Agent Run #${selectedRun.run.id} 详情`
                   : `Agent Run #${selectedRun.run.id} details`
               }
             >
+              <div className="md:hidden">
+                <Button
+                  variant="ghost"
+                  icon={<ArrowLeft />}
+                  onClick={returnToRunList}
+                >
+                  {zh ? "返回运行列表" : "Back to run list"}
+                </Button>
+              </div>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -858,7 +886,19 @@ export function RecordsWorkspace({
               />
             </div>
           ) : (
-            <div className="rounded-lg border bg-background p-8">
+            <div
+              data-slot="ops-detail-pane"
+              className={`${mobilePane === "master" ? "hidden md:block" : "block"} rounded-lg border bg-background p-8`}
+            >
+              <div className="mb-4 md:hidden">
+                <Button
+                  variant="ghost"
+                  icon={<ArrowLeft />}
+                  onClick={returnToRunList}
+                >
+                  {zh ? "返回运行列表" : "Back to run list"}
+                </Button>
+              </div>
               <Empty
                 title={
                   zh

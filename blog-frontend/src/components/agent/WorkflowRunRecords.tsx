@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { operationsApi } from "../../api/operations";
 import type { ArticleImagePreview } from "../../api/operations";
 import { workflowApi } from "../../api/workflows";
@@ -9,7 +10,7 @@ import type {
   WorkflowRun,
   WorkflowStepRun,
 } from "../../types/agent";
-import { Alert, Empty, Modal, Select, Text } from "@gouno/ui/core";
+import { Alert, Button, Empty, Modal, Select, Text } from "@gouno/ui/core";
 import { ArticlePreviewModal } from "./ArticlePreviewModal";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunDetail } from "./WorkflowRunDetail";
@@ -77,6 +78,11 @@ export function WorkflowRunRecords({
     number | null
   >(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [mobilePane, setMobilePane] = useState<"master" | "detail">(() =>
+    new URLSearchParams(window.location.search).get("run")
+      ? "detail"
+      : "master",
+  );
   const [generationNow, setGenerationNow] = useState(() => Date.now());
   const inspectedFromURL = useRef(false);
   const autoInspectedRunID = useRef<number | null>(null);
@@ -116,12 +122,17 @@ export function WorkflowRunRecords({
   }, [runs, selected]);
 
   const inspect = useCallback(
-    async (run: WorkflowRun) => {
+    async (
+      run: WorkflowRun,
+      syncRoute = new URLSearchParams(window.location.search).has("run"),
+    ) => {
       setLoadingID(run.id);
       setError("");
-      const url = new URL(window.location.href);
-      url.searchParams.set("run", String(run.id));
-      window.history.replaceState(null, "", url);
+      if (syncRoute) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("run", String(run.id));
+        window.history.replaceState(null, "", url);
+      }
       try {
         const [steps, resources, interactions, candidates, events] =
           await Promise.all([
@@ -567,6 +578,7 @@ export function WorkflowRunRecords({
       new URLSearchParams(window.location.search).get("run"),
     );
     if (!requestedID) return;
+    setMobilePane("detail");
     const requested = runs.find((run) => run.id === requestedID);
     if (!requested) {
       if (runs.length > 0) {
@@ -575,14 +587,14 @@ export function WorkflowRunRecords({
           .getRuns()
           .then((allRuns) => {
             const found = allRuns.find((run) => run.id === requestedID);
-            if (found) void inspect(found);
+            if (found) void inspect(found, true);
           })
           .catch(() => {});
       }
       return;
     }
     inspectedFromURL.current = true;
-    void inspect(requested);
+    void inspect(requested, true);
   }, [inspect, runs]);
 
   useEffect(() => {
@@ -599,7 +611,7 @@ export function WorkflowRunRecords({
     )
       return;
     autoInspectedRunID.current = candidate.id;
-    void inspect(candidate);
+    void inspect(candidate, false);
   }, [filtered, inspect, loadingID, selected]);
 
   return (
@@ -613,6 +625,7 @@ export function WorkflowRunRecords({
           onChange={(nextValue) => {
             setWorkflowID(Number(nextValue));
             setSelected(null);
+            setMobilePane("master");
             autoInspectedRunID.current = null;
             const url = new URL(window.location.href);
             url.searchParams.delete("run");
@@ -632,6 +645,7 @@ export function WorkflowRunRecords({
           onChange={(nextValue) => {
             setStatusFilter(String(nextValue));
             setSelected(null);
+            setMobilePane("master");
             autoInspectedRunID.current = null;
             const url = new URL(window.location.href);
             url.searchParams.delete("run");
@@ -651,11 +665,12 @@ export function WorkflowRunRecords({
       <div
         data-slot="ops-master-detail"
         data-pattern="master-detail-composition"
+        data-mobile-pane={mobilePane}
         className="grid min-w-0 items-stretch gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]"
       >
         <aside
           data-slot="ops-rail"
-          className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
+          className={`${mobilePane === "detail" ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background`}
           aria-label={zh ? "Workflow Runs" : "Workflow Runs"}
         >
           <div className="shrink-0 border-b px-[18px] py-4">
@@ -711,7 +726,10 @@ export function WorkflowRunRecords({
                     }
                     selected={selected?.run.id === run.id}
                     disabled={loadingID === run.id}
-                    onClick={() => void inspect(run)}
+                    onClick={() => {
+                      setMobilePane("detail");
+                      void inspect(run, true);
+                    }}
                   />
                 </div>
               );
@@ -730,7 +748,24 @@ export function WorkflowRunRecords({
           </div>
         </aside>
 
-        <div className="min-w-0">
+        <div
+          data-slot="ops-detail-pane"
+          className={`${mobilePane === "master" ? "hidden md:block" : "block"} min-w-0`}
+        >
+          <div className="mb-4 md:hidden">
+            <Button
+              variant="ghost"
+              icon={<ArrowLeft />}
+              onClick={() => {
+                setMobilePane("master");
+                const url = new URL(window.location.href);
+                url.searchParams.delete("run");
+                window.history.replaceState(null, "", url);
+              }}
+            >
+              {zh ? "返回运行列表" : "Back to run list"}
+            </Button>
+          </div>
           {selected ? (
             <WorkflowRunDetail
               selected={selected}

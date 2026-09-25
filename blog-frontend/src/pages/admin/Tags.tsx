@@ -272,7 +272,7 @@ export default function Tags() {
                     {tag.name}
                   </strong>
                 </div>
-                <Tag color="default" className="shrink-0 font-mono">
+                <Tag color="default" className="shrink-0 type-family-mono">
                   {tag.post_count} 篇
                 </Tag>
               </div>
