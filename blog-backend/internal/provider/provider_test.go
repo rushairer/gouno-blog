@@ -732,3 +732,58 @@ func TestOpenAIAutoStreamFallbackDoesNotRetryUnrelatedErrors(t *testing.T) {
 		t.Fatalf("requests=%d err=%v", requests, err)
 	}
 }
+
+
+func TestResolveProviderTargetURLKeepsCompatibleBasePrefixes(t *testing.T) {
+	tests := []struct {
+		name, baseURL, endpoint, want string
+	}{
+		{
+			name: "default openai root",
+			baseURL: "https://api.openai.com",
+			endpoint: "/v1/chat/completions",
+			want: "https://api.openai.com/v1/chat/completions",
+		},
+		{
+			name: "versioned openai base",
+			baseURL: "https://api.example.com/v1",
+			endpoint: "/v1/chat/completions",
+			want: "https://api.example.com/v1/chat/completions",
+		},
+		{
+			name: "volcengine compatible prefix",
+			baseURL: "https://ark.cn-beijing.volces.com/api/v3",
+			endpoint: "/v1/chat/completions",
+			want: "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+		},
+		{
+			name: "dashscope compatible prefix",
+			baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+			endpoint: "/v1/chat/completions",
+			want: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+		},
+		{
+			name: "compatible responses prefix",
+			baseURL: "https://ark.cn-beijing.volces.com/api/v3",
+			endpoint: "/v1/responses",
+			want: "https://ark.cn-beijing.volces.com/api/v3/responses",
+		},
+		{
+			name: "anthropic prefix remains native",
+			baseURL: "https://api.deepseek.com/anthropic",
+			endpoint: "/v1/messages",
+			want: "https://api.deepseek.com/anthropic/v1/messages",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := resolveProviderTargetURL(
+				map[bool]string{true: "openai", false: "anthropic"}[strings.Contains(test.endpoint, "chat/completions") || strings.Contains(test.endpoint, "responses")],
+				test.baseURL,
+				test.endpoint,
+			); got != test.want {
+				t.Fatalf("target URL = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
