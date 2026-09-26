@@ -263,11 +263,10 @@ func resolveProviderTargetURL(providerName, vendor, baseURL, endpointPath string
 
 	// OpenAI-compatible SDK base URLs represent the API root, which is not
 	// universally /v1. Vendor-specific prefixes such as /api/v3,
-	// /compatible-mode/v1 and /v2 therefore own their version/path segment.
-	// DeepSeek's official root is the notable pathless case: its Chat endpoint
-	// is /chat/completions rather than /v1/chat/completions.
-	if providerName == "openai" &&
-		(strings.HasPrefix(endpointPath, "/v1/chat/completions") || strings.HasPrefix(endpointPath, "/v1/responses")) {
+	// /compatible-mode/v1 and /v2 therefore own their version/path segment for
+	// every OpenAI resource (Chat, Responses, Images, etc.).
+	// DeepSeek's official pathless root follows the same SDK-root semantics.
+	if providerName == "openai" && strings.HasPrefix(endpointPath, "/v1/") {
 		resourcePath := strings.TrimPrefix(endpointPath, "/v1")
 		if basePath != "" && basePath != "/" {
 			return baseURL + resourcePath
