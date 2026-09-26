@@ -1,7 +1,11 @@
 import { KeyRound, Save } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import type { ProviderProfile, ProviderType } from "../../types/agent";
+import type {
+  ProviderProfile,
+  ProviderType,
+  ProviderVendor,
+} from "../../types/agent";
 import { emptyProvider } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
 import {
@@ -23,6 +27,7 @@ export interface ProviderFormValue {
   id?: number;
   name: string;
   provider_type: ProviderType;
+  vendor: ProviderVendor;
   base_url: string;
   model: string;
   api_key: string;
@@ -31,6 +36,122 @@ export interface ProviderFormValue {
   stream_mode: string;
   request_timeout_seconds: number;
   max_output_tokens: number;
+}
+
+const vendorPresets: Record<
+  ProviderVendor,
+  {
+    label: string;
+    providerType: ProviderType;
+    baseURL: string;
+    protocolMode: string;
+    modelPlaceholder: string;
+  }
+> = {
+  openai: {
+    label: "OpenAI",
+    providerType: "openai",
+    baseURL: "https://api.openai.com",
+    protocolMode: "responses",
+    modelPlaceholder: "gpt-5.6",
+  },
+  anthropic: {
+    label: "Anthropic",
+    providerType: "anthropic",
+    baseURL: "https://api.anthropic.com",
+    protocolMode: "",
+    modelPlaceholder: "claude-sonnet-5",
+  },
+  google: {
+    label: "Google Gemini",
+    providerType: "gemini",
+    baseURL: "https://generativelanguage.googleapis.com",
+    protocolMode: "generate_content",
+    modelPlaceholder: "gemini-3.1-pro",
+  },
+  deepseek: {
+    label: "DeepSeek",
+    providerType: "openai",
+    baseURL: "https://api.deepseek.com",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "deepseek-flash",
+  },
+  alibaba: {
+    label: "阿里云百炼 / Qwen",
+    providerType: "openai",
+    baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "qwen-plus",
+  },
+  volcengine: {
+    label: "火山方舟 / 豆包",
+    providerType: "openai",
+    baseURL: "https://ark.cn-beijing.volces.com/api/v3",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "doubao-seed-2-1-pro-260628",
+  },
+  moonshot: {
+    label: "Moonshot / Kimi",
+    providerType: "openai",
+    baseURL: "https://api.moonshot.cn/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "kimi-k2",
+  },
+  tencent: {
+    label: "腾讯混元",
+    providerType: "openai",
+    baseURL: "https://api.hunyuan.cloud.tencent.com/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "hunyuan-turbos-latest",
+  },
+  zhipu: {
+    label: "智谱 GLM",
+    providerType: "openai",
+    baseURL: "https://open.bigmodel.cn/api/paas/v4",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "glm-5",
+  },
+  baidu: {
+    label: "百度千帆",
+    providerType: "openai",
+    baseURL: "",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "填写模型 ID",
+  },
+  minimax: {
+    label: "MiniMax",
+    providerType: "openai",
+    baseURL: "",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "填写模型 ID",
+  },
+  xai: {
+    label: "xAI",
+    providerType: "openai",
+    baseURL: "https://api.x.ai/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "grok-4",
+  },
+  mistral: {
+    label: "Mistral AI",
+    providerType: "openai",
+    baseURL: "https://api.mistral.ai/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "mistral-large-latest",
+  },
+  custom: {
+    label: "自定义 / 兼容服务",
+    providerType: "openai",
+    baseURL: "",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "model-id",
+  },
+};
+
+function fallbackVendor(providerType: ProviderType): ProviderVendor {
+  if (providerType === "anthropic") return "anthropic";
+  if (providerType === "gemini") return "google";
+  return "openai";
 }
 
 export function ProviderForm({
@@ -52,6 +173,7 @@ export function ProviderForm({
           id: initial.id,
           name: initial.name,
           provider_type: initial.provider_type,
+          vendor: initial.vendor || fallbackVendor(initial.provider_type),
           base_url: initial.base_url,
           model: initial.model,
           api_key: "",
@@ -93,28 +215,30 @@ export function ProviderForm({
     onCancel();
   };
 
+  const setVendor = (nextValue: string | string[]) => {
+    const vendor = String(nextValue) as ProviderVendor;
+    const preset = vendorPresets[vendor];
+    setValue((current) => ({
+      ...current,
+      vendor,
+      provider_type: preset.providerType,
+      base_url: preset.baseURL || current.base_url,
+      protocol_mode: preset.protocolMode,
+    }));
+  };
+
   const setProviderType = (nextValue: string | string[]) => {
     const providerType = String(nextValue) as ProviderType;
-    setValue((current) => {
-      const defaultBaseURL =
-        providerType === "openai"
-          ? "https://api.openai.com"
-          : providerType === "gemini"
-            ? "https://generativelanguage.googleapis.com"
-            : "https://api.anthropic.com";
-      const defaultMode =
+    setValue((current) => ({
+      ...current,
+      provider_type: providerType,
+      protocol_mode:
         providerType === "openai"
           ? "chat_completions"
           : providerType === "gemini"
             ? "generate_content"
-            : "";
-      return {
-        ...current,
-        provider_type: providerType,
-        base_url: current.base_url.trim() ? current.base_url : defaultBaseURL,
-        protocol_mode: defaultMode,
-      };
-    });
+            : "",
+    }));
   };
 
   const protocolFields =
@@ -265,11 +389,13 @@ export function ProviderForm({
                   }
                 />
               </Field>
-              <Field label={labels.providerType}>
-                <Select value={value.provider_type} onChange={setProviderType}>
-                  <option value="openai">OpenAI / compatible</option>
-                  <option value="anthropic">Anthropic native</option>
-                  <option value="gemini">Gemini native</option>
+              <Field label={labels.providerVendor || "供应商"}>
+                <Select value={value.vendor} onChange={setVendor}>
+                  {Object.entries(vendorPresets).map(([vendor, preset]) => (
+                    <option key={vendor} value={vendor}>
+                      {preset.label}
+                    </option>
+                  ))}
                 </Select>
               </Field>
             </FormGrid>
@@ -281,6 +407,19 @@ export function ProviderForm({
           >
             <div className="flex flex-col gap-5">
               <FormGrid columns={2}>
+                <Field label={labels.providerProtocol || "接口协议"}>
+                  <Select value={value.provider_type} onChange={setProviderType}>
+                    <option value="openai">
+                      {labels.protocolOpenAICompatible || "OpenAI Compatible"}
+                    </option>
+                    <option value="anthropic">
+                      {labels.protocolAnthropicMessages || "Anthropic Messages"}
+                    </option>
+                    <option value="gemini">
+                      {labels.protocolGeminiNative || "Gemini Native"}
+                    </option>
+                  </Select>
+                </Field>
                 <Field label={labels.baseUrl}>
                   <Input
                     className="font-mono"
@@ -295,16 +434,15 @@ export function ProviderForm({
                     }
                   />
                 </Field>
+              </FormGrid>
+
+              <FormGrid columns={2}>
                 <Field label={labels.model}>
                   <Input
                     className="font-mono"
                     required
                     placeholder={
-                      value.provider_type === "openai"
-                        ? "gpt-5-mini"
-                        : value.provider_type === "gemini"
-                          ? "gemini-3.1-flash-image"
-                          : "claude-sonnet-4-5"
+                      vendorPresets[value.vendor]?.modelPlaceholder || "model-id"
                     }
                     value={value.model}
                     onChange={(event) =>
