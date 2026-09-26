@@ -345,6 +345,7 @@
     "editProvider": "编辑模型连接",
     "agentName": "Agent 名称",
     "providerName": "连接名称",
+    "providerVendor": "平台",
     "providerType": "Provider 类型",
     "provider": "模型连接",
     "chooseProvider": "选择模型连接",
