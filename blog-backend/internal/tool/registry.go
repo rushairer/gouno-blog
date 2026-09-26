@@ -192,6 +192,38 @@ func (r *Registry) Invoke(ctx context.Context, capabilities []string, name strin
 	return definition.Risk, result, nil, err
 }
 
+func (r *Registry) SupportsSurface(name, surface string) bool {
+	definition, ok := r.definitions[name]
+	return ok && slices.Contains(definition.Surfaces, surface)
+}
+
+func (r *Registry) CatalogForSurface(surface string) []CatalogItem {
+	result := make([]CatalogItem, 0, len(r.definitions))
+	for _, definition := range r.definitions {
+		if !slices.Contains(definition.Surfaces, surface) {
+			continue
+		}
+		result = append(result, CatalogItem{
+			Name: definition.Name, Description: definition.Description, DescriptionZH: catalogDescriptionsZH[definition.Name],
+			Parameters: catalogSchema(definition.Parameters, emptyParametersSchema),
+			ConfigurationSchema: catalogSchema(definition.Configuration, nil),
+			DefaultBinding: catalogSchema(definition.DefaultBinding, nil),
+			Output: catalogSchema(definition.Output, nil),
+			Surfaces: definition.Surfaces, Risk: definition.Risk, Scope: definition.Scope,
+		})
+	}
+	slices.SortFunc(result, func(a, b CatalogItem) int {
+		if a.Name < b.Name {
+			return -1
+		}
+		if a.Name > b.Name {
+			return 1
+		}
+		return 0
+	})
+	return result
+}
+
 func (r *Registry) Catalog() []CatalogItem {
 	result := make([]CatalogItem, 0, len(r.definitions))
 	for _, definition := range r.definitions {
