@@ -140,9 +140,8 @@ func (s *ManagementService) validateProvider(ctx context.Context, profile *provi
 	if profile.ProviderType != providerdomain.ProviderOpenAI && profile.ProviderType != providerdomain.ProviderAnthropic && profile.ProviderType != providerdomain.ProviderGemini {
 		return fmt.Errorf("%w: unsupported provider protocol", ErrInvalid)
 	}
-	vendor := string(profile.Vendor)
-	if vendor == "" || len(vendor) > 64 || strings.ContainsAny(vendor, " \t\r\n") {
-		return fmt.Errorf("%w: invalid provider vendor", ErrInvalid)
+	if !providerdomain.IsSupportedVendor(profile.Vendor) {
+		return fmt.Errorf("%w: unsupported provider vendor", ErrInvalid)
 	}
 	if err := provider.ValidateUpstreamURL(ctx, profile.BaseURL, s.allowedHosts); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalid, err)
