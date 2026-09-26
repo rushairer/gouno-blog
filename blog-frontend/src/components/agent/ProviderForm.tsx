@@ -466,7 +466,9 @@ export function ProviderForm({
                   <Select value={value.provider_type} onChange={setProviderType}>
                     <option
                       value="openai"
-                      disabled={!activeVendorPreset.protocols.includes("openai")}
+                      disabled={
+                        !activeVendorPreset.protocols.includes("openai")
+                      }
                     >
                       {labels.protocolOpenAICompatible || "OpenAI Compatible"}
                     </option>
@@ -482,7 +484,9 @@ export function ProviderForm({
                     </option>
                     <option
                       value="gemini"
-                      disabled={!activeVendorPreset.protocols.includes("gemini")}
+                      disabled={
+                        !activeVendorPreset.protocols.includes("gemini")
+                      }
                     >
                       {labels.protocolGeminiNative || "Gemini Native"}
                     </option>
@@ -508,7 +512,9 @@ export function ProviderForm({
                 <Input
                   className="font-mono"
                   required
-                  placeholder={activeVendorPreset.modelPlaceholder || "model-id"}
+                  placeholder={
+                    activeVendorPreset.modelPlaceholder || "model-id"
+                  }
                   value={value.model}
                   onChange={(event) =>
                     setValue((current) => ({
