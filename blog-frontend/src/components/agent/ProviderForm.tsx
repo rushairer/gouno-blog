@@ -95,7 +95,7 @@ const vendorPresets: Record<
     baseURL: "https://ark.cn-beijing.volces.com/api/v3",
     protocolMode: "chat_completions",
     modelPlaceholder: "doubao-seed-2-1-pro-260628",
-    protocols: ["openai"],
+    protocols: ["openai", "anthropic"],
   },
   moonshot: {
     label: "Moonshot / Kimi",
@@ -119,28 +119,28 @@ const vendorPresets: Record<
     baseURL: "https://open.bigmodel.cn/api/paas/v4",
     protocolMode: "chat_completions",
     modelPlaceholder: "glm-5",
-    protocols: ["openai"],
+    protocols: ["openai", "anthropic"],
   },
   baidu: {
     label: "Baidu Qianfan",
     providerType: "openai",
-    baseURL: "",
+    baseURL: "https://qianfan.baidubce.com/v2",
     protocolMode: "chat_completions",
-    modelPlaceholder: "填写模型 ID",
+    modelPlaceholder: "model-id",
     protocols: ["openai"],
   },
   minimax: {
     label: "MiniMax",
     providerType: "openai",
-    baseURL: "",
+    baseURL: "https://api.minimax.io/v1",
     protocolMode: "chat_completions",
-    modelPlaceholder: "填写模型 ID",
+    modelPlaceholder: "model-id",
     protocols: ["openai"],
   },
   xai: {
     label: "xAI",
     providerType: "openai",
-    baseURL: "https://api.x.ai/v1",
+    baseURL: "https://api.x.ai",
     protocolMode: "chat_completions",
     modelPlaceholder: "grok-4",
     protocols: ["openai"],
@@ -183,6 +183,16 @@ function vendorProtocolBaseURL(
     if (providerType === "anthropic")
       return "https://dashscope.aliyuncs.com/apps/anthropic";
     if (providerType === "openai") return vendorPresets.alibaba.baseURL;
+  }
+  if (vendor === "volcengine") {
+    if (providerType === "anthropic")
+      return "https://ark.cn-beijing.volces.com/api/compatible";
+    if (providerType === "openai") return vendorPresets.volcengine.baseURL;
+  }
+  if (vendor === "zhipu") {
+    if (providerType === "anthropic")
+      return "https://open.bigmodel.cn/api/anthropic";
+    if (providerType === "openai") return vendorPresets.zhipu.baseURL;
   }
   const preset = vendorPresets[vendor];
   if (providerType === preset.providerType && preset.baseURL) {
