@@ -63,3 +63,42 @@ func TestBlogCSRFIssuesSecureCookie(t *testing.T) {
 		t.Fatalf("expected a secure %s cookie, got %#v", middleware.BlogCSRFCookie, cookie)
 	}
 }
+
+
+func TestBlogCSRFAllowsExplicitExternalCapabilityMachineRoute(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(middleware.BlogCSRFMiddleware(false))
+	router.POST("/api/external/v1/capabilities/:name/invoke", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/external/v1/capabilities/content.list_posts/invoke",
+		nil,
+	)
+	req.Header.Set("Authorization", "Bearer gouno_live_explicit-machine-key")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("status = %d", response.Code)
+	}
+}
+
+func TestBlogCSRFDoesNotGeneralizeMachineExemptionToBrowserAPI(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(middleware.BlogCSRFMiddleware(false))
+	router.POST("/api/admin/provider-profiles", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/provider-profiles", nil)
+	req.Header.Set("Authorization", "Bearer gouno_live_explicit-machine-key")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("status = %d", response.Code)
+	}
+}
