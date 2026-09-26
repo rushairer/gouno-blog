@@ -1465,6 +1465,12 @@ components:
         provider_type:
           type: string
           enum: [openai, anthropic, gemini]
+          description: Wire protocol family. The legacy field name is retained for backward compatibility.
+        vendor:
+          type: string
+          maxLength: 64
+          description: Commercial/model vendor identity, independent from the wire protocol. Omit for legacy clients to infer it from provider_type.
+          example: deepseek
         base_url:
           type: string
           format: uri
@@ -1484,7 +1490,7 @@ components:
         request_timeout_seconds:
           type: integer
           minimum: 1
-          maximum: 600
+          maximum: 1800
         max_output_tokens:
           type: integer
           minimum: 1
