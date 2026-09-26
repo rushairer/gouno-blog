@@ -227,6 +227,7 @@ export function ProviderForm({
         }
       : {
           ...emptyProvider,
+          vendor: "openai",
           protocol_mode: "chat_completions",
           stream_mode: "auto",
         },
