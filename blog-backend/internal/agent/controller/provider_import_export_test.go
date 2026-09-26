@@ -116,6 +116,7 @@ func TestProviderExportItemStructure(t *testing.T) {
 	item := providerExportItem{
 		Name:                  "Test",
 		ProviderType:          providerdomain.ProviderOpenAI,
+		Vendor:                providerdomain.VendorDeepSeek,
 		BaseURL:               "https://api.openai.com",
 		Model:                 "gpt-4o",
 		Enabled:               true,
