@@ -12,6 +12,56 @@ import (
 	"time"
 )
 
+func TestOpenAICompatibleAPIRoots(t *testing.T) {
+	cases := []struct {
+		name     string
+		basePath string
+		wantPath string
+	}{
+		{name: "host-only OpenAI root", basePath: "", wantPath: "/v1/chat/completions"},
+		{name: "standard v1 root", basePath: "/v1", wantPath: "/v1/chat/completions"},
+		{name: "Qianfan v2 root", basePath: "/v2", wantPath: "/v2/chat/completions"},
+		{name: "Ark v3 root", basePath: "/api/v3", wantPath: "/api/v3/chat/completions"},
+		{name: "Zhipu v4 root", basePath: "/api/paas/v4", wantPath: "/api/paas/v4/chat/completions"},
+		{name: "Bailian compatible root", basePath: "/compatible-mode/v1", wantPath: "/compatible-mode/v1/chat/completions"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tc.wantPath {
+					t.Fatalf("path = %s, want %s", r.URL.Path, tc.wantPath)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"OK"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1}}`))
+			}))
+			defer server.Close()
+
+			client, err := NewHTTPProviderWithConfig(
+				"openai",
+				server.URL+tc.basePath,
+				"secret",
+				"compatible-model",
+				"chat_completions",
+				"never",
+				[]string{"127.0.0.1"},
+				time.Second,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := client.Generate(context.Background(), Request{
+				Messages: []Message{{Role: "user", Content: "hello"}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Text != "OK" {
+				t.Fatalf("text = %q", result.Text)
+			}
+		})
+	}
+}
+
 func TestOpenAIGenerateParsesToolCallWithoutLeakingKey(t *testing.T) {
 	var authorization string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
