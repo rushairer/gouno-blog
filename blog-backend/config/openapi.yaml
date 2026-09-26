@@ -1468,7 +1468,7 @@ components:
           description: Wire protocol family. The legacy field name is retained for backward compatibility.
         vendor:
           type: string
-          maxLength: 64
+          enum: [openai, anthropic, google, deepseek, alibaba, volcengine, moonshot, tencent, zhipu, baidu, minimax, xai, mistral, custom]
           description: Commercial/model vendor identity, independent from the wire protocol. Omit for legacy clients to infer it from provider_type.
           example: deepseek
         base_url:
