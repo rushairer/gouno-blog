@@ -1,9 +1,14 @@
 import { KeyRound, Save } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import type { ProviderProfile, ProviderType } from "../../types/agent";
+import type {
+  ProviderProfile,
+  ProviderType,
+  ProviderVendor,
+} from "../../types/agent";
 import { emptyProvider } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
+import { providerPresetByVendor, providerPresets } from "./providerPresets";
 import {
   Button,
   Checkbox,
@@ -23,6 +28,7 @@ export interface ProviderFormValue {
   id?: number;
   name: string;
   provider_type: ProviderType;
+  vendor: ProviderVendor;
   base_url: string;
   model: string;
   api_key: string;
@@ -52,6 +58,7 @@ export function ProviderForm({
           id: initial.id,
           name: initial.name,
           provider_type: initial.provider_type,
+          vendor: initial.vendor || "custom",
           base_url: initial.base_url,
           model: initial.model,
           api_key: "",
@@ -94,7 +101,8 @@ export function ProviderForm({
   };
 
   const setProviderType = (nextValue: string | string[]) => {
-    const providerType = String(nextValue) as ProviderType;
+    const raw = Array.isArray(nextValue) ? nextValue[0] : nextValue;
+    const providerType = raw as ProviderType;
     setValue((current) => {
       const defaultBaseURL =
         providerType === "openai"
@@ -111,11 +119,35 @@ export function ProviderForm({
       return {
         ...current,
         provider_type: providerType,
-        base_url: current.base_url.trim() ? current.base_url : defaultBaseURL,
+        base_url:
+          current.vendor === "custom" && !current.base_url.trim()
+            ? defaultBaseURL
+            : current.base_url,
         protocol_mode: defaultMode,
       };
     });
   };
+
+  const setVendor = (nextValue: string | string[]) => {
+    const raw = Array.isArray(nextValue) ? nextValue[0] : nextValue;
+    const vendor = raw as ProviderVendor;
+    const preset = providerPresetByVendor.get(vendor);
+    setValue((current) => {
+      if (!preset || vendor === "custom") {
+        return { ...current, vendor };
+      }
+      return {
+        ...current,
+        vendor,
+        provider_type: preset.providerType,
+        base_url: preset.baseURL,
+        protocol_mode: preset.protocolMode,
+      };
+    });
+  };
+
+  const currentPreset = providerPresetByVendor.get(value.vendor);
+
 
   const protocolFields =
     value.provider_type === "openai" ? (
@@ -265,11 +297,16 @@ export function ProviderForm({
                   }
                 />
               </Field>
-              <Field label={labels.providerType}>
-                <Select value={value.provider_type} onChange={setProviderType}>
-                  <option value="openai">OpenAI / compatible</option>
-                  <option value="anthropic">Anthropic native</option>
-                  <option value="gemini">Gemini native</option>
+              <Field
+                label={labels.providerVendor || "平台"}
+                hint={currentPreset?.note}
+              >
+                <Select value={value.vendor} onChange={setVendor}>
+                  {providerPresets.map((preset) => (
+                    <option key={preset.vendor} value={preset.vendor}>
+                      {preset.label}
+                    </option>
+                  ))}
                 </Select>
               </Field>
             </FormGrid>
@@ -280,6 +317,16 @@ export function ProviderForm({
             description="协议和流式策略属于连接能力；端点、模型、超时与输出限制共同决定实际请求行为。"
           >
             <div className="flex flex-col gap-5">
+              <Field
+                label={labels.providerType || "接口协议"}
+                hint="平台与协议独立；兼容平台默认走 OpenAI-compatible，也可手工切换原生协议。"
+              >
+                <Select value={value.provider_type} onChange={setProviderType}>
+                  <option value="openai">OpenAI-compatible</option>
+                  <option value="anthropic">Anthropic Messages-compatible</option>
+                  <option value="gemini">Gemini native</option>
+                </Select>
+              </Field>
               <FormGrid columns={2}>
                 <Field label={labels.baseUrl}>
                   <Input
@@ -300,11 +347,12 @@ export function ProviderForm({
                     className="font-mono"
                     required
                     placeholder={
-                      value.provider_type === "openai"
-                        ? "gpt-5-mini"
+                      currentPreset?.modelPlaceholder ||
+                      (value.provider_type === "openai"
+                        ? "gpt-5.6"
                         : value.provider_type === "gemini"
-                          ? "gemini-3.1-flash-image"
-                          : "claude-sonnet-4-5"
+                          ? "gemini-3.1-pro-preview"
+                          : "claude-sonnet-4-5")
                     }
                     value={value.model}
                     onChange={(event) =>
