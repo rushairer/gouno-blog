@@ -3,6 +3,7 @@ package domain
 import "time"
 
 type ProviderType string
+type ProviderVendor string
 
 const (
 	ProviderOpenAI    ProviderType = "openai"
@@ -10,10 +11,27 @@ const (
 	ProviderGemini    ProviderType = "gemini"
 )
 
+const (
+	VendorCustom          ProviderVendor = "custom"
+	VendorOpenAI          ProviderVendor = "openai"
+	VendorAnthropic       ProviderVendor = "anthropic"
+	VendorGoogle          ProviderVendor = "google"
+	VendorDeepSeek        ProviderVendor = "deepseek"
+	VendorAlibabaBailian  ProviderVendor = "alibaba_bailian"
+	VendorVolcengineArk   ProviderVendor = "volcengine_ark"
+	VendorTencentHunyuan  ProviderVendor = "tencent_hunyuan"
+	VendorBaiduQianfan    ProviderVendor = "baidu_qianfan"
+	VendorMoonshot        ProviderVendor = "moonshot"
+	VendorZhipu           ProviderVendor = "zhipu"
+	VendorSiliconFlow     ProviderVendor = "siliconflow"
+	VendorMiniMax         ProviderVendor = "minimax"
+)
+
 type ProviderProfile struct {
 	ID                    int64        `json:"id"`
-	Name                  string       `json:"name"`
-	ProviderType          ProviderType `json:"provider_type"`
+	Name                  string         `json:"name"`
+	ProviderType          ProviderType   `json:"provider_type"`
+	Vendor                ProviderVendor `json:"vendor"`
 	BaseURL               string       `json:"base_url"`
 	Model                 string       `json:"model"`
 	APIKeyCiphertext      []byte       `json:"-"`
