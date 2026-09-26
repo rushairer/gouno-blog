@@ -129,7 +129,7 @@ func NewBlogRegistry(posts *postservice.PostService, community communityModerati
 			Parameters:     schema(`{"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":20}}`, "query"),
 			Configuration:  schema(`{"limit":{"type":"integer","minimum":1,"maximum":20}}`),
 			DefaultBinding: json.RawMessage(`{"limit":8}`),
-			Surfaces: []string{"agent", "external"}, Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}, Execute: tools.searchKnowledge,
+			Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}, Execute: tools.searchKnowledge,
 		},
 		Definition{
 			Name: "content.list_stale_posts", Description: "List published posts that have not been updated for a chosen number of days.",
