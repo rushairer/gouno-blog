@@ -37,7 +37,7 @@ export interface ProviderProfile {
   id: number;
   name: string;
   provider_type: ProviderType;
-  vendor: ProviderVendor;
+  vendor?: ProviderVendor;
   base_url: string;
   model: string;
   api_key_last4?: string;
