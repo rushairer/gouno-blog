@@ -795,6 +795,14 @@ func TestResolveProviderTargetURLKeepsCompatibleBasePrefixes(t *testing.T) {
 			want:     "https://ark.cn-beijing.volces.com/api/v3/responses",
 		},
 		{
+			name:     "dashscope compatible image prefix",
+			protocol: "openai",
+			vendor:   "alibaba",
+			baseURL:  "https://dashscope.aliyuncs.com/compatible-mode/v1",
+			endpoint: "/v1/images/generations",
+			want:     "https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations",
+		},
+		{
 			name:     "anthropic prefix remains native",
 			protocol: "anthropic",
 			vendor:   "deepseek",
