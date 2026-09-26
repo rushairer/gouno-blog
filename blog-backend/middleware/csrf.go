@@ -26,7 +26,12 @@ func BlogCSRFMiddleware(secure bool) gin.HandlerFunc {
 		}
 		// The public webhook authenticates itself with a body HMAC.
 		// OIDC backchannel-logout authenticates itself with a signed JWT logout_token.
-		if strings.HasPrefix(ctx.Request.URL.Path, "/api/ai/webhooks/") || ctx.Request.URL.Path == "/api/auth/backchannel-logout" {
+		// External Capability v1 is a machine-to-machine API authenticated by its
+		// own explicit Bearer API key; browser-facing /api routes remain subject
+		// to the normal CSRF contract.
+		if strings.HasPrefix(ctx.Request.URL.Path, "/api/ai/webhooks/") ||
+			strings.HasPrefix(ctx.Request.URL.Path, "/api/external/v1/") ||
+			ctx.Request.URL.Path == "/api/auth/backchannel-logout" {
 			ctx.Next()
 			return
 		}
