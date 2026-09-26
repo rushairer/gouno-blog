@@ -90,7 +90,7 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 	}
 	resp, err := p.do(ctx, "/v1/chat/completions", body)
 	if err != nil {
-		if p.streamMode != "never" && strings.Contains(strings.ToLower(err.Error()), "stream") {
+		if p.streamMode != "never" && requiresStreamingFallback(err) {
 			body["stream"] = true
 			streamResp, streamErr := p.do(ctx, "/v1/chat/completions", body)
 			if streamErr == nil {
@@ -158,6 +158,12 @@ func decodeOpenAIChatStream(resp *http.Response) (Result, error) {
 	var text strings.Builder
 	var lastStop string
 	var inputTokens, outputTokens int64
+	type streamedToolCall struct {
+		ID, Name string
+		Arguments strings.Builder
+	}
+	toolCalls := map[int]*streamedToolCall{}
+	toolOrder := make([]int, 0)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -172,6 +178,14 @@ func decodeOpenAIChatStream(resp *http.Response) (Result, error) {
 			Choices []struct {
 				Delta struct {
 					Content string `json:"content"`
+					ToolCalls []struct {
+						Index int `json:"index"`
+						ID string `json:"id"`
+						Function struct {
+							Name string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
 				} `json:"delta"`
 				FinishReason string `json:"finish_reason"`
 			} `json:"choices"`
@@ -182,9 +196,25 @@ func decodeOpenAIChatStream(resp *http.Response) (Result, error) {
 		}
 		if err := json.Unmarshal([]byte(dataStr), &chunk); err == nil {
 			if len(chunk.Choices) > 0 {
-				text.WriteString(chunk.Choices[0].Delta.Content)
-				if chunk.Choices[0].FinishReason != "" {
-					lastStop = chunk.Choices[0].FinishReason
+				choice := chunk.Choices[0]
+				text.WriteString(choice.Delta.Content)
+				for _, delta := range choice.Delta.ToolCalls {
+					call, ok := toolCalls[delta.Index]
+					if !ok {
+						call = &streamedToolCall{}
+						toolCalls[delta.Index] = call
+						toolOrder = append(toolOrder, delta.Index)
+					}
+					if delta.ID != "" {
+						call.ID = delta.ID
+					}
+					if delta.Function.Name != "" {
+						call.Name = delta.Function.Name
+					}
+					call.Arguments.WriteString(delta.Function.Arguments)
+				}
+				if choice.FinishReason != "" {
+					lastStop = choice.FinishReason
 				}
 			}
 			if chunk.Usage != nil {
@@ -193,12 +223,21 @@ func decodeOpenAIChatStream(resp *http.Response) (Result, error) {
 			}
 		}
 	}
-	return Result{
-		Text:         text.String(),
-		StopReason:   lastStop,
-		InputTokens:  inputTokens,
-		OutputTokens: outputTokens,
-	}, scanner.Err()
+	result := Result{
+		Text: text.String(), StopReason: lastStop,
+		InputTokens: inputTokens, OutputTokens: outputTokens,
+	}
+	for _, index := range toolOrder {
+		call := toolCalls[index]
+		arguments := json.RawMessage(call.Arguments.String())
+		if len(arguments) == 0 {
+			arguments = json.RawMessage(`{}`)
+		}
+		result.ToolCalls = append(result.ToolCalls, ToolCall{
+			ID: call.ID, Name: call.Name, Arguments: arguments,
+		})
+	}
+	return result, scanner.Err()
 }
 
 func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result, error) {
@@ -257,7 +296,7 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 	}
 	resp, err := p.do(ctx, "/v1/responses", body)
 	if err != nil {
-		if p.streamMode != "never" && strings.Contains(strings.ToLower(err.Error()), "stream") {
+		if p.streamMode != "never" && requiresStreamingFallback(err) {
 			body["stream"] = true
 			streamResp, streamErr := p.do(ctx, "/v1/responses", body)
 			if streamErr == nil {
@@ -321,6 +360,12 @@ func decodeOpenAIResponsesStream(resp *http.Response) (Result, error) {
 	var text strings.Builder
 	var lastStop string
 	var inputTokens, outputTokens int64
+	type streamedToolCall struct {
+		ID, Name string
+		Arguments strings.Builder
+	}
+	toolCalls := map[string]*streamedToolCall{}
+	toolOrder := make([]string, 0)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -335,6 +380,15 @@ func decodeOpenAIResponsesStream(resp *http.Response) (Result, error) {
 			Type   string `json:"type"`
 			Delta  string `json:"delta"`
 			Status string `json:"status"`
+			ItemID string `json:"item_id"`
+			CallID string `json:"call_id"`
+			Name   string `json:"name"`
+			Item *struct {
+				ID string `json:"id"`
+				CallID string `json:"call_id"`
+				Name string `json:"name"`
+				Arguments string `json:"arguments"`
+			} `json:"item"`
 			Usage  *struct {
 				InputTokens  int64 `json:"input_tokens"`
 				OutputTokens int64 `json:"output_tokens"`
@@ -342,14 +396,50 @@ func decodeOpenAIResponsesStream(resp *http.Response) (Result, error) {
 			Response struct {
 				OutputText string `json:"output_text"`
 				Status     string `json:"status"`
+				Usage *struct {
+					InputTokens  int64 `json:"input_tokens"`
+					OutputTokens int64 `json:"output_tokens"`
+				} `json:"usage"`
 			} `json:"response"`
 		}
 		if err := json.Unmarshal([]byte(dataStr), &chunk); err == nil {
-			if chunk.Delta != "" {
+			if chunk.Type == "response.output_text.delta" && chunk.Delta != "" {
 				text.WriteString(chunk.Delta)
 			}
 			if chunk.Response.OutputText != "" && text.Len() == 0 {
 				text.WriteString(chunk.Response.OutputText)
+			}
+			key := chunk.ItemID
+			if chunk.Item != nil {
+				if key == "" {
+					key = chunk.Item.ID
+				}
+				if key == "" {
+					key = chunk.Item.CallID
+				}
+			}
+			if key == "" {
+				key = chunk.CallID
+			}
+			if (chunk.Type == "response.output_item.added" || chunk.Type == "response.function_call_arguments.delta" || chunk.Type == "response.output_item.done") && key != "" {
+				call, ok := toolCalls[key]
+				if !ok {
+					call = &streamedToolCall{}
+					toolCalls[key] = call
+					toolOrder = append(toolOrder, key)
+				}
+				if chunk.Item != nil {
+					if chunk.Item.CallID != "" { call.ID = chunk.Item.CallID }
+					if chunk.Item.Name != "" { call.Name = chunk.Item.Name }
+					if chunk.Type == "response.output_item.done" && chunk.Item.Arguments != "" && call.Arguments.Len() == 0 {
+						call.Arguments.WriteString(chunk.Item.Arguments)
+					}
+				}
+				if chunk.CallID != "" { call.ID = chunk.CallID }
+				if chunk.Name != "" { call.Name = chunk.Name }
+				if chunk.Type == "response.function_call_arguments.delta" {
+					call.Arguments.WriteString(chunk.Delta)
+				}
 			}
 			if chunk.Status != "" {
 				lastStop = chunk.Status
@@ -361,14 +451,27 @@ func decodeOpenAIResponsesStream(resp *http.Response) (Result, error) {
 				inputTokens = chunk.Usage.InputTokens
 				outputTokens = chunk.Usage.OutputTokens
 			}
+			if chunk.Response.Usage != nil {
+				inputTokens = chunk.Response.Usage.InputTokens
+				outputTokens = chunk.Response.Usage.OutputTokens
+			}
 		}
 	}
-	return Result{
-		Text:         text.String(),
-		StopReason:   lastStop,
-		InputTokens:  inputTokens,
-		OutputTokens: outputTokens,
-	}, scanner.Err()
+	result := Result{
+		Text: text.String(), StopReason: lastStop,
+		InputTokens: inputTokens, OutputTokens: outputTokens,
+	}
+	for _, key := range toolOrder {
+		call := toolCalls[key]
+		arguments := json.RawMessage(call.Arguments.String())
+		if len(arguments) == 0 {
+			arguments = json.RawMessage(`{}`)
+		}
+		result.ToolCalls = append(result.ToolCalls, ToolCall{
+			ID: call.ID, Name: call.Name, Arguments: arguments,
+		})
+	}
+	return result, scanner.Err()
 }
 
 func (p *HTTPProvider) openAIGenerateImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
