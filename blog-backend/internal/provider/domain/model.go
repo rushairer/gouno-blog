@@ -42,6 +42,17 @@ func DefaultVendor(providerType ProviderType) ProviderVendor {
 	}
 }
 
+func IsSupportedVendor(vendor ProviderVendor) bool {
+	switch vendor {
+	case VendorOpenAI, VendorAnthropic, VendorGoogle, VendorDeepSeek, VendorAlibaba,
+		VendorVolcengine, VendorMoonshot, VendorTencent, VendorZhipu, VendorBaidu,
+		VendorMiniMax, VendorXAI, VendorMistral, VendorCustom:
+		return true
+	default:
+		return false
+	}
+}
+
 type ProviderProfile struct {
 	ID                    int64        `json:"id"`
 	Name                  string       `json:"name"`
