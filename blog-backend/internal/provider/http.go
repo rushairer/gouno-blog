@@ -246,18 +246,40 @@ func isLoopbackHost(host string) bool {
 func (p *HTTPProvider) Name() string  { return p.name }
 func (p *HTTPProvider) Model() string { return p.model }
 
+func resolveProviderTargetURL(providerName, baseURL, endpointPath string) string {
+	baseURL = strings.TrimRight(baseURL, "/")
+	parsed, _ := url.Parse(baseURL)
+	basePath := ""
+	if parsed != nil {
+		basePath = strings.TrimRight(parsed.Path, "/")
+	}
+
+	// OpenAI-compatible SDKs treat base_url as the API root. If an operator
+	// supplies a vendor-specific API prefix (for example /api/v3 or
+	// /compatible-mode/v1), append the OpenAI resource below that prefix rather
+	// than injecting another /v1 segment.
+	if providerName == "openai" && basePath != "" && basePath != "/" &&
+		(strings.HasPrefix(endpointPath, "/v1/chat/completions") || strings.HasPrefix(endpointPath, "/v1/responses")) {
+		return baseURL + strings.TrimPrefix(endpointPath, "/v1")
+	}
+
+	// Preserve the existing native API normalization for bases that already end
+	// in the version segment.
+	if strings.HasSuffix(baseURL, "/v1beta") && strings.HasPrefix(endpointPath, "/v1beta/") {
+		baseURL = strings.TrimSuffix(baseURL, "/v1beta")
+	} else if strings.HasSuffix(baseURL, "/v1") &&
+		(strings.HasPrefix(endpointPath, "/v1/") || strings.HasPrefix(endpointPath, "/v1beta/")) {
+		baseURL = strings.TrimSuffix(baseURL, "/v1")
+	}
+	return baseURL + endpointPath
+}
+
 func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Response, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
-	baseURL := strings.TrimRight(p.baseURL, "/")
-	if strings.HasSuffix(baseURL, "/v1beta") && strings.HasPrefix(path, "/v1beta/") {
-		baseURL = strings.TrimSuffix(baseURL, "/v1beta")
-	} else if strings.HasSuffix(baseURL, "/v1") && (strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/v1beta/")) {
-		baseURL = strings.TrimSuffix(baseURL, "/v1")
-	}
-	targetURL := baseURL + path
+	targetURL := resolveProviderTargetURL(p.name, p.baseURL, path)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
