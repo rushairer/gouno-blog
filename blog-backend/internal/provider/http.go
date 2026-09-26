@@ -211,18 +211,38 @@ func isLoopbackHost(host string) bool {
 func (p *HTTPProvider) Name() string  { return p.name }
 func (p *HTTPProvider) Model() string { return p.model }
 
+
+func providerTargetURL(providerName, baseURL, operationPath string) string {
+	baseURL = strings.TrimRight(baseURL, "/")
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return baseURL + operationPath
+	}
+	basePath := strings.TrimRight(parsed.Path, "/")
+	path := operationPath
+
+	if basePath != "" && basePath != "/" {
+		// OpenAI-compatible vendors publish different API roots (/v1, /v2,
+		// /api/v3, /api/paas/v4, /compatible-mode/v1). Once an operator
+		// configures an API root, preserve it and append only the operation
+		// suffix instead of forcing OpenAI's /v1 prefix.
+		if providerName == "openai" && strings.HasPrefix(path, "/v1/") {
+			path = strings.TrimPrefix(path, "/v1")
+		} else if strings.HasSuffix(basePath, "/v1") && strings.HasPrefix(path, "/v1/") {
+			path = strings.TrimPrefix(path, "/v1")
+		} else if strings.HasSuffix(basePath, "/v1beta") && strings.HasPrefix(path, "/v1beta/") {
+			path = strings.TrimPrefix(path, "/v1beta")
+		}
+	}
+	return baseURL + path
+}
+
 func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Response, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
-	baseURL := strings.TrimRight(p.baseURL, "/")
-	if strings.HasSuffix(baseURL, "/v1beta") && strings.HasPrefix(path, "/v1beta/") {
-		baseURL = strings.TrimSuffix(baseURL, "/v1beta")
-	} else if strings.HasSuffix(baseURL, "/v1") && (strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/v1beta/")) {
-		baseURL = strings.TrimSuffix(baseURL, "/v1")
-	}
-	targetURL := baseURL + path
+	targetURL := providerTargetURL(p.name, p.baseURL, path)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
