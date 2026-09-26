@@ -65,7 +65,8 @@ func New(opts Options) *Controller {
 type providerRequest struct {
 	ID                    int64                       `json:"id,omitempty"`
 	Name                  string                      `json:"name" binding:"required"`
-	ProviderType          providerdomain.ProviderType `json:"provider_type" binding:"required"`
+	ProviderType          providerdomain.ProviderType   `json:"provider_type" binding:"required"`
+	Vendor                providerdomain.ProviderVendor `json:"vendor"`
 	BaseURL               string                      `json:"base_url" binding:"required"`
 	Model                 string                      `json:"model" binding:"required"`
 	APIKey                string                      `json:"api_key"`
@@ -84,7 +85,8 @@ type providerRequest struct {
 
 type providerExportItem struct {
 	Name                  string                      `json:"name"`
-	ProviderType          providerdomain.ProviderType `json:"provider_type"`
+	ProviderType          providerdomain.ProviderType   `json:"provider_type"`
+	Vendor                providerdomain.ProviderVendor `json:"vendor,omitempty"`
 	BaseURL               string                      `json:"base_url"`
 	Model                 string                      `json:"model"`
 	Enabled               bool                        `json:"enabled"`
@@ -98,7 +100,8 @@ type providerExportItem struct {
 
 type providerImportItem struct {
 	Name                  string                      `json:"name"`
-	ProviderType          providerdomain.ProviderType `json:"provider_type"`
+	ProviderType          providerdomain.ProviderType   `json:"provider_type"`
+	Vendor                providerdomain.ProviderVendor `json:"vendor,omitempty"`
 	BaseURL               string                      `json:"base_url"`
 	Model                 string                      `json:"model"`
 	APIKey                string                      `json:"api_key,omitempty"`
@@ -179,6 +182,7 @@ func (ctrl *Controller) ExportProviders(c *gin.Context) {
 		exportList = append(exportList, providerExportItem{
 			Name:                  item.Name,
 			ProviderType:          item.ProviderType,
+			Vendor:                item.Vendor,
 			BaseURL:               item.BaseURL,
 			Model:                 item.Model,
 			Enabled:               item.Enabled,
@@ -257,9 +261,14 @@ func (ctrl *Controller) ImportProviders(c *gin.Context) {
 			apiKey = "placeholder-key-please-update"
 		}
 
+		vendor := item.Vendor
+		if vendor == "" {
+			vendor = providerdomain.DefaultVendor(pType)
+		}
 		profile := &providerdomain.ProviderProfile{
 			Name:                  name,
 			ProviderType:          pType,
+			Vendor:                vendor,
 			BaseURL:               baseURL,
 			Model:                 strings.TrimSpace(item.Model),
 			Enabled:               enabled,
@@ -324,7 +333,7 @@ func (ctrl *Controller) saveProvider(c *gin.Context, id int64) {
 		return
 	}
 	profile := &providerdomain.ProviderProfile{
-		ID: id, Name: req.Name, ProviderType: req.ProviderType, BaseURL: req.BaseURL,
+		ID: id, Name: req.Name, ProviderType: req.ProviderType, Vendor: req.Vendor, BaseURL: req.BaseURL,
 		Model: req.Model, Enabled: req.Enabled, ProtocolMode: strings.TrimSpace(req.ProtocolMode),
 		StreamMode:            strings.TrimSpace(req.StreamMode),
 		RequestTimeoutSeconds: req.RequestTimeoutSeconds, MaxOutputTokens: req.MaxOutputTokens,

@@ -2,6 +2,8 @@ package domain
 
 import "time"
 
+// ProviderType is the wire protocol family used by the runtime. The JSON/database
+// name is intentionally retained for backward compatibility with existing profiles.
 type ProviderType string
 
 const (
@@ -10,10 +12,52 @@ const (
 	ProviderGemini    ProviderType = "gemini"
 )
 
+type ProviderVendor string
+
+const (
+	VendorOpenAI     ProviderVendor = "openai"
+	VendorAnthropic  ProviderVendor = "anthropic"
+	VendorGoogle     ProviderVendor = "google"
+	VendorDeepSeek   ProviderVendor = "deepseek"
+	VendorAlibaba    ProviderVendor = "alibaba"
+	VendorVolcengine ProviderVendor = "volcengine"
+	VendorMoonshot   ProviderVendor = "moonshot"
+	VendorTencent    ProviderVendor = "tencent"
+	VendorZhipu      ProviderVendor = "zhipu"
+	VendorBaidu      ProviderVendor = "baidu"
+	VendorMiniMax    ProviderVendor = "minimax"
+	VendorXAI        ProviderVendor = "xai"
+	VendorMistral    ProviderVendor = "mistral"
+	VendorCustom     ProviderVendor = "custom"
+)
+
+func DefaultVendor(providerType ProviderType) ProviderVendor {
+	switch providerType {
+	case ProviderAnthropic:
+		return VendorAnthropic
+	case ProviderGemini:
+		return VendorGoogle
+	default:
+		return VendorOpenAI
+	}
+}
+
+func IsSupportedVendor(vendor ProviderVendor) bool {
+	switch vendor {
+	case VendorOpenAI, VendorAnthropic, VendorGoogle, VendorDeepSeek, VendorAlibaba,
+		VendorVolcengine, VendorMoonshot, VendorTencent, VendorZhipu, VendorBaidu,
+		VendorMiniMax, VendorXAI, VendorMistral, VendorCustom:
+		return true
+	default:
+		return false
+	}
+}
+
 type ProviderProfile struct {
 	ID                    int64        `json:"id"`
 	Name                  string       `json:"name"`
-	ProviderType          ProviderType `json:"provider_type"`
+	ProviderType          ProviderType   `json:"provider_type"`
+	Vendor                ProviderVendor `json:"vendor"`
 	BaseURL               string       `json:"base_url"`
 	Model                 string       `json:"model"`
 	APIKeyCiphertext      []byte       `json:"-"`

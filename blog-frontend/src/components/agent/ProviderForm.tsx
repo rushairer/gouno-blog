@@ -1,7 +1,11 @@
 import { KeyRound, Save } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import type { ProviderProfile, ProviderType } from "../../types/agent";
+import type {
+  ProviderProfile,
+  ProviderType,
+  ProviderVendor,
+} from "../../types/agent";
 import { emptyProvider } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
 import {
@@ -23,6 +27,7 @@ export interface ProviderFormValue {
   id?: number;
   name: string;
   provider_type: ProviderType;
+  vendor: ProviderVendor;
   base_url: string;
   model: string;
   api_key: string;
@@ -31,6 +36,168 @@ export interface ProviderFormValue {
   stream_mode: string;
   request_timeout_seconds: number;
   max_output_tokens: number;
+}
+
+const vendorPresets: Record<
+  ProviderVendor,
+  {
+    label: string;
+    providerType: ProviderType;
+    baseURL: string;
+    protocolMode: string;
+    modelPlaceholder: string;
+    protocols: ProviderType[];
+  }
+> = {
+  openai: {
+    label: "OpenAI",
+    providerType: "openai",
+    baseURL: "https://api.openai.com",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "gpt-5.6",
+    protocols: ["openai"],
+  },
+  anthropic: {
+    label: "Anthropic",
+    providerType: "anthropic",
+    baseURL: "https://api.anthropic.com",
+    protocolMode: "",
+    modelPlaceholder: "claude-sonnet-5",
+    protocols: ["anthropic"],
+  },
+  google: {
+    label: "Google Gemini",
+    providerType: "gemini",
+    baseURL: "https://generativelanguage.googleapis.com",
+    protocolMode: "generate_content",
+    modelPlaceholder: "gemini-3.1-pro",
+    protocols: ["gemini"],
+  },
+  deepseek: {
+    label: "DeepSeek",
+    providerType: "openai",
+    baseURL: "https://api.deepseek.com",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "deepseek-flash",
+    protocols: ["openai", "anthropic"],
+  },
+  alibaba: {
+    label: "Alibaba Model Studio / Qwen",
+    providerType: "openai",
+    baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "qwen-plus",
+    protocols: ["openai", "anthropic"],
+  },
+  volcengine: {
+    label: "Volcengine Ark / Doubao",
+    providerType: "openai",
+    baseURL: "https://ark.cn-beijing.volces.com/api/v3",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "doubao-seed-2-1-pro-260628",
+    protocols: ["openai", "anthropic"],
+  },
+  moonshot: {
+    label: "Moonshot / Kimi",
+    providerType: "openai",
+    baseURL: "https://api.moonshot.cn/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "kimi-k2",
+    protocols: ["openai"],
+  },
+  tencent: {
+    label: "Tencent TokenHub / Hunyuan",
+    providerType: "openai",
+    baseURL: "https://tokenhub.tencentmaas.com/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "hy4-preview",
+    protocols: ["openai", "anthropic"],
+  },
+  zhipu: {
+    label: "Zhipu GLM",
+    providerType: "openai",
+    baseURL: "https://open.bigmodel.cn/api/paas/v4",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "glm-5",
+    protocols: ["openai"],
+  },
+  baidu: {
+    label: "Baidu Qianfan",
+    providerType: "openai",
+    baseURL: "https://qianfan.baidubce.com/v2",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "model-id",
+    protocols: ["openai"],
+  },
+  minimax: {
+    label: "MiniMax",
+    providerType: "openai",
+    baseURL: "https://api.minimax.io/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "model-id",
+    protocols: ["openai"],
+  },
+  xai: {
+    label: "xAI",
+    providerType: "openai",
+    baseURL: "https://api.x.ai",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "grok-4",
+    protocols: ["openai"],
+  },
+  mistral: {
+    label: "Mistral AI",
+    providerType: "openai",
+    baseURL: "https://api.mistral.ai/v1",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "mistral-large-latest",
+    protocols: ["openai"],
+  },
+  custom: {
+    label: "Custom / Compatible",
+    providerType: "openai",
+    baseURL: "",
+    protocolMode: "chat_completions",
+    modelPlaceholder: "model-id",
+    protocols: ["openai", "anthropic", "gemini"],
+  },
+};
+
+function fallbackVendor(providerType: ProviderType): ProviderVendor {
+  if (providerType === "anthropic") return "anthropic";
+  if (providerType === "gemini") return "google";
+  return "openai";
+}
+
+function vendorProtocolBaseURL(
+  vendor: ProviderVendor,
+  providerType: ProviderType,
+  currentBaseURL: string,
+): string {
+  if (vendor === "deepseek") {
+    if (providerType === "anthropic")
+      return "https://api.deepseek.com/anthropic";
+    if (providerType === "openai") return vendorPresets.deepseek.baseURL;
+  }
+  if (vendor === "alibaba") {
+    if (providerType === "anthropic")
+      return "https://dashscope.aliyuncs.com/apps/anthropic";
+    if (providerType === "openai") return vendorPresets.alibaba.baseURL;
+  }
+  if (vendor === "volcengine") {
+    if (providerType === "anthropic")
+      return "https://ark.cn-beijing.volces.com/api/compatible";
+    if (providerType === "openai") return vendorPresets.volcengine.baseURL;
+  }
+  if (vendor === "tencent") {
+    if (providerType === "openai" || providerType === "anthropic")
+      return vendorPresets.tencent.baseURL;
+  }
+  const preset = vendorPresets[vendor];
+  if (providerType === preset.providerType && preset.baseURL) {
+    return preset.baseURL;
+  }
+  return currentBaseURL;
 }
 
 export function ProviderForm({
@@ -52,6 +219,7 @@ export function ProviderForm({
           id: initial.id,
           name: initial.name,
           provider_type: initial.provider_type,
+          vendor: initial.vendor || fallbackVendor(initial.provider_type),
           base_url: initial.base_url,
           model: initial.model,
           api_key: "",
@@ -69,6 +237,7 @@ export function ProviderForm({
         }
       : {
           ...emptyProvider,
+          vendor: "openai",
           protocol_mode: "chat_completions",
           stream_mode: "auto",
         },
@@ -76,12 +245,15 @@ export function ProviderForm({
   const [saving, setSaving] = useState(false);
   const draftKey = `provider-${initial?.id ?? "new"}`;
   const { clearDraft } = useFormDraft(draftKey, value, setValue);
+  const activeVendor =
+    value.vendor || fallbackVendor(value.provider_type || "openai");
+  const activeVendorPreset = vendorPresets[activeVendor];
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
     try {
-      await onSave(value);
+      await onSave({ ...value, vendor: activeVendor });
       clearDraft();
     } finally {
       setSaving(false);
@@ -93,28 +265,35 @@ export function ProviderForm({
     onCancel();
   };
 
+  const setVendor = (nextValue: string | string[]) => {
+    const vendor = String(nextValue) as ProviderVendor;
+    const preset = vendorPresets[vendor];
+    setValue((current) => ({
+      ...current,
+      vendor,
+      provider_type: preset.providerType,
+      base_url: vendor === "custom" ? current.base_url : preset.baseURL,
+      protocol_mode: preset.protocolMode,
+    }));
+  };
+
   const setProviderType = (nextValue: string | string[]) => {
     const providerType = String(nextValue) as ProviderType;
-    setValue((current) => {
-      const defaultBaseURL =
-        providerType === "openai"
-          ? "https://api.openai.com"
-          : providerType === "gemini"
-            ? "https://generativelanguage.googleapis.com"
-            : "https://api.anthropic.com";
-      const defaultMode =
+    setValue((current) => ({
+      ...current,
+      provider_type: providerType,
+      base_url: vendorProtocolBaseURL(
+        current.vendor || fallbackVendor(current.provider_type),
+        providerType,
+        current.base_url,
+      ),
+      protocol_mode:
         providerType === "openai"
           ? "chat_completions"
           : providerType === "gemini"
             ? "generate_content"
-            : "";
-      return {
-        ...current,
-        provider_type: providerType,
-        base_url: current.base_url.trim() ? current.base_url : defaultBaseURL,
-        protocol_mode: defaultMode,
-      };
-    });
+            : "",
+    }));
   };
 
   const protocolFields =
@@ -250,7 +429,7 @@ export function ProviderForm({
         <div className="grid gap-5 xl:grid-cols-2">
           <AISettingsEditorSection
             title="连接身份"
-            description="名称和供应商类型用于识别连接；启停状态决定它是否可被 Agent 或默认模型选择。"
+            description="连接名称与供应商只表达产品身份；具体请求格式由接口协议单独决定。"
           >
             <FormGrid columns={2}>
               <Field label={labels.providerName}>
@@ -265,11 +444,13 @@ export function ProviderForm({
                   }
                 />
               </Field>
-              <Field label={labels.providerType}>
-                <Select value={value.provider_type} onChange={setProviderType}>
-                  <option value="openai">OpenAI / compatible</option>
-                  <option value="anthropic">Anthropic native</option>
-                  <option value="gemini">Gemini native</option>
+              <Field label={labels.providerVendor || "供应商"}>
+                <Select value={activeVendor} onChange={setVendor}>
+                  {Object.entries(vendorPresets).map(([vendor, preset]) => (
+                    <option key={vendor} value={vendor}>
+                      {preset.label}
+                    </option>
+                  ))}
                 </Select>
               </Field>
             </FormGrid>
@@ -277,10 +458,40 @@ export function ProviderForm({
 
           <AISettingsEditorSection
             title="模型与端点"
-            description="协议和流式策略属于连接能力；端点、模型、超时与输出限制共同决定实际请求行为。"
+            description="接口协议、端点和模型共同决定运行时请求；供应商身份不再替代协议选择。"
           >
             <div className="flex flex-col gap-5">
               <FormGrid columns={2}>
+                <Field label={labels.providerProtocol || "接口协议"}>
+                  <Select value={value.provider_type} onChange={setProviderType}>
+                    <option
+                      value="openai"
+                      disabled={
+                        !activeVendorPreset.protocols.includes("openai")
+                      }
+                    >
+                      {labels.protocolOpenAICompatible || "OpenAI Compatible"}
+                    </option>
+                    <option
+                      value="anthropic"
+                      disabled={
+                        !activeVendorPreset.protocols.includes(
+                          "anthropic",
+                        )
+                      }
+                    >
+                      {labels.protocolAnthropicMessages || "Anthropic Messages"}
+                    </option>
+                    <option
+                      value="gemini"
+                      disabled={
+                        !activeVendorPreset.protocols.includes("gemini")
+                      }
+                    >
+                      {labels.protocolGeminiNative || "Gemini Native"}
+                    </option>
+                  </Select>
+                </Field>
                 <Field label={labels.baseUrl}>
                   <Input
                     className="font-mono"
@@ -295,27 +506,24 @@ export function ProviderForm({
                     }
                   />
                 </Field>
-                <Field label={labels.model}>
-                  <Input
-                    className="font-mono"
-                    required
-                    placeholder={
-                      value.provider_type === "openai"
-                        ? "gpt-5-mini"
-                        : value.provider_type === "gemini"
-                          ? "gemini-3.1-flash-image"
-                          : "claude-sonnet-4-5"
-                    }
-                    value={value.model}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        model: event.target.value,
-                      }))
-                    }
-                  />
-                </Field>
               </FormGrid>
+
+              <Field label={labels.model}>
+                <Input
+                  className="font-mono"
+                  required
+                  placeholder={
+                    activeVendorPreset.modelPlaceholder || "model-id"
+                  }
+                  value={value.model}
+                  onChange={(event) =>
+                    setValue((current) => ({
+                      ...current,
+                      model: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
 
               {protocolFields}
 

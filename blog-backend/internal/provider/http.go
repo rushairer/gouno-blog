@@ -17,8 +17,8 @@ import (
 )
 
 type HTTPProvider struct {
-	name, baseURL, key, model, protocolMode, streamMode string
-	client                                *http.Client
+	name, vendor, baseURL, key, model, protocolMode, streamMode string
+	client                                        *http.Client
 }
 
 type upstreamHTTPError struct {
@@ -68,6 +68,10 @@ func NewHTTPProviderWithMode(name, baseURL, key, model, protocolMode string, all
 }
 
 func NewHTTPProviderWithConfig(name, baseURL, key, model, protocolMode, streamMode string, allowedHosts []string, timeout time.Duration) (*HTTPProvider, error) {
+	return NewHTTPProviderWithVendorConfig(name, "", baseURL, key, model, protocolMode, streamMode, allowedHosts, timeout)
+}
+
+func NewHTTPProviderWithVendorConfig(name, vendor, baseURL, key, model, protocolMode, streamMode string, allowedHosts []string, timeout time.Duration) (*HTTPProvider, error) {
 	if name != "openai" && name != "anthropic" && name != "gemini" {
 		return nil, fmt.Errorf("unsupported provider %q", name)
 	}
@@ -81,7 +85,8 @@ func NewHTTPProviderWithConfig(name, baseURL, key, model, protocolMode, streamMo
 		streamMode = "auto"
 	}
 	return &HTTPProvider{
-		name: name, baseURL: strings.TrimRight(baseURL, "/"), key: key, model: model,
+		name: name, vendor: strings.ToLower(strings.TrimSpace(vendor)),
+		baseURL: strings.TrimRight(baseURL, "/"), key: key, model: model,
 		protocolMode: protocolMode, streamMode: streamMode,
 		client: &http.Client{
 			Timeout:   timeout,
@@ -246,18 +251,48 @@ func isLoopbackHost(host string) bool {
 func (p *HTTPProvider) Name() string  { return p.name }
 func (p *HTTPProvider) Model() string { return p.model }
 
+func resolveProviderTargetURL(providerName, vendor, baseURL, endpointPath string) string {
+	baseURL = strings.TrimRight(baseURL, "/")
+	parsed, _ := url.Parse(baseURL)
+	basePath := ""
+	host := ""
+	if parsed != nil {
+		basePath = strings.TrimRight(parsed.Path, "/")
+		host = strings.ToLower(parsed.Hostname())
+	}
+
+	// OpenAI-compatible SDK base URLs represent the API root, which is not
+	// universally /v1. Vendor-specific prefixes such as /api/v3,
+	// /compatible-mode/v1 and /v2 therefore own their version/path segment for
+	// every OpenAI resource (Chat, Responses, Images, etc.).
+	// DeepSeek's official pathless root follows the same SDK-root semantics.
+	if providerName == "openai" && strings.HasPrefix(endpointPath, "/v1/") {
+		resourcePath := strings.TrimPrefix(endpointPath, "/v1")
+		if basePath != "" && basePath != "/" {
+			return baseURL + resourcePath
+		}
+		if vendor == "deepseek" && host == "api.deepseek.com" {
+			return baseURL + resourcePath
+		}
+	}
+
+	// Preserve the existing native API normalization for bases that already end
+	// in the version segment.
+	if strings.HasSuffix(baseURL, "/v1beta") && strings.HasPrefix(endpointPath, "/v1beta/") {
+		baseURL = strings.TrimSuffix(baseURL, "/v1beta")
+	} else if strings.HasSuffix(baseURL, "/v1") &&
+		(strings.HasPrefix(endpointPath, "/v1/") || strings.HasPrefix(endpointPath, "/v1beta/")) {
+		baseURL = strings.TrimSuffix(baseURL, "/v1")
+	}
+	return baseURL + endpointPath
+}
+
 func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Response, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
-	baseURL := strings.TrimRight(p.baseURL, "/")
-	if strings.HasSuffix(baseURL, "/v1beta") && strings.HasPrefix(path, "/v1beta/") {
-		baseURL = strings.TrimSuffix(baseURL, "/v1beta")
-	} else if strings.HasSuffix(baseURL, "/v1") && (strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/v1beta/")) {
-		baseURL = strings.TrimSuffix(baseURL, "/v1")
-	}
-	targetURL := baseURL + path
+	targetURL := resolveProviderTargetURL(p.name, p.vendor, p.baseURL, path)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(raw))
 	if err != nil {
 		return nil, err

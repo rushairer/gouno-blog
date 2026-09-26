@@ -292,6 +292,27 @@ test("Provider settings expose provider and embedding configuration without writ
   const providerDrawer = page.getByRole("dialog", { name: "Add model connection" });
   await expect(providerDrawer).toBeVisible();
   await expect(providerDrawer.getByLabel("API Key")).toHaveAttribute("required", "");
+
+  const vendorSelect = providerDrawer.getByRole("combobox", { name: "Vendor" });
+  await vendorSelect.click();
+  await page.getByRole("option", { name: "DeepSeek", exact: true }).click();
+  await expect(vendorSelect).toContainText("DeepSeek");
+
+  const protocolSelect = providerDrawer.getByRole("combobox", {
+    name: "API protocol",
+  });
+  await expect(protocolSelect).toContainText("OpenAI Compatible");
+  await protocolSelect.click();
+  await page
+    .getByRole("option", { name: "Anthropic Messages", exact: true })
+    .click();
+  await expect(protocolSelect).toContainText("Anthropic Messages");
+  await expect(providerDrawer.getByLabel("Base URL")).toHaveValue(
+    "https://api.deepseek.com/anthropic",
+  );
+  await expectNoDocumentOverflow(page);
+  await attachScreenshot(page, testInfo, "u04b-provider-vendor-protocol-drawer");
+
   await page.keyboard.press("Escape");
   await expect(providerDrawer).toBeHidden();
 

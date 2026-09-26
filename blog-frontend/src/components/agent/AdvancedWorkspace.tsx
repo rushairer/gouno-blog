@@ -830,6 +830,7 @@ export function AdvancedWorkspace({
                             <div className="min-w-0">
                               <strong>{provider.name}</strong>
                               <Text size="xs" tone="muted">
+                                {provider.vendor || provider.provider_type} ·{" "}
                                 {provider.provider_type} · {provider.model}
                               </Text>
                             </div>
