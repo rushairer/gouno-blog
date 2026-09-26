@@ -46,6 +46,7 @@ const vendorPresets: Record<
     baseURL: string;
     protocolMode: string;
     modelPlaceholder: string;
+    protocols: ProviderType[];
   }
 > = {
   openai: {
@@ -54,6 +55,7 @@ const vendorPresets: Record<
     baseURL: "https://api.openai.com",
     protocolMode: "chat_completions",
     modelPlaceholder: "gpt-5.6",
+    protocols: ["openai"],
   },
   anthropic: {
     label: "Anthropic",
@@ -61,6 +63,7 @@ const vendorPresets: Record<
     baseURL: "https://api.anthropic.com",
     protocolMode: "",
     modelPlaceholder: "claude-sonnet-5",
+    protocols: ["anthropic"],
   },
   google: {
     label: "Google Gemini",
@@ -68,6 +71,7 @@ const vendorPresets: Record<
     baseURL: "https://generativelanguage.googleapis.com",
     protocolMode: "generate_content",
     modelPlaceholder: "gemini-3.1-pro",
+    protocols: ["gemini"],
   },
   deepseek: {
     label: "DeepSeek",
@@ -75,6 +79,7 @@ const vendorPresets: Record<
     baseURL: "https://api.deepseek.com",
     protocolMode: "chat_completions",
     modelPlaceholder: "deepseek-flash",
+    protocols: ["openai", "anthropic"],
   },
   alibaba: {
     label: "Alibaba Model Studio / Qwen",
@@ -82,6 +87,7 @@ const vendorPresets: Record<
     baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     protocolMode: "chat_completions",
     modelPlaceholder: "qwen-plus",
+    protocols: ["openai", "anthropic"],
   },
   volcengine: {
     label: "Volcengine Ark / Doubao",
@@ -89,6 +95,7 @@ const vendorPresets: Record<
     baseURL: "https://ark.cn-beijing.volces.com/api/v3",
     protocolMode: "chat_completions",
     modelPlaceholder: "doubao-seed-2-1-pro-260628",
+    protocols: ["openai"],
   },
   moonshot: {
     label: "Moonshot / Kimi",
@@ -96,6 +103,7 @@ const vendorPresets: Record<
     baseURL: "https://api.moonshot.cn/v1",
     protocolMode: "chat_completions",
     modelPlaceholder: "kimi-k2",
+    protocols: ["openai"],
   },
   tencent: {
     label: "Tencent Hunyuan",
@@ -103,6 +111,7 @@ const vendorPresets: Record<
     baseURL: "https://api.hunyuan.cloud.tencent.com/v1",
     protocolMode: "chat_completions",
     modelPlaceholder: "hunyuan-turbos-latest",
+    protocols: ["openai"],
   },
   zhipu: {
     label: "Zhipu GLM",
@@ -110,6 +119,7 @@ const vendorPresets: Record<
     baseURL: "https://open.bigmodel.cn/api/paas/v4",
     protocolMode: "chat_completions",
     modelPlaceholder: "glm-5",
+    protocols: ["openai"],
   },
   baidu: {
     label: "Baidu Qianfan",
@@ -117,6 +127,7 @@ const vendorPresets: Record<
     baseURL: "",
     protocolMode: "chat_completions",
     modelPlaceholder: "填写模型 ID",
+    protocols: ["openai"],
   },
   minimax: {
     label: "MiniMax",
@@ -124,6 +135,7 @@ const vendorPresets: Record<
     baseURL: "",
     protocolMode: "chat_completions",
     modelPlaceholder: "填写模型 ID",
+    protocols: ["openai"],
   },
   xai: {
     label: "xAI",
@@ -131,6 +143,7 @@ const vendorPresets: Record<
     baseURL: "https://api.x.ai/v1",
     protocolMode: "chat_completions",
     modelPlaceholder: "grok-4",
+    protocols: ["openai"],
   },
   mistral: {
     label: "Mistral AI",
@@ -138,6 +151,7 @@ const vendorPresets: Record<
     baseURL: "https://api.mistral.ai/v1",
     protocolMode: "chat_completions",
     modelPlaceholder: "mistral-large-latest",
+    protocols: ["openai"],
   },
   custom: {
     label: "Custom / Compatible",
@@ -145,6 +159,7 @@ const vendorPresets: Record<
     baseURL: "",
     protocolMode: "chat_completions",
     modelPlaceholder: "model-id",
+    protocols: ["openai", "anthropic", "gemini"],
   },
 };
 
@@ -152,6 +167,27 @@ function fallbackVendor(providerType: ProviderType): ProviderVendor {
   if (providerType === "anthropic") return "anthropic";
   if (providerType === "gemini") return "google";
   return "openai";
+}
+
+function vendorProtocolBaseURL(
+  vendor: ProviderVendor,
+  providerType: ProviderType,
+  currentBaseURL: string,
+): string {
+  if (vendor === "deepseek") {
+    if (providerType === "anthropic") return "https://api.deepseek.com/anthropic";
+    if (providerType === "openai") return vendorPresets.deepseek.baseURL;
+  }
+  if (vendor === "alibaba") {
+    if (providerType === "anthropic")
+      return "https://dashscope.aliyuncs.com/apps/anthropic";
+    if (providerType === "openai") return vendorPresets.alibaba.baseURL;
+  }
+  const preset = vendorPresets[vendor];
+  if (providerType === preset.providerType && preset.baseURL) {
+    return preset.baseURL;
+  }
+  return currentBaseURL;
 }
 
 export function ProviderForm({
@@ -232,6 +268,11 @@ export function ProviderForm({
     setValue((current) => ({
       ...current,
       provider_type: providerType,
+      base_url: vendorProtocolBaseURL(
+        current.vendor,
+        providerType,
+        current.base_url,
+      ),
       protocol_mode:
         providerType === "openai"
           ? "chat_completions"
@@ -409,13 +450,30 @@ export function ProviderForm({
               <FormGrid columns={2}>
                 <Field label={labels.providerProtocol || "接口协议"}>
                   <Select value={value.provider_type} onChange={setProviderType}>
-                    <option value="openai">
+                    <option
+                      value="openai"
+                      disabled={
+                        !vendorPresets[value.vendor].protocols.includes("openai")
+                      }
+                    >
                       {labels.protocolOpenAICompatible || "OpenAI Compatible"}
                     </option>
-                    <option value="anthropic">
+                    <option
+                      value="anthropic"
+                      disabled={
+                        !vendorPresets[value.vendor].protocols.includes(
+                          "anthropic",
+                        )
+                      }
+                    >
                       {labels.protocolAnthropicMessages || "Anthropic Messages"}
                     </option>
-                    <option value="gemini">
+                    <option
+                      value="gemini"
+                      disabled={
+                        !vendorPresets[value.vendor].protocols.includes("gemini")
+                      }
+                    >
                       {labels.protocolGeminiNative || "Gemini Native"}
                     </option>
                   </Select>
