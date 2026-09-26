@@ -32,6 +32,9 @@ func scanProvider(scanner interface{ Scan(...any) error }) (*providerdomain.Prov
 		&profile.CreatedAt, &profile.UpdatedAt,
 	)
 	profile.HasAPIKey = len(profile.APIKeyCiphertext) > 0
+	if profile.Vendor == "" {
+		profile.Vendor = providerdomain.DefaultVendor(profile.ProviderType)
+	}
 	return &profile, err
 }
 
