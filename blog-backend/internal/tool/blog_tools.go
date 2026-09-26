@@ -58,31 +58,31 @@ func NewBlogRegistry(posts *postservice.PostService, community communityModerati
 		Definition{
 			Name: "content.list_posts", Description: "List blog posts, including drafts and scheduled posts.",
 			Parameters: schema(`{"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.listPosts,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.listPosts,
 		},
 		Definition{
 			Name: "content.get_post", Description: "Read one blog post by numeric ID.",
 			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id"}, Execute: tools.getPost,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id"}, Execute: tools.getPost,
 		},
 		Definition{
 			Name: "content.search_posts", Description: "Search published blog posts by title, summary, or content.",
 			Parameters: schema(`{"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":20}}`, "query"),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.searchPosts,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.searchPosts,
 		},
 		Definition{
 			Name: "content.list_tags", Description: "List all blog tags.",
-			Parameters: schema(`{}`), Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "tag", OutputKeys: []string{"name"}}, Execute: tools.listTags,
+			Parameters: schema(`{}`), Surfaces: []string{"agent", "external"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "tag", OutputKeys: []string{"name"}}, Execute: tools.listTags,
 		},
 		Definition{
 			Name: "content.list_pages", Description: "List custom pages, including drafts and navigation pages.",
 			Parameters: schema(`{"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "page", OutputKeys: []string{"id"}}, Execute: tools.listPages,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "page", OutputKeys: []string{"id"}}, Execute: tools.listPages,
 		},
 		Definition{
 			Name: "content.get_page", Description: "Read one custom page by numeric ID.",
 			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "page", Argument: "id"}, Execute: tools.getPage,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "page", Argument: "id"}, Execute: tools.getPage,
 		},
 		Definition{
 			Name: "content.audit_page", Description: "Run deterministic content-quality checks for a draft or published custom page.",
@@ -122,26 +122,26 @@ func NewBlogRegistry(posts *postservice.PostService, community communityModerati
 		Definition{
 			Name: "content.find_related", Description: "Search published posts related to one post and return relevance-ranked evidence snippets.",
 			Parameters: schema(`{"id":{"type":"integer","minimum":1},"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":10}}`, "id"),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id", Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id", "id"}}, Execute: tools.findRelatedContent,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id", Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id", "id"}}, Execute: tools.findRelatedContent,
 		},
 		Definition{
 			Name: "content.search_knowledge", Description: "Search indexed published content and return validated citation evidence.",
 			Parameters:     schema(`{"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":20}}`, "query"),
 			Configuration:  schema(`{"limit":{"type":"integer","minimum":1,"maximum":20}}`),
 			DefaultBinding: json.RawMessage(`{"limit":8}`),
-			Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}, Execute: tools.searchKnowledge,
+			Surfaces: []string{"agent", "external"}, Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}, Execute: tools.searchKnowledge,
 		},
 		Definition{
 			Name: "content.list_stale_posts", Description: "List published posts that have not been updated for a chosen number of days.",
 			Parameters:     schema(`{"older_than_days":{"type":"integer","minimum":1,"maximum":3650},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Configuration:  schema(`{"older_than_days":{"type":"integer","minimum":1,"maximum":3650},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			DefaultBinding: json.RawMessage(`{"older_than_days":180,"limit":20}`),
-			Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findStalePosts,
+			Surfaces: []string{"agent", "external"}, Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findStalePosts,
 		},
 		Definition{
 			Name: "content.list_orphan_posts", Description: "List published posts with no detected relative internal links from another published post.",
 			Parameters: schema(`{"limit":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findOrphanPosts,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findOrphanPosts,
 		},
 		Definition{
 			Name: "comments.list_pending", Description: "List pending or reported comments for moderation insight.",
@@ -150,14 +150,14 @@ func NewBlogRegistry(posts *postservice.PostService, community communityModerati
 		},
 		Definition{
 			Name: "analytics.get_summary", Description: "Read the current blog analytics summary.",
-			Parameters: schema(`{}`), Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true}, Execute: tools.analyticsSummary,
+			Parameters: schema(`{}`), Surfaces: []string{"agent", "external"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true}, Execute: tools.analyticsSummary,
 		},
 		Definition{
 			Name: "analytics.list_low_engagement_posts", Description: "List published posts with sufficient views but a low likes-to-views ratio.",
 			Parameters:     schema(`{"min_views":{"type":"integer","minimum":1,"maximum":1000000000},"max_engagement_rate":{"type":"number","minimum":0,"maximum":1},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Configuration:  schema(`{"min_views":{"type":"integer","minimum":1,"maximum":1000000000},"max_engagement_rate":{"type":"number","minimum":0,"maximum":1},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			DefaultBinding: json.RawMessage(`{"min_views":100,"max_engagement_rate":0.02,"limit":20}`),
-			Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findLowEngagementPosts,
+			Surfaces: []string{"agent", "external"}, Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findLowEngagementPosts,
 		},
 		Definition{
 			Name: "content.propose_draft", Description: "Create a new blog draft proposal.",
