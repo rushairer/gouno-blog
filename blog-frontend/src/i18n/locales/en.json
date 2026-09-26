@@ -345,6 +345,7 @@
     "editProvider": "Edit model connection",
     "agentName": "Agent name",
     "providerName": "Connection name",
+    "providerVendor": "Platform",
     "providerType": "Provider type",
     "provider": "Model connection",
     "chooseProvider": "Choose a model connection",
