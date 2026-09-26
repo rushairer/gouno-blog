@@ -45,6 +45,9 @@ func (r *Repository) ReserveProviderID(ctx context.Context) (int64, error) {
 }
 
 func (r *Repository) CreateProvider(ctx context.Context, profile *providerdomain.ProviderProfile) error {
+	if profile.Vendor == "" {
+		profile.Vendor = providerdomain.DefaultVendor(profile.ProviderType)
+	}
 	if profile.StreamMode == "" {
 		profile.StreamMode = "auto"
 	}
@@ -71,6 +74,9 @@ func (r *Repository) CreateProvider(ctx context.Context, profile *providerdomain
 }
 
 func (r *Repository) UpdateProvider(ctx context.Context, profile *providerdomain.ProviderProfile, replaceSecret bool) error {
+	if profile.Vendor == "" {
+		profile.Vendor = providerdomain.DefaultVendor(profile.ProviderType)
+	}
 	if profile.StreamMode == "" {
 		profile.StreamMode = "auto"
 	}
