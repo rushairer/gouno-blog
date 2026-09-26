@@ -622,3 +622,113 @@ func TestAnthropicThinkingFallbackRemovesForcedToolChoice(t *testing.T) {
 		t.Fatalf("result=%#v requests=%d err=%v", result, requests, err)
 	}
 }
+
+
+func TestOpenAIChatStreamPreservesToolCalls(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w,
+			"data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_1\",\"function\":{\"name\":\"content.list_posts\",\"arguments\":\"{\\\"li\"}}]}}]}\n\n"+
+			"data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"mit\\\":5}\"}}]},\"finish_reason\":\"tool_calls\"}],\"usage\":{\"prompt_tokens\":11,\"completion_tokens\":3}}\n\n"+
+			"data: [DONE]\n\n")
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProviderWithConfig("openai", server.URL, "secret", "model", "chat_completions", "always", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{
+		Messages: []Message{{Role: "user", Content: "list posts"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.ToolCalls) != 1 {
+		t.Fatalf("tool calls = %#v", result.ToolCalls)
+	}
+	if result.ToolCalls[0].ID != "call_1" || result.ToolCalls[0].Name != "content.list_posts" ||
+		string(result.ToolCalls[0].Arguments) != `{"limit":5}` {
+		t.Fatalf("tool call = %#v", result.ToolCalls[0])
+	}
+	if result.InputTokens != 11 || result.OutputTokens != 3 || result.StopReason != "tool_calls" {
+		t.Fatalf("result metadata = %#v", result)
+	}
+}
+
+func TestOpenAIResponsesStreamPreservesToolCalls(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w,
+			"data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"item_1\",\"call_id\":\"call_9\",\"name\":\"analytics.get_summary\"}}\n\n"+
+			"data: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"item_1\",\"delta\":\"{\\\"days\\\":\"}\n\n"+
+			"data: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"item_1\",\"delta\":\"7}\"}\n\n"+
+			"data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":9,\"output_tokens\":4}}}\n\n")
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProviderWithConfig("openai", server.URL, "secret", "model", "responses", "always", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{
+		Messages: []Message{{Role: "user", Content: "summary"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.ToolCalls) != 1 || result.ToolCalls[0].ID != "call_9" ||
+		result.ToolCalls[0].Name != "analytics.get_summary" ||
+		string(result.ToolCalls[0].Arguments) != `{"days":7}` {
+		t.Fatalf("tool calls = %#v", result.ToolCalls)
+	}
+	if result.InputTokens != 9 || result.OutputTokens != 4 || result.StopReason != "completed" {
+		t.Fatalf("result metadata = %#v", result)
+	}
+}
+
+func TestOpenAIAutoStreamFallbackOnlyForExplicitRequirement(t *testing.T) {
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if requests == 1 {
+			http.Error(w, `{"error":{"message":"streaming is required for this model"}}`, http.StatusBadRequest)
+			return
+		}
+		if body["stream"] != true {
+			t.Fatalf("expected stream=true on fallback, got %#v", body)
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"OK\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProviderWithConfig("openai", server.URL, "secret", "model", "chat_completions", "auto", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{Messages: []Message{{Role: "user", Content: "x"}}})
+	if err != nil || result.Text != "OK" || requests != 2 {
+		t.Fatalf("result=%#v requests=%d err=%v", result, requests, err)
+	}
+}
+
+func TestOpenAIAutoStreamFallbackDoesNotRetryUnrelatedErrors(t *testing.T) {
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		http.Error(w, `{"error":{"message":"upstream stream processor unavailable"}}`, http.StatusBadGateway)
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProviderWithConfig("openai", server.URL, "secret", "model", "chat_completions", "auto", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Generate(context.Background(), Request{Messages: []Message{{Role: "user", Content: "x"}}})
+	if err == nil || requests != 1 {
+		t.Fatalf("requests=%d err=%v", requests, err)
+	}
+}
