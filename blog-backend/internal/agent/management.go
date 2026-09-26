@@ -85,6 +85,10 @@ func (s *ManagementService) SetDefaultProvider(ctx context.Context, id int64, pu
 
 func (s *ManagementService) SaveProvider(ctx context.Context, profile *providerdomain.ProviderProfile, apiKey string) error {
 	profile.Name = strings.TrimSpace(profile.Name)
+	profile.Vendor = providerdomain.ProviderVendor(strings.ToLower(strings.TrimSpace(string(profile.Vendor))))
+	if profile.Vendor == "" {
+		profile.Vendor = providerdomain.DefaultVendor(profile.ProviderType)
+	}
 	profile.BaseURL = strings.TrimRight(strings.TrimSpace(profile.BaseURL), "/")
 	profile.Model = strings.TrimSpace(profile.Model)
 	if profile.RequestTimeoutSeconds == 0 {
@@ -134,7 +138,11 @@ func (s *ManagementService) validateProvider(ctx context.Context, profile *provi
 		return fmt.Errorf("%w: name and model are required", ErrInvalid)
 	}
 	if profile.ProviderType != providerdomain.ProviderOpenAI && profile.ProviderType != providerdomain.ProviderAnthropic && profile.ProviderType != providerdomain.ProviderGemini {
-		return fmt.Errorf("%w: unsupported provider type", ErrInvalid)
+		return fmt.Errorf("%w: unsupported provider protocol", ErrInvalid)
+	}
+	vendor := string(profile.Vendor)
+	if vendor == "" || len(vendor) > 64 || strings.ContainsAny(vendor, " \t\r\n") {
+		return fmt.Errorf("%w: invalid provider vendor", ErrInvalid)
 	}
 	if err := provider.ValidateUpstreamURL(ctx, profile.BaseURL, s.allowedHosts); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalid, err)
