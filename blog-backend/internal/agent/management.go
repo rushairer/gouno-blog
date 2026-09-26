@@ -87,6 +87,9 @@ func (s *ManagementService) SaveProvider(ctx context.Context, profile *providerd
 	profile.Name = strings.TrimSpace(profile.Name)
 	profile.BaseURL = strings.TrimRight(strings.TrimSpace(profile.BaseURL), "/")
 	profile.Model = strings.TrimSpace(profile.Model)
+	if profile.Vendor == "" {
+		profile.Vendor = providerdomain.DefaultVendor(profile.ProviderType)
+	}
 	if profile.RequestTimeoutSeconds == 0 {
 		profile.RequestTimeoutSeconds = 60
 	}
@@ -135,6 +138,9 @@ func (s *ManagementService) validateProvider(ctx context.Context, profile *provi
 	}
 	if profile.ProviderType != providerdomain.ProviderOpenAI && profile.ProviderType != providerdomain.ProviderAnthropic && profile.ProviderType != providerdomain.ProviderGemini {
 		return fmt.Errorf("%w: unsupported provider type", ErrInvalid)
+	}
+	if !providerdomain.ValidVendor(profile.Vendor) {
+		return fmt.Errorf("%w: unsupported provider vendor", ErrInvalid)
 	}
 	if err := provider.ValidateUpstreamURL(ctx, profile.BaseURL, s.allowedHosts); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalid, err)
