@@ -216,8 +216,9 @@ func (s *ManagementService) ProviderClient(ctx context.Context, id int64) (provi
 	if err != nil {
 		return nil, err
 	}
-	return provider.NewHTTPProviderWithConfig(
-		string(profile.ProviderType), profile.BaseURL, key, profile.Model, profile.ProtocolMode, profile.StreamMode, s.allowedHosts,
+	return provider.NewHTTPProviderWithVendorConfig(
+		string(profile.ProviderType), string(profile.Vendor), profile.BaseURL, key, profile.Model,
+		profile.ProtocolMode, profile.StreamMode, s.allowedHosts,
 		time.Duration(profile.RequestTimeoutSeconds)*time.Second,
 	)
 }
