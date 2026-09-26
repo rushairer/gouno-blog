@@ -12,7 +12,7 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-24",
       "manualReview": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md",
@@ -94,8 +94,10 @@
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-admin-dl17-typography-recertification.md",
-      "recertificationReason": "CSA-A003 semantic Typography and CSA-A004 mobile Master/Detail propagation were manually re-reviewed on the exact Product head and paired rendered evidence."
+      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md",
+      "recertificationReason": "U04b Connector Productization explicitly reopens the frozen Connector canonical/product binding for manual-first review. Existing OAuth/callback, credential, Sandbox, Outbox/delivery and isolation behavior remains frozen while presentation fidelity is corrected.",
+      "reopenedBy": "U04b Connector Productization Program",
+      "reopenedDate": "2026-09-26"
     },
     {
       "id": "blog-admin-core-support",
