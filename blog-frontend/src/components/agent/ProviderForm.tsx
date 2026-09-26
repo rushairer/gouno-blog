@@ -430,7 +430,7 @@ export function ProviderForm({
         <div className="grid gap-5 xl:grid-cols-2">
           <AISettingsEditorSection
             title="连接身份"
-            description="名称和供应商类型用于识别连接；启停状态决定它是否可被 Agent 或默认模型选择。"
+            description="连接名称与供应商只表达产品身份；具体请求格式由接口协议单独决定。"
           >
             <FormGrid columns={2}>
               <Field label={labels.providerName}>
@@ -459,7 +459,7 @@ export function ProviderForm({
 
           <AISettingsEditorSection
             title="模型与端点"
-            description="协议和流式策略属于连接能力；端点、模型、超时与输出限制共同决定实际请求行为。"
+            description="接口协议、端点和模型共同决定运行时请求；供应商身份不再替代协议选择。"
           >
             <div className="flex flex-col gap-5">
               <FormGrid columns={2}>
@@ -505,22 +505,20 @@ export function ProviderForm({
                 </Field>
               </FormGrid>
 
-              <FormGrid columns={2}>
-                <Field label={labels.model}>
-                  <Input
-                    className="font-mono"
-                    required
-                    placeholder={activeVendorPreset.modelPlaceholder || "model-id"}
-                    value={value.model}
-                    onChange={(event) =>
-                      setValue((current) => ({
-                        ...current,
-                        model: event.target.value,
-                      }))
-                    }
-                  />
-                </Field>
-              </FormGrid>
+              <Field label={labels.model}>
+                <Input
+                  className="font-mono"
+                  required
+                  placeholder={activeVendorPreset.modelPlaceholder || "model-id"}
+                  value={value.model}
+                  onChange={(event) =>
+                    setValue((current) => ({
+                      ...current,
+                      model: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
 
               {protocolFields}
 
