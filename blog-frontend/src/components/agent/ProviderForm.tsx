@@ -234,12 +234,15 @@ export function ProviderForm({
   const [saving, setSaving] = useState(false);
   const draftKey = `provider-${initial?.id ?? "new"}`;
   const { clearDraft } = useFormDraft(draftKey, value, setValue);
+  const activeVendor =
+    value.vendor || fallbackVendor(value.provider_type || "openai");
+  const activeVendorPreset = vendorPresets[activeVendor];
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
     try {
-      await onSave(value);
+      await onSave({ ...value, vendor: activeVendor });
       clearDraft();
     } finally {
       setSaving(false);
@@ -258,7 +261,8 @@ export function ProviderForm({
       ...current,
       vendor,
       provider_type: preset.providerType,
-      base_url: preset.baseURL || current.base_url,
+      base_url:
+        vendor === "custom" ? current.base_url : preset.baseURL,
       protocol_mode: preset.protocolMode,
     }));
   };
@@ -269,7 +273,7 @@ export function ProviderForm({
       ...current,
       provider_type: providerType,
       base_url: vendorProtocolBaseURL(
-        current.vendor,
+        current.vendor || fallbackVendor(current.provider_type),
         providerType,
         current.base_url,
       ),
@@ -431,7 +435,7 @@ export function ProviderForm({
                 />
               </Field>
               <Field label={labels.providerVendor || "供应商"}>
-                <Select value={value.vendor} onChange={setVendor}>
+                <Select value={activeVendor} onChange={setVendor}>
                   {Object.entries(vendorPresets).map(([vendor, preset]) => (
                     <option key={vendor} value={vendor}>
                       {preset.label}
@@ -453,7 +457,7 @@ export function ProviderForm({
                     <option
                       value="openai"
                       disabled={
-                        !vendorPresets[value.vendor].protocols.includes("openai")
+                        !activeVendorPreset.protocols.includes("openai")
                       }
                     >
                       {labels.protocolOpenAICompatible || "OpenAI Compatible"}
@@ -461,7 +465,7 @@ export function ProviderForm({
                     <option
                       value="anthropic"
                       disabled={
-                        !vendorPresets[value.vendor].protocols.includes(
+                        !activeVendorPreset.protocols.includes(
                           "anthropic",
                         )
                       }
@@ -471,7 +475,7 @@ export function ProviderForm({
                     <option
                       value="gemini"
                       disabled={
-                        !vendorPresets[value.vendor].protocols.includes("gemini")
+                        !activeVendorPreset.protocols.includes("gemini")
                       }
                     >
                       {labels.protocolGeminiNative || "Gemini Native"}
@@ -500,7 +504,7 @@ export function ProviderForm({
                     className="font-mono"
                     required
                     placeholder={
-                      vendorPresets[value.vendor]?.modelPlaceholder || "model-id"
+                      activeVendorPreset.modelPlaceholder || "model-id"
                     }
                     value={value.model}
                     onChange={(event) =>
