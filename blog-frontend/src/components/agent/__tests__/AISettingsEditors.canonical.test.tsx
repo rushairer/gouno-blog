@@ -27,7 +27,12 @@ const providerLabels = {
   editProvider: "编辑模型连接",
   createProvider: "添加模型连接",
   providerName: "连接名称",
-  providerType: "供应商类型",
+  providerType: "Provider 类型",
+  providerVendor: "供应商",
+  providerProtocol: "接口协议",
+  protocolOpenAICompatible: "OpenAI Compatible",
+  protocolAnthropicMessages: "Anthropic Messages",
+  protocolGeminiNative: "Gemini Native",
   protocolMode: "接口协议模式",
   streamMode: "流式传输 (Stream)",
   baseUrl: "Base URL",
@@ -137,6 +142,14 @@ describe("AI Settings canonical editors", () => {
     expect(screen.getByText("连接身份")).toBeInTheDocument();
     expect(screen.getByText("凭据与状态")).toBeInTheDocument();
     expect(screen.getByText("模型与端点")).toBeInTheDocument();
+    expect(screen.getByText("供应商")).toBeInTheDocument();
+    expect(screen.getByText("接口协议")).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "DeepSeek" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Volcengine Ark / Doubao" }),
+    ).toBeInTheDocument();
   });
 
   it("groups Embedding configuration into index semantics and connectivity", () => {
