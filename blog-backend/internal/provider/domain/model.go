@@ -27,6 +27,28 @@ const (
 	VendorMiniMax         ProviderVendor = "minimax"
 )
 
+func DefaultVendor(providerType ProviderType) ProviderVendor {
+	switch providerType {
+	case ProviderAnthropic:
+		return VendorAnthropic
+	case ProviderGemini:
+		return VendorGoogle
+	default:
+		return VendorOpenAI
+	}
+}
+
+func ValidVendor(vendor ProviderVendor) bool {
+	switch vendor {
+	case VendorCustom, VendorOpenAI, VendorAnthropic, VendorGoogle, VendorDeepSeek,
+		VendorAlibabaBailian, VendorVolcengineArk, VendorTencentHunyuan, VendorBaiduQianfan,
+		VendorMoonshot, VendorZhipu, VendorSiliconFlow, VendorMiniMax:
+		return true
+	default:
+		return false
+	}
+}
+
 type ProviderProfile struct {
 	ID                    int64        `json:"id"`
 	Name                  string         `json:"name"`
