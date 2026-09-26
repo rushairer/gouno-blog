@@ -21,6 +21,41 @@ type HTTPProvider struct {
 	client                                *http.Client
 }
 
+type upstreamHTTPError struct {
+	Provider   string
+	StatusCode int
+	Body       string
+}
+
+func (e *upstreamHTTPError) Error() string {
+	return fmt.Sprintf("upstream %s returned %d: %s", e.Provider, e.StatusCode, e.Body)
+}
+
+func requiresStreamingFallback(err error) bool {
+	var upstreamErr *upstreamHTTPError
+	if !errors.As(err, &upstreamErr) {
+		return false
+	}
+	if upstreamErr.StatusCode != http.StatusBadRequest && upstreamErr.StatusCode != http.StatusUnprocessableEntity {
+		return false
+	}
+	message := strings.ToLower(upstreamErr.Body)
+	for _, hint := range []string{
+		"stream must be true",
+		"streaming is required",
+		"streaming required",
+		"only support stream",
+		"only supports stream",
+		"only support streaming",
+		"only supports streaming",
+	} {
+		if strings.Contains(message, hint) {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *HTTPProvider) ProtocolMode() string { return p.protocolMode }
 func (p *HTTPProvider) StreamMode() string   { return p.streamMode }
 
@@ -243,7 +278,9 @@ func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Res
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		defer resp.Body.Close()
 		limited, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return nil, fmt.Errorf("upstream %s returned %d: %s", p.name, resp.StatusCode, strings.TrimSpace(string(limited)))
+		return nil, &upstreamHTTPError{
+			Provider: p.name, StatusCode: resp.StatusCode, Body: strings.TrimSpace(string(limited)),
+		}
 	}
 	return resp, nil
 }
