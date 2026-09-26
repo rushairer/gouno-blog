@@ -23,6 +23,7 @@ const provider = {
   id: 1,
   name: "OpenAI",
   provider_type: "openai",
+  vendor: "openai",
   base_url: "https://api.openai.com",
   model: "gpt-5-mini",
   api_key_last4: "1234",
