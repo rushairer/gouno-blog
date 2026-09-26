@@ -4313,15 +4313,15 @@
       ],
       "subview": "advanced:connectors",
       "implementation": "migrated",
-      "verification": "verified",
+      "verification": "needs-manual-recertification",
       "evidence": [
-        "AI Settings reverse migration: canonical Connector collection with contextual Drawer while preserving OAuth/Outbox behavior; source parity and browser coverage"
+        "Historical reverse migration exists, but U04b manual-first Connector review was previously blocked by Module Hold; 2026-09-26 productization explicitly reopens Canonical/Product parity."
       ]
     }
   ],
   "currentProgramStatus": {
-    "asOf": "2026-09-13",
-    "mainHead": "6f722dcdd34f3495a293d7a77dff4baf35e1120a",
+    "asOf": "2026-09-26",
+    "mainHead": "aa393a8f73b33c0876054746452e9104f8c369c7",
     "canonicalUi": {
       "package": "@gouno/ui@0.3.0",
       "upstreamMainSha": "cb946376e32bcc0db18d13fb09d89d71b5780dca",
@@ -4350,11 +4350,11 @@
         "browser": "verified: run 34761329896; artifact 10319540400 sha256:c380295786ccdf2f8d1d1bde0ce4785ab2ce3c5e10419586a55191c7ae6154d7"
       },
       "U04b": {
-        "status": "hold",
-        "reason": "Connector frontend workspace is protected by the root AGENTS.md Connector Module Hold"
+        "status": "in-progress",
+        "reason": "User explicitly authorized Connector work on 2026-09-26; Canonical semantic correction and manual-first Product recertification are underway."
       },
       "U04c": {
-        "status": "blocked-by-U04b-hold"
+        "status": "blocked-by-U04b-in-progress"
       }
     },
     "cssBoundary": {
@@ -4371,7 +4371,7 @@
       "agentConsoleGenericButtonOverrides": [
         ".agent-row-actions .btn"
       ],
-      "agentConsoleButtonExceptionReason": "shared with ConnectorWorkspace under Connector Module Hold",
+      "agentConsoleButtonExceptionReason": "Historical Connector-Hold rationale is stale; current ConnectorWorkspace does not use agent-row-actions. U04c must reclassify remaining Workflow-owned usage after U04b closes.",
       "workflowGenericButtonOverrides": 0
     },
     "latestValidation": {
