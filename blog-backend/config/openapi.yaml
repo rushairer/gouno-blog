@@ -1465,6 +1465,12 @@ components:
         provider_type:
           type: string
           enum: [openai, anthropic, gemini]
+          description: Wire protocol family used by the runtime adapter.
+        vendor:
+          type: string
+          enum: [custom, openai, anthropic, google, deepseek, alibaba_bailian, volcengine_ark, tencent_hunyuan, baidu_qianfan, moonshot, zhipu, siliconflow, minimax]
+          description: Human-facing model platform identity; independent from provider_type.
+          enum: [openai, anthropic, gemini]
         base_url:
           type: string
           format: uri
