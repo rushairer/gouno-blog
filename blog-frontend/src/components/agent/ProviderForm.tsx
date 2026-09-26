@@ -106,12 +106,12 @@ const vendorPresets: Record<
     protocols: ["openai"],
   },
   tencent: {
-    label: "Tencent Hunyuan",
+    label: "Tencent TokenHub / Hunyuan",
     providerType: "openai",
-    baseURL: "https://api.hunyuan.cloud.tencent.com/v1",
+    baseURL: "https://tokenhub.tencentmaas.com/v1",
     protocolMode: "chat_completions",
-    modelPlaceholder: "hunyuan-turbos-latest",
-    protocols: ["openai"],
+    modelPlaceholder: "hy4-preview",
+    protocols: ["openai", "anthropic"],
   },
   zhipu: {
     label: "Zhipu GLM",
@@ -119,7 +119,7 @@ const vendorPresets: Record<
     baseURL: "https://open.bigmodel.cn/api/paas/v4",
     protocolMode: "chat_completions",
     modelPlaceholder: "glm-5",
-    protocols: ["openai", "anthropic"],
+    protocols: ["openai"],
   },
   baidu: {
     label: "Baidu Qianfan",
@@ -189,10 +189,9 @@ function vendorProtocolBaseURL(
       return "https://ark.cn-beijing.volces.com/api/compatible";
     if (providerType === "openai") return vendorPresets.volcengine.baseURL;
   }
-  if (vendor === "zhipu") {
-    if (providerType === "anthropic")
-      return "https://open.bigmodel.cn/api/anthropic";
-    if (providerType === "openai") return vendorPresets.zhipu.baseURL;
+  if (vendor === "tencent") {
+    if (providerType === "openai" || providerType === "anthropic")
+      return vendorPresets.tencent.baseURL;
   }
   const preset = vendorPresets[vendor];
   if (providerType === preset.providerType && preset.baseURL) {
