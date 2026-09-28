@@ -344,44 +344,6 @@ func (t *BlogTools) getPublishedPost(ctx context.Context, raw json.RawMessage) (
 	return publishedPostView(post), nil
 }
 
-func (t *BlogTools) listPublishedPosts(ctx context.Context, raw json.RawMessage) (any, error) {
-	var args struct {
-		Page     int `json:"page"`
-		PageSize int `json:"page_size"`
-	}
-	if err := decodeArguments(raw, &args); err != nil {
-		return nil, err
-	}
-	if args.Page <= 0 {
-		args.Page = 1
-	}
-	if args.PageSize <= 0 {
-		args.PageSize = 50
-	}
-	if args.PageSize > 100 {
-		return nil, ErrInvalidArgument
-	}
-	posts, total, err := t.posts.ListPosts(ctx, "", "", args.Page, args.PageSize)
-	return map[string]any{"list": compactPosts(posts), "total": total}, err
-}
-
-func (t *BlogTools) getPublishedPost(ctx context.Context, raw json.RawMessage) (any, error) {
-	var args struct {
-		ID int64 `json:"id"`
-	}
-	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
-		return nil, ErrInvalidArgument
-	}
-	post, err := t.posts.GetPost(ctx, args.ID)
-	if err != nil || post == nil {
-		return nil, err
-	}
-	if len([]rune(post.Content)) > 50000 {
-		post.Content = string([]rune(post.Content)[:50000])
-	}
-	return post, nil
-}
-
 func (t *BlogTools) searchPosts(ctx context.Context, raw json.RawMessage) (any, error) {
 	var args struct {
 		Query string `json:"query"`
