@@ -100,11 +100,13 @@ function providerVendorLabel(provider: ProviderProfile, locale: "en" | "zh") {
 }
 
 function providerProtocolLabel(provider: ProviderProfile) {
-  return {
-    openai: "OpenAI Compatible",
-    anthropic: "Anthropic Messages",
-    gemini: "Gemini Native",
-  }[provider.provider_type] || provider.provider_type;
+  return (
+    {
+      openai: "OpenAI Compatible",
+      anthropic: "Anthropic Messages",
+      gemini: "Gemini Native",
+    }[provider.provider_type] || provider.provider_type
+  );
 }
 
 interface AdvancedWorkspaceProps {
