@@ -80,8 +80,12 @@ function providerVendorLabel(provider: ProviderProfile, locale: "en" | "zh") {
     anthropic: "Anthropic",
     google: "Google Gemini",
     deepseek: "DeepSeek",
-    alibaba: locale === "zh" ? "阿里云百炼 / Qwen" : "Alibaba Model Studio / Qwen",
-    volcengine: locale === "zh" ? "火山方舟 / 豆包" : "Volcengine Ark / Doubao",
+    alibaba:
+      locale === "zh"
+        ? "阿里云百炼 / Qwen"
+        : "Alibaba Model Studio / Qwen",
+    volcengine:
+      locale === "zh" ? "火山方舟 / 豆包" : "Volcengine Ark / Doubao",
     moonshot: "Moonshot / Kimi",
     tencent:
       locale === "zh" ? "腾讯 TokenHub / 混元" : "Tencent TokenHub / Hunyuan",
