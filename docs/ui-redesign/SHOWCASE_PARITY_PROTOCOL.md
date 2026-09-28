@@ -33,6 +33,19 @@ For every surface family:
 8. Only after the preceding steps pass, extract stable conclusions into source/AST/browser contracts.
 9. Update the certification ledger last. The ledger records evidence; it never creates evidence.
 
+## Cross-repository amendment handshake
+
+A post-freeze Canonical amendment may temporarily declare a Blog consumer impact of `needs-manual-recertification`. This is a synchronization state, not an acceptance state.
+
+The required sequence is:
+
+1. The upstream amendment lands with Blog impact `needs-manual-recertification`; the affected Blog certification must also be demoted to `needs-manual-recertification`.
+2. The Blog consumer implementation may then land with fresh manual/browser evidence while remaining pending. Automated parity still runs; the pending label only prevents a circular cross-repository certification dependency.
+3. After that consumer implementation is on Blog `main`, Gouno UI may promote the amendment impact to `recertified` and run reciprocal parity against the real Blog main branch.
+4. Only after the upstream `recertified` state is merged may Blog promote its local certification back to `verified`.
+
+At no point may `needs-manual-recertification` be treated as equivalent to `verified`. If upstream remains pending while a local affected entry claims `verified`, the certification gate must fail.
+
 ## Minimum evidence for `verified`
 
 A verified entry must record:
