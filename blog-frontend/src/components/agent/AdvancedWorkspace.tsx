@@ -867,7 +867,8 @@ export function AdvancedWorkspace({
                               <strong>{provider.name}</strong>
                               <Text size="xs" tone="muted">
                                 {providerVendorLabel(provider, locale)} ·{" "}
-                                {providerProtocolLabel(provider)} · {provider.model}
+                                {providerProtocolLabel(provider)} ·{" "}
+                                {provider.model}
                               </Text>
                             </div>
                             <Tag
