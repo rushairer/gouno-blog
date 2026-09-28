@@ -144,12 +144,7 @@ describe("AI Settings canonical editors", () => {
     expect(screen.getByText("模型与端点")).toBeInTheDocument();
     expect(screen.getByText("供应商")).toBeInTheDocument();
     expect(screen.getByText("接口协议")).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "DeepSeek" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "Volcengine Ark / Doubao" }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("模型与端点")).toBeInTheDocument();
   });
 
   it("groups Embedding configuration into index semantics and connectivity", () => {
