@@ -16,9 +16,10 @@ import (
 )
 
 type fakeCapabilityService struct {
-	client  *externaldomain.Client
-	created *externaldomain.CreatedClient
-	invoked string
+	client          *externaldomain.Client
+	created         *externaldomain.CreatedClient
+	invoked         string
+	authFailureErr  error
 }
 
 func (s *fakeCapabilityService) ExternalCatalog() []tool.CatalogItem {
@@ -50,6 +51,9 @@ func (s *fakeCapabilityService) Authenticate(_ context.Context, key string) (*ex
 		return nil, externalservice.ErrUnauthorized
 	}
 	return s.client, nil
+}
+func (s *fakeCapabilityService) AllowAuthenticationFailure(context.Context, string) error {
+	return s.authFailureErr
 }
 func (s *fakeCapabilityService) Allow(context.Context, *externaldomain.Client) error {
 	return nil
@@ -101,6 +105,27 @@ func TestExternalBearerBoundaryAndInvocation(t *testing.T) {
 	}
 	if response.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("cache control = %q", response.Header().Get("Cache-Control"))
+	}
+}
+
+func TestExternalInvalidBearerIsFailureRateLimited(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCapabilityService{
+		client: &externaldomain.Client{ID: 1, Enabled: true, RateLimitPerMinute: 60},
+		authFailureErr: externalservice.ErrRateLimited,
+	}
+	ctrl := New(service)
+	router := gin.New()
+	group := router.Group("/api/external/v1")
+	group.Use(ctrl.RejectBrowserOrigin(), ctrl.Authenticate(), ctrl.RateLimit())
+	group.GET("/capabilities", ctrl.Catalog)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/external/v1/capabilities", nil)
+	req.Header.Set("Authorization", "Bearer gouno_live_invalid-key-material")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != http.StatusTooManyRequests {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
