@@ -94,6 +94,23 @@ describe("AI API high-privilege interception", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
+  it("holds and replays External API administration after successful Step-Up", async () => {
+    const listener = listenForStepUp();
+    postMock
+      .mockRejectedValueOnce(
+        new Error("recent multi-factor authentication required"),
+      )
+      .mockResolvedValueOnce({ client: { id: 91 } });
+
+    const pending = apiClient.post("/api/admin/external-api/clients/91/rotate");
+
+    await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
+    window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
+
+    await expect(pending).resolves.toEqual({ client: { id: 91 } });
+    expect(postMock).toHaveBeenCalledTimes(2);
+  });
+
   it("does not claim unrelated administration errors as AI Step-Up", async () => {
     const listener = listenForStepUp();
     postMock.mockRejectedValueOnce(
