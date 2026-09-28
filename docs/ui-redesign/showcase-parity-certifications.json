@@ -14,12 +14,12 @@
       "scope": "Blog Admin AI Settings + AI Operations",
       "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-24",
-      "manualReview": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md",
+      "reviewDate": "2026-09-28",
+      "manualReview": "docs/ui-redesign/blog-admin-csa-a005-pending-recertification.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
-        "blog": "57c3249d14e15e8eb71a3dbc18bced516cda1e14",
-        "gounoUi": "69019c4175bde817d56c5037f95fbc382b122c98"
+        "blog": "ec92d2748f186b0831cce6f78df913d1676506cf",
+        "gounoUi": "9a1aa7ebf897525856a49642db8e7a63b2d1088d"
       },
       "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
@@ -46,35 +46,40 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 35939650752,
+            "id": 36404210431,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35939650710,
+            "id": 36404210415,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 35939650761,
+            "id": 36404210434,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 35939650750,
+            "id": 36404210362,
+            "result": "success"
+          },
+          {
+            "name": "Gosso Release BFF Compatibility",
+            "id": 36404210429,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10784805484,
-            "name": "blog-showcase-parity-35939650752",
-            "sha256": "ef4eea6cb521da4731c9ffff092426d9e741cd6d213c91d408263192a58c3194"
+            "id": 10962245898,
+            "name": "blog-showcase-parity-36404210431",
+            "sha256": "fbde8c8b10e616aad5e4d92efd9da86b63d3f32c786bbcb28268dce61367b004"
           },
           {
-            "id": 10784860914,
-            "name": "blog-browser-acceptance-35939650710",
-            "sha256": "d2099536df24779c92c1942b7e57955bde588fc99df959b85cca6c4f9fceed62"
+            "id": 10961722110,
+            "name": "blog-browser-acceptance-36404210415",
+            "sha256": "c5fad0ed2fef0e9ae5da0b1e6dcdd0ccf406436b2ad026c140c6c8b7ee640e26"
           }
         ]
       },
@@ -95,7 +100,7 @@
         "blog-admin-ai-settings"
       ],
       "previousManualReview": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md",
-      "recertificationReason": "U04b Connector Productization explicitly reopens the frozen Connector canonical/product binding for manual-first review. Existing OAuth/callback, credential, Sandbox, Outbox/delivery and isolation behavior remains frozen while presentation fidelity is corrected.",
+      "recertificationReason": "CSA-A005 changed the canonical Model Connection contract by separating vendor identity from wire protocol. Blog Product implementation has been manually reviewed and exact-head browser/parity evidence is fresh, but the cross-repository handshake remains pending until Gouno UI marks the Blog consumer impact recertified.",
       "reopenedBy": "U04b Connector Productization Program",
       "reopenedDate": "2026-09-26"
     },
