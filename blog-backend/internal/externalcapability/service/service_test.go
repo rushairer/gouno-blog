@@ -184,7 +184,7 @@ func TestCreateClientReturnsSecretOnceAndAuthenticatesHash(t *testing.T) {
 func TestCreateClientRejectsNonExternalOrWriteCapabilities(t *testing.T) {
 	svc := New(&fakeRepository{}, externalRegistry(), fixedLimiter{allowed: true})
 	for _, capability := range []string{"content.agent_only", "content.write", "missing"} {
-		_, err := svc.CreateClient(context.Background(), "Unsafe", []string{capability}, 60, nil, nil)
+		_, err := svc.CreateClient(context.Background(), "Unsafe", []string{capability}, 60, nil, &testPrincipalID)
 		if !errors.Is(err, ErrForbidden) {
 			t.Fatalf("%s error = %v", capability, err)
 		}
