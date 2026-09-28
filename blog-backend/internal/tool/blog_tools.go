@@ -58,31 +58,51 @@ func NewBlogRegistry(posts *postservice.PostService, community communityModerati
 		Definition{
 			Name: "content.list_posts", Description: "List blog posts, including drafts and scheduled posts.",
 			Parameters: schema(`{"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.listPosts,
+			Surfaces: []string{"agent"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.listPosts,
 		},
 		Definition{
 			Name: "content.get_post", Description: "Read one blog post by numeric ID.",
 			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id"}, Execute: tools.getPost,
+			Surfaces: []string{"agent"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id"}, Execute: tools.getPost,
+		},
+		Definition{
+			Name: "content.list_published_posts", Description: "List published blog posts through the public content boundary.",
+			Parameters: schema(`{"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100}}`),
+			Surfaces: []string{"external"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.listPublishedPosts,
+		},
+		Definition{
+			Name: "content.get_published_post", Description: "Read one published blog post by numeric ID through the public content boundary.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
+			Surfaces: []string{"external"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id"}, Execute: tools.getPublishedPost,
 		},
 		Definition{
 			Name: "content.search_posts", Description: "Search published blog posts by title, summary, or content.",
 			Parameters: schema(`{"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":20}}`, "query"),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.searchPosts,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}, Execute: tools.searchPosts,
 		},
 		Definition{
 			Name: "content.list_tags", Description: "List all blog tags.",
-			Parameters: schema(`{}`), Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "tag", OutputKeys: []string{"name"}}, Execute: tools.listTags,
+			Parameters: schema(`{}`), Surfaces: []string{"agent", "external"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "tag", OutputKeys: []string{"name"}}, Execute: tools.listTags,
 		},
 		Definition{
 			Name: "content.list_pages", Description: "List custom pages, including drafts and navigation pages.",
 			Parameters: schema(`{"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "page", OutputKeys: []string{"id"}}, Execute: tools.listPages,
+			Surfaces: []string{"agent"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "page", OutputKeys: []string{"id"}}, Execute: tools.listPages,
 		},
 		Definition{
 			Name: "content.get_page", Description: "Read one custom page by numeric ID.",
 			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "page", Argument: "id"}, Execute: tools.getPage,
+			Surfaces: []string{"agent"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "page", Argument: "id"}, Execute: tools.getPage,
+		},
+		Definition{
+			Name: "content.list_published_pages", Description: "List published custom pages through the public content boundary.",
+			Parameters: schema(`{"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100}}`),
+			Surfaces: []string{"external"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "page", OutputKeys: []string{"id"}}, Execute: tools.listPublishedPages,
+		},
+		Definition{
+			Name: "content.get_published_page", Description: "Read one published custom page by slug through the public content boundary.",
+			Parameters: schema(`{"slug":{"type":"string","minLength":1,"maxLength":200}}`, "slug"),
+			Surfaces: []string{"external"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "page", OutputKeys: []string{"id"}}, Execute: tools.getPublishedPage,
 		},
 		Definition{
 			Name: "content.audit_page", Description: "Run deterministic content-quality checks for a draft or published custom page.",
@@ -122,26 +142,26 @@ func NewBlogRegistry(posts *postservice.PostService, community communityModerati
 		Definition{
 			Name: "content.find_related", Description: "Search published posts related to one post and return relevance-ranked evidence snippets.",
 			Parameters: schema(`{"id":{"type":"integer","minimum":1},"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":10}}`, "id"),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id", Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id", "id"}}, Execute: tools.findRelatedContent,
+			Surfaces: []string{"agent"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "post", Argument: "id", Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id", "id"}}, Execute: tools.findRelatedContent,
 		},
 		Definition{
 			Name: "content.search_knowledge", Description: "Search indexed published content and return validated citation evidence.",
 			Parameters:     schema(`{"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":20}}`, "query"),
 			Configuration:  schema(`{"limit":{"type":"integer","minimum":1,"maximum":20}}`),
 			DefaultBinding: json.RawMessage(`{"limit":8}`),
-			Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}, Execute: tools.searchKnowledge,
+			Surfaces:       []string{"agent"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}, Execute: tools.searchKnowledge,
 		},
 		Definition{
 			Name: "content.list_stale_posts", Description: "List published posts that have not been updated for a chosen number of days.",
 			Parameters:     schema(`{"older_than_days":{"type":"integer","minimum":1,"maximum":3650},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Configuration:  schema(`{"older_than_days":{"type":"integer","minimum":1,"maximum":3650},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			DefaultBinding: json.RawMessage(`{"older_than_days":180,"limit":20}`),
-			Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findStalePosts,
+			Surfaces: []string{"agent", "external"}, Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findStalePosts,
 		},
 		Definition{
 			Name: "content.list_orphan_posts", Description: "List published posts with no detected relative internal links from another published post.",
 			Parameters: schema(`{"limit":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findOrphanPosts,
+			Surfaces: []string{"agent", "external"}, Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findOrphanPosts,
 		},
 		Definition{
 			Name: "comments.list_pending", Description: "List pending or reported comments for moderation insight.",
@@ -149,15 +169,15 @@ func NewBlogRegistry(posts *postservice.PostService, community communityModerati
 			Risk:       tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "comment", OutputKeys: []string{"id"}}, Execute: tools.listPendingComments,
 		},
 		Definition{
-			Name: "analytics.get_summary", Description: "Read the current blog analytics summary.",
-			Parameters: schema(`{}`), Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true}, Execute: tools.analyticsSummary,
+			Name: "analytics.get_summary", Description: "Read the administrative blog analytics summary, including moderation and AI alert state.",
+			Parameters: schema(`{}`), Surfaces: []string{"agent"}, Risk: tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true}, Execute: tools.analyticsSummary,
 		},
 		Definition{
 			Name: "analytics.list_low_engagement_posts", Description: "List published posts with sufficient views but a low likes-to-views ratio.",
 			Parameters:     schema(`{"min_views":{"type":"integer","minimum":1,"maximum":1000000000},"max_engagement_rate":{"type":"number","minimum":0,"maximum":1},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Configuration:  schema(`{"min_views":{"type":"integer","minimum":1,"maximum":1000000000},"max_engagement_rate":{"type":"number","minimum":0,"maximum":1},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			DefaultBinding: json.RawMessage(`{"min_views":100,"max_engagement_rate":0.02,"limit":20}`),
-			Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findLowEngagementPosts,
+			Surfaces: []string{"agent", "external"}, Risk:           tooldomain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findLowEngagementPosts,
 		},
 		Definition{
 			Name: "content.propose_draft", Description: "Create a new blog draft proposal.",
@@ -255,6 +275,17 @@ func compactPosts(posts []*postdomain.Post) []map[string]any {
 	return result
 }
 
+func publishedPostView(post *postdomain.Post) map[string]any {
+	return map[string]any{
+		"id": post.ID, "title": post.Title, "slug": post.Slug, "summary": post.Summary,
+		"content": post.Content, "tags": post.Tags, "category_id": post.CategoryID,
+		"cover_url": post.CoverURL, "cover_alt": post.CoverAlt,
+		"seo_title": post.SEOTitle, "seo_description": post.SEODescription,
+		"status": post.Status, "views_count": post.ViewsCount, "likes_count": post.LikesCount,
+		"published_at": post.PublishedAt, "created_at": post.CreatedAt, "updated_at": post.UpdatedAt,
+	}
+}
+
 func (t *BlogTools) getPost(ctx context.Context, raw json.RawMessage) (any, error) {
 	var args struct {
 		ID int64 `json:"id"`
@@ -264,6 +295,85 @@ func (t *BlogTools) getPost(ctx context.Context, raw json.RawMessage) (any, erro
 	}
 	post, err := t.posts.GetAdminPost(ctx, args.ID)
 	if err != nil {
+		return nil, err
+	}
+	if len([]rune(post.Content)) > 50000 {
+		post.Content = string([]rune(post.Content)[:50000])
+	}
+	return post, nil
+}
+
+func (t *BlogTools) listPublishedPosts(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct {
+		Page     int `json:"page"`
+		PageSize int `json:"page_size"`
+	}
+	if err := decodeArguments(raw, &args); err != nil {
+		return nil, err
+	}
+	if args.Page <= 0 {
+		args.Page = 1
+	}
+	if args.PageSize <= 0 {
+		args.PageSize = 50
+	}
+	if args.PageSize > 100 {
+		return nil, ErrInvalidArgument
+	}
+	posts, total, err := t.posts.ListPosts(ctx, "", "", args.Page, args.PageSize)
+	return map[string]any{"list": compactPosts(posts), "total": total}, err
+}
+
+func (t *BlogTools) getPublishedPost(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct {
+		ID int64 `json:"id"`
+	}
+	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
+		return nil, ErrInvalidArgument
+	}
+	post, err := t.posts.GetPost(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	if post == nil {
+		return nil, ErrInvalidArgument
+	}
+	if len([]rune(post.Content)) > 50000 {
+		post.Content = string([]rune(post.Content)[:50000])
+	}
+	return publishedPostView(post), nil
+}
+
+func (t *BlogTools) listPublishedPosts(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct {
+		Page     int `json:"page"`
+		PageSize int `json:"page_size"`
+	}
+	if err := decodeArguments(raw, &args); err != nil {
+		return nil, err
+	}
+	if args.Page <= 0 {
+		args.Page = 1
+	}
+	if args.PageSize <= 0 {
+		args.PageSize = 50
+	}
+	if args.PageSize > 100 {
+		return nil, ErrInvalidArgument
+	}
+	posts, total, err := t.posts.ListPosts(ctx, "", "", args.Page, args.PageSize)
+	return map[string]any{"list": compactPosts(posts), "total": total}, err
+}
+
+func (t *BlogTools) getPublishedPost(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct {
+		ID int64 `json:"id"`
+	}
+	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
+		return nil, ErrInvalidArgument
+	}
+	post, err := t.posts.GetPost(ctx, args.ID)
+	if err != nil || post == nil {
 		return nil, err
 	}
 	if len([]rune(post.Content)) > 50000 {
@@ -511,6 +621,16 @@ func compactPages(pages []*pagedomain.Page) []map[string]any {
 	return result
 }
 
+func publishedPageView(page *pagedomain.Page) map[string]any {
+	return map[string]any{
+		"id": page.ID, "title": page.Title, "slug": page.Slug, "summary": page.Summary,
+		"content": page.Content, "template": page.Template, "status": page.Status,
+		"show_in_nav": page.ShowInNav, "allow_comments": page.AllowComments,
+		"sort_order": page.SortOrder, "seo_title": page.SEOTitle,
+		"seo_description": page.SEODescription, "created_at": page.CreatedAt, "updated_at": page.UpdatedAt,
+	}
+}
+
 func (t *BlogTools) getPage(ctx context.Context, raw json.RawMessage) (any, error) {
 	if t.pages == nil {
 		return nil, ErrInvalidArgument
@@ -529,6 +649,66 @@ func (t *BlogTools) getPage(ctx context.Context, raw json.RawMessage) (any, erro
 		page.Content = string([]rune(page.Content)[:50000])
 	}
 	return page, nil
+}
+
+func (t *BlogTools) listPublishedPages(ctx context.Context, raw json.RawMessage) (any, error) {
+	if t.pages == nil {
+		return map[string]any{"list": []any{}, "total": 0}, nil
+	}
+	var args struct {
+		Page     int `json:"page"`
+		PageSize int `json:"page_size"`
+	}
+	if err := decodeArguments(raw, &args); err != nil {
+		return nil, err
+	}
+	if args.Page <= 0 {
+		args.Page = 1
+	}
+	if args.PageSize <= 0 {
+		args.PageSize = 50
+	}
+	if args.PageSize > 100 {
+		return nil, ErrInvalidArgument
+	}
+	pages, err := t.pages.ListPublishedPages(ctx)
+	if err != nil {
+		return nil, err
+	}
+	total := len(pages)
+	start := (args.Page - 1) * args.PageSize
+	if start >= total {
+		return map[string]any{"list": []map[string]any{}, "total": total}, nil
+	}
+	end := start + args.PageSize
+	if end > total {
+		end = total
+	}
+	return map[string]any{"list": compactPages(pages[start:end]), "total": total}, nil
+}
+
+func (t *BlogTools) getPublishedPage(ctx context.Context, raw json.RawMessage) (any, error) {
+	if t.pages == nil {
+		return nil, ErrInvalidArgument
+	}
+	var args struct {
+		Slug string `json:"slug"`
+	}
+	if err := decodeArguments(raw, &args); err != nil {
+		return nil, err
+	}
+	args.Slug = strings.TrimSpace(args.Slug)
+	if args.Slug == "" || len([]rune(args.Slug)) > 200 {
+		return nil, ErrInvalidArgument
+	}
+	page, err := t.pages.GetPublishedPageBySlug(ctx, args.Slug)
+	if err != nil {
+		return nil, err
+	}
+	if len([]rune(page.Content)) > 50000 {
+		page.Content = string([]rune(page.Content)[:50000])
+	}
+	return publishedPageView(page), nil
 }
 
 func (t *BlogTools) proposePageDraft(_ context.Context, raw json.RawMessage) (*Proposal, error) {
