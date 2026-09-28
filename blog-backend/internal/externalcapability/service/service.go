@@ -92,7 +92,7 @@ func (s *Service) CatalogForClient(client *externaldomain.Client) []tool.Catalog
 	return result
 }
 
-func (s *Service) CreateClient(ctx context.Context, name string, capabilities []string, rateLimit int, expiresAt *time.Time, principalID *int64) (*externaldomain.CreatedClient, error) {
+func (s *Service) CreateClient(ctx context.Context, name string, capabilities []string, enabled bool, rateLimit int, expiresAt *time.Time, principalID *int64) (*externaldomain.CreatedClient, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || len([]rune(name)) > 120 ||
 		principalID == nil || *principalID <= 0 ||
@@ -113,7 +113,7 @@ func (s *Service) CreateClient(ctx context.Context, name string, capabilities []
 	}
 	item := &externaldomain.Client{
 		Name: name, KeyPrefix: keyPrefix, Capabilities: capabilities,
-		Enabled: true, RateLimitPerMinute: rateLimit, ExpiresAt: expiresAt,
+		Enabled: enabled, RateLimitPerMinute: rateLimit, ExpiresAt: expiresAt,
 		CreatedByPrincipalID: principalID,
 	}
 	if err := s.repo.Create(ctx, item, keyHash); err != nil {
