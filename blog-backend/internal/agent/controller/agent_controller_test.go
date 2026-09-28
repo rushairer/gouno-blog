@@ -14,6 +14,7 @@ func TestBindAgentJSONAcceptsProviderWithID(t *testing.T) {
 		"id": 1,
 		"name": "DeepSeek",
 		"provider_type": "anthropic",
+		"vendor": "deepseek",
 		"base_url": "https://ai.apigg.com",
 		"model": "deepseek-v4-flash",
 		"api_key": "",
@@ -31,7 +32,7 @@ func TestBindAgentJSONAcceptsProviderWithID(t *testing.T) {
 	if err := bindAgentJSON(context, &value); err != nil {
 		t.Fatalf("expected provider with ID and options to bind successfully, got: %v", err)
 	}
-	if value.ID != 1 || value.Name != "DeepSeek" {
+	if value.ID != 1 || value.Name != "DeepSeek" || string(value.Vendor) != "deepseek" {
 		t.Fatalf("unexpected bound values: %+v", value)
 	}
 }

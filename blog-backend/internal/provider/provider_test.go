@@ -732,3 +732,95 @@ func TestOpenAIAutoStreamFallbackDoesNotRetryUnrelatedErrors(t *testing.T) {
 		t.Fatalf("requests=%d err=%v", requests, err)
 	}
 }
+
+
+func TestResolveProviderTargetURLKeepsCompatibleBasePrefixes(t *testing.T) {
+	tests := []struct {
+		name, protocol, vendor, baseURL, endpoint, want string
+	}{
+		{
+			name:     "default openai root",
+			protocol: "openai",
+			vendor:   "openai",
+			baseURL:  "https://api.openai.com",
+			endpoint: "/v1/chat/completions",
+			want:     "https://api.openai.com/v1/chat/completions",
+		},
+		{
+			name:     "deepseek official root",
+			protocol: "openai",
+			vendor:   "deepseek",
+			baseURL:  "https://api.deepseek.com",
+			endpoint: "/v1/chat/completions",
+			want:     "https://api.deepseek.com/chat/completions",
+		},
+		{
+			name:     "versioned openai compatible base",
+			protocol: "openai",
+			vendor:   "custom",
+			baseURL:  "https://api.example.com/v1",
+			endpoint: "/v1/chat/completions",
+			want:     "https://api.example.com/v1/chat/completions",
+		},
+		{
+			name:     "volcengine compatible prefix",
+			protocol: "openai",
+			vendor:   "volcengine",
+			baseURL:  "https://ark.cn-beijing.volces.com/api/v3",
+			endpoint: "/v1/chat/completions",
+			want:     "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+		},
+		{
+			name:     "dashscope compatible prefix",
+			protocol: "openai",
+			vendor:   "alibaba",
+			baseURL:  "https://dashscope.aliyuncs.com/compatible-mode/v1",
+			endpoint: "/v1/chat/completions",
+			want:     "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+		},
+		{
+			name:     "qianfan v2 compatible prefix",
+			protocol: "openai",
+			vendor:   "baidu",
+			baseURL:  "https://qianfan.baidubce.com/v2",
+			endpoint: "/v1/chat/completions",
+			want:     "https://qianfan.baidubce.com/v2/chat/completions",
+		},
+		{
+			name:     "compatible responses prefix",
+			protocol: "openai",
+			vendor:   "volcengine",
+			baseURL:  "https://ark.cn-beijing.volces.com/api/v3",
+			endpoint: "/v1/responses",
+			want:     "https://ark.cn-beijing.volces.com/api/v3/responses",
+		},
+		{
+			name:     "dashscope compatible image prefix",
+			protocol: "openai",
+			vendor:   "alibaba",
+			baseURL:  "https://dashscope.aliyuncs.com/compatible-mode/v1",
+			endpoint: "/v1/images/generations",
+			want:     "https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations",
+		},
+		{
+			name:     "anthropic prefix remains native",
+			protocol: "anthropic",
+			vendor:   "deepseek",
+			baseURL:  "https://api.deepseek.com/anthropic",
+			endpoint: "/v1/messages",
+			want:     "https://api.deepseek.com/anthropic/v1/messages",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := resolveProviderTargetURL(
+				test.protocol,
+				test.vendor,
+				test.baseURL,
+				test.endpoint,
+			); got != test.want {
+				t.Fatalf("target URL = %q, want %q", got, test.want)
+			}
+		})
+	}
+}

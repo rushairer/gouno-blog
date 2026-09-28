@@ -52,7 +52,7 @@ func TestResolveUniqueProviderName(t *testing.T) {
 func TestParseProviderImportPayload(t *testing.T) {
 	// Array format
 	rawArray := []byte(`[
-		{"name": "OpenAI 1", "provider_type": "openai", "base_url": "https://api.openai.com", "model": "gpt-4o", "protocol_mode": "chat_completions"},
+		{"name": "OpenAI 1", "provider_type": "openai", "vendor": "deepseek", "base_url": "https://api.deepseek.com", "model": "deepseek-flash", "protocol_mode": "chat_completions"},
 		{"name": "Claude 1", "provider_type": "anthropic", "base_url": "https://api.anthropic.com", "model": "claude-3-5-sonnet"}
 	]`)
 	items, err := parseProviderImportPayload(rawArray)
@@ -62,7 +62,7 @@ func TestParseProviderImportPayload(t *testing.T) {
 	if len(items) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(items))
 	}
-	if items[0].Name != "OpenAI 1" || items[0].Model != "gpt-4o" || items[0].ProtocolMode != "chat_completions" {
+	if items[0].Name != "OpenAI 1" || items[0].Model != "deepseek-flash" || items[0].Vendor != providerdomain.VendorDeepSeek || items[0].ProtocolMode != "chat_completions" {
 		t.Fatalf("unexpected item 0: %+v", items[0])
 	}
 
@@ -116,6 +116,7 @@ func TestProviderExportItemStructure(t *testing.T) {
 	item := providerExportItem{
 		Name:                  "Test",
 		ProviderType:          providerdomain.ProviderOpenAI,
+		Vendor:                providerdomain.VendorDeepSeek,
 		BaseURL:               "https://api.openai.com",
 		Model:                 "gpt-4o",
 		Enabled:               true,
@@ -126,7 +127,7 @@ func TestProviderExportItemStructure(t *testing.T) {
 		RequestTimeoutSeconds: 60,
 		MaxOutputTokens:       2000,
 	}
-	if item.Name != "Test" || item.ProviderType != providerdomain.ProviderOpenAI || item.ProtocolMode != "chat_completions" || item.StreamMode != "always" {
+	if item.Name != "Test" || item.ProviderType != providerdomain.ProviderOpenAI || item.Vendor != providerdomain.VendorDeepSeek || item.ProtocolMode != "chat_completions" || item.StreamMode != "always" {
 		t.Fatalf("unexpected export item: %+v", item)
 	}
 }

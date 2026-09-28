@@ -11,7 +11,7 @@ import (
 
 var ErrResourceInUse = errors.New("resource is in use")
 
-const providerColumns = `id, name, provider_type, base_url, model, api_key_ciphertext,
+const providerColumns = `id, name, provider_type, vendor, base_url, model, api_key_ciphertext,
 	api_key_nonce, api_key_last4, key_version, enabled, is_default_writing, is_default_image, protocol_mode, stream_mode, request_timeout_seconds,
 	max_output_tokens, created_at, updated_at`
 
@@ -26,12 +26,15 @@ func New(db *sql.DB) *Repository {
 func scanProvider(scanner interface{ Scan(...any) error }) (*providerdomain.ProviderProfile, error) {
 	var profile providerdomain.ProviderProfile
 	err := scanner.Scan(
-		&profile.ID, &profile.Name, &profile.ProviderType, &profile.BaseURL, &profile.Model,
+		&profile.ID, &profile.Name, &profile.ProviderType, &profile.Vendor, &profile.BaseURL, &profile.Model,
 		&profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.APIKeyLast4, &profile.KeyVersion,
 		&profile.Enabled, &profile.IsDefaultWriting, &profile.IsDefaultImage, &profile.ProtocolMode, &profile.StreamMode, &profile.RequestTimeoutSeconds, &profile.MaxOutputTokens,
 		&profile.CreatedAt, &profile.UpdatedAt,
 	)
 	profile.HasAPIKey = len(profile.APIKeyCiphertext) > 0
+	if profile.Vendor == "" {
+		profile.Vendor = providerdomain.DefaultVendor(profile.ProviderType)
+	}
 	return &profile, err
 }
 
@@ -50,21 +53,21 @@ func (r *Repository) CreateProvider(ctx context.Context, profile *providerdomain
 	}
 	if profile.ID > 0 {
 		return r.db.QueryRowContext(ctx, `INSERT INTO ai_provider_profiles
-			(id, name, provider_type, base_url, model, api_key_ciphertext, api_key_nonce, api_key_last4,
+			(id, name, provider_type, vendor, base_url, model, api_key_ciphertext, api_key_nonce, api_key_last4,
 			 key_version, enabled, protocol_mode, stream_mode, request_timeout_seconds, max_output_tokens)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 			RETURNING created_at, updated_at`,
-			profile.ID, profile.Name, profile.ProviderType, profile.BaseURL, profile.Model, profile.APIKeyCiphertext,
+			profile.ID, profile.Name, profile.ProviderType, profile.Vendor, profile.BaseURL, profile.Model, profile.APIKeyCiphertext,
 			profile.APIKeyNonce, profile.APIKeyLast4, profile.KeyVersion, profile.Enabled,
 			profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds, profile.MaxOutputTokens,
 		).Scan(&profile.CreatedAt, &profile.UpdatedAt)
 	}
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_provider_profiles
-		(name, provider_type, base_url, model, api_key_ciphertext, api_key_nonce, api_key_last4,
+		(name, provider_type, vendor, base_url, model, api_key_ciphertext, api_key_nonce, api_key_last4,
 		 key_version, enabled, protocol_mode, stream_mode, request_timeout_seconds, max_output_tokens)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 		RETURNING id, created_at, updated_at`,
-		profile.Name, profile.ProviderType, profile.BaseURL, profile.Model, profile.APIKeyCiphertext,
+		profile.Name, profile.ProviderType, profile.Vendor, profile.BaseURL, profile.Model, profile.APIKeyCiphertext,
 		profile.APIKeyNonce, profile.APIKeyLast4, profile.KeyVersion, profile.Enabled,
 		profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds, profile.MaxOutputTokens,
 	).Scan(&profile.ID, &profile.CreatedAt, &profile.UpdatedAt)
@@ -77,20 +80,20 @@ func (r *Repository) UpdateProvider(ctx context.Context, profile *providerdomain
 	var row *sql.Row
 	if replaceSecret {
 		row = r.db.QueryRowContext(ctx, `UPDATE ai_provider_profiles SET
-			name=$2, provider_type=$3, base_url=$4, model=$5, api_key_ciphertext=$6,
-			api_key_nonce=$7, api_key_last4=$8, key_version=$9, enabled=$10,
-			protocol_mode=$11, stream_mode=$12, request_timeout_seconds=$13, max_output_tokens=$14, updated_at=NOW()
+			name=$2, provider_type=$3, vendor=$4, base_url=$5, model=$6, api_key_ciphertext=$7,
+			api_key_nonce=$8, api_key_last4=$9, key_version=$10, enabled=$11,
+			protocol_mode=$12, stream_mode=$13, request_timeout_seconds=$14, max_output_tokens=$15, updated_at=NOW()
 			WHERE id=$1 AND deleted_at IS NULL RETURNING created_at, updated_at`,
-			profile.ID, profile.Name, profile.ProviderType, profile.BaseURL, profile.Model,
+			profile.ID, profile.Name, profile.ProviderType, profile.Vendor, profile.BaseURL, profile.Model,
 			profile.APIKeyCiphertext, profile.APIKeyNonce, profile.APIKeyLast4, profile.KeyVersion,
 			profile.Enabled, profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds, profile.MaxOutputTokens)
 	} else {
 		row = r.db.QueryRowContext(ctx, `UPDATE ai_provider_profiles SET
-			name=$2, provider_type=$3, base_url=$4, model=$5, enabled=$6,
-			protocol_mode=$7, stream_mode=$8, request_timeout_seconds=$9, max_output_tokens=$10, updated_at=NOW()
+			name=$2, provider_type=$3, vendor=$4, base_url=$5, model=$6, enabled=$7,
+			protocol_mode=$8, stream_mode=$9, request_timeout_seconds=$10, max_output_tokens=$11, updated_at=NOW()
 			WHERE id=$1 AND deleted_at IS NULL
 			RETURNING api_key_ciphertext, api_key_nonce, api_key_last4, key_version, created_at, updated_at`,
-			profile.ID, profile.Name, profile.ProviderType, profile.BaseURL, profile.Model,
+			profile.ID, profile.Name, profile.ProviderType, profile.Vendor, profile.BaseURL, profile.Model,
 			profile.Enabled, profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds, profile.MaxOutputTokens)
 		return row.Scan(
 			&profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.APIKeyLast4,

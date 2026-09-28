@@ -1,4 +1,19 @@
 export type ProviderType = "openai" | "anthropic" | "gemini";
+export type ProviderVendor =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "deepseek"
+  | "alibaba"
+  | "volcengine"
+  | "moonshot"
+  | "tencent"
+  | "zhipu"
+  | "baidu"
+  | "minimax"
+  | "xai"
+  | "mistral"
+  | "custom";
 export type TriggerType = "manual" | "cron";
 export type ExecutionMode = "advisory" | "approval";
 export type ContentPublishMode = "draft" | "approval" | "publish";
@@ -22,6 +37,7 @@ export interface ProviderProfile {
   id: number;
   name: string;
   provider_type: ProviderType;
+  vendor?: ProviderVendor;
   base_url: string;
   model: string;
   api_key_last4?: string;
@@ -518,6 +534,7 @@ export const emptyProvider: Omit<
 > & { api_key: string } = {
   name: "",
   provider_type: "openai",
+  vendor: "openai",
   base_url: "https://api.openai.com",
   model: "",
   api_key: "",

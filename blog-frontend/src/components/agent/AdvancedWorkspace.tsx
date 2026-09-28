@@ -73,6 +73,40 @@ function formatCapability(value: string) {
   return value.replace(".", " / ").replaceAll("_", " ");
 }
 
+const providerVendorLabels: Record<string, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  google: "Google Gemini",
+  deepseek: "DeepSeek",
+  alibaba: "Alibaba Model Studio / Qwen",
+  volcengine: "Volcengine Ark / Doubao",
+  moonshot: "Moonshot / Kimi",
+  tencent: "Tencent Hunyuan",
+  zhipu: "Zhipu GLM",
+  baidu: "Baidu Qianfan",
+  minimax: "MiniMax",
+  xai: "xAI",
+  mistral: "Mistral AI",
+  custom: "Custom / Compatible",
+};
+
+const providerProtocolLabels: Record<string, string> = {
+  openai: "OpenAI Compatible",
+  anthropic: "Anthropic Messages",
+  gemini: "Gemini Native",
+};
+
+function providerVendorLabel(provider: ProviderProfile) {
+  const vendor = provider.vendor || provider.provider_type;
+  return providerVendorLabels[vendor] || vendor;
+}
+
+function providerProtocolLabel(provider: ProviderProfile) {
+  return (
+    providerProtocolLabels[provider.provider_type] || provider.provider_type
+  );
+}
+
 interface AdvancedWorkspaceProps {
   locale: "en" | "zh";
   labels: Record<string, string>;
@@ -830,7 +864,9 @@ export function AdvancedWorkspace({
                             <div className="min-w-0">
                               <strong>{provider.name}</strong>
                               <Text size="xs" tone="muted">
-                                {provider.provider_type} · {provider.model}
+                                {providerVendorLabel(provider)} ·{" "}
+                                {providerProtocolLabel(provider)} ·{" "}
+                                {provider.model}
                               </Text>
                             </div>
                             <Tag
