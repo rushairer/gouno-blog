@@ -467,7 +467,10 @@ export function ProviderForm({
             <div className="flex flex-col gap-5">
               <FormGrid columns={2}>
                 <Field label={labels.providerProtocol || "接口协议"}>
-                  <Select value={value.provider_type} onChange={setProviderType}>
+                  <Select
+                    value={value.provider_type}
+                    onChange={setProviderType}
+                  >
                     <option value="openai" disabled={!supportsOpenAI}>
                       {labels.protocolOpenAICompatible || "OpenAI Compatible"}
                     </option>
