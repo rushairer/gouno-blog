@@ -12,7 +12,7 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-28",
       "manualReview": "docs/ui-redesign/blog-admin-csa-a005-recertification.md",
@@ -100,7 +100,9 @@
         "blog-admin-ai-settings"
       ],
       "previousManualReview": "docs/ui-redesign/blog-admin-csa-a005-pending-recertification.md",
-      "recertificationReason": "CSA-A005 changed the canonical Model Connection contract by separating vendor identity from wire protocol. Blog Product implementation, exact-head browser/parity evidence and reciprocal Gouno UI consumer recertification are now complete.",
+      "recertificationReason": "CSA-A005 Provider vendor/protocol recertification is complete, but the subsequently merged CSA-A006 API Access canonical extension reopens blog-admin-ai-settings until the new server-to-server API Access Product surface is reverse-migrated and manually re-certified.",
+      "reopenedBy": "CSA-A006 External API Access Extension",
+      "reopenedDate": "2026-09-28",
       "reopenedBy": "U04b Connector Productization Program",
       "reopenedDate": "2026-09-26"
     },
