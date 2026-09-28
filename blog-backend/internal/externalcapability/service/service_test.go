@@ -140,16 +140,30 @@ func TestCreateClientRequiresAuditableActorAndBoundedName(t *testing.T) {
 	svc := New(&fakeRepository{}, externalRegistry(), fixedLimiter{allowed: true})
 
 	if _, err := svc.CreateClient(
-		context.Background(), "Missing Actor", []string{"content.safe_read"}, 60, nil, nil,
+		context.Background(), "Missing Actor", []string{"content.safe_read"}, true, 60, nil, nil,
 	); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("missing actor error = %v", err)
 	}
 
 	longName := strings.Repeat("x", 121)
 	if _, err := svc.CreateClient(
-		context.Background(), longName, []string{"content.safe_read"}, 60, nil, &testPrincipalID,
+		context.Background(), longName, []string{"content.safe_read"}, true, 60, nil, &testPrincipalID,
 	); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("long name error = %v", err)
+	}
+}
+
+func TestCreateClientCanStartDisabled(t *testing.T) {
+	repo := &fakeRepository{}
+	svc := New(repo, externalRegistry(), fixedLimiter{allowed: true})
+	created, err := svc.CreateClient(
+		context.Background(), "Staged", []string{"content.safe_read"}, false, 60, nil, &testPrincipalID,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Client.Enabled || repo.client == nil || repo.client.Enabled {
+		t.Fatalf("created client enabled state = %#v repo=%#v", created.Client, repo.client)
 	}
 }
 
@@ -157,7 +171,7 @@ func TestCreateClientReturnsSecretOnceAndAuthenticatesHash(t *testing.T) {
 	repo := &fakeRepository{}
 	svc := New(repo, externalRegistry(), fixedLimiter{allowed: true})
 	created, err := svc.CreateClient(
-		context.Background(), "Reporting", []string{"content.safe_read"}, 30, nil, &testPrincipalID,
+		context.Background(), "Reporting", []string{"content.safe_read"}, true, 30, nil, &testPrincipalID,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +198,7 @@ func TestCreateClientReturnsSecretOnceAndAuthenticatesHash(t *testing.T) {
 func TestCreateClientRejectsNonExternalOrWriteCapabilities(t *testing.T) {
 	svc := New(&fakeRepository{}, externalRegistry(), fixedLimiter{allowed: true})
 	for _, capability := range []string{"content.agent_only", "content.write", "missing"} {
-		_, err := svc.CreateClient(context.Background(), "Unsafe", []string{capability}, 60, nil, &testPrincipalID)
+		_, err := svc.CreateClient(context.Background(), "Unsafe", []string{capability}, true, 60, nil, &testPrincipalID)
 		if !errors.Is(err, ErrForbidden) {
 			t.Fatalf("%s error = %v", capability, err)
 		}
@@ -195,7 +209,7 @@ func TestInvokeRequiresExplicitReadScopeAndRecordsAudit(t *testing.T) {
 	repo := &fakeRepository{}
 	svc := New(repo, externalRegistry(), fixedLimiter{allowed: true})
 	created, err := svc.CreateClient(
-		context.Background(), "Reporting", []string{"content.safe_read"}, 60, nil, &testPrincipalID,
+		context.Background(), "Reporting", []string{"content.safe_read"}, true, 60, nil, &testPrincipalID,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -257,7 +271,7 @@ func TestExpiredAndRevokedClientsCannotAuthenticate(t *testing.T) {
 		repo := &fakeRepository{}
 		svc := New(repo, externalRegistry(), fixedLimiter{allowed: true})
 		created, err := svc.CreateClient(
-			context.Background(), "Reporting", []string{"content.safe_read"}, 60, nil, &testPrincipalID,
+			context.Background(), "Reporting", []string{"content.safe_read"}, true, 60, nil, &testPrincipalID,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -275,13 +289,13 @@ func TestCreateAndUpdateRejectExpiredCredentials(t *testing.T) {
 	svc := New(repo, externalRegistry(), fixedLimiter{allowed: true})
 	expired := time.Now().Add(-time.Minute)
 	if _, err := svc.CreateClient(
-		context.Background(), "Expired", []string{"content.safe_read"}, 60, &expired, &testPrincipalID,
+		context.Background(), "Expired", []string{"content.safe_read"}, true, 60, &expired, &testPrincipalID,
 	); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("create expired error = %v", err)
 	}
 
 	created, err := svc.CreateClient(
-		context.Background(), "Valid", []string{"content.safe_read"}, 60, nil, &testPrincipalID,
+		context.Background(), "Valid", []string{"content.safe_read"}, true, 60, nil, &testPrincipalID,
 	)
 	if err != nil {
 		t.Fatal(err)
