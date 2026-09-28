@@ -103,3 +103,29 @@ func TestCORSMiddlewareRejectsSpoofedForwardedHost(t *testing.T) {
 		t.Fatalf("unexpected allow-origin = %q", got)
 	}
 }
+
+
+func TestExternalCapabilityPathDoesNotAdvertiseBrowserCORS(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(middleware.SkipPathPrefixes(
+		middleware.CORSMiddleware([]string{"https://blog.dev.local"}),
+		"/api/external/v1/",
+	))
+	router.GET("/api/external/v1/capabilities", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodOptions, "/api/external/v1/capabilities", nil)
+	req.Header.Set("Origin", "https://blog.dev.local")
+	req.Header.Set("Access-Control-Request-Method", http.MethodGet)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+
+	if response.Code == http.StatusNoContent {
+		t.Fatalf("external machine API unexpectedly accepted browser CORS preflight")
+	}
+	if response.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Fatalf("external machine API advertised Access-Control-Allow-Origin")
+	}
+}

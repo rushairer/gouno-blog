@@ -167,3 +167,71 @@ func TestDistributionDraftRejectsUnsafeOrMalformedInput(t *testing.T) {
 		}
 	}
 }
+
+
+func TestRegistryFiltersCatalogBySurface(t *testing.T) {
+	registry := New(
+		Definition{Name: "agent.only", Risk: tooldomain.ToolRiskRead},
+		Definition{Name: "shared.read", Surfaces: []string{"agent", "external"}, Risk: tooldomain.ToolRiskRead},
+		Definition{Name: "external.only", Surfaces: []string{"external"}, Risk: tooldomain.ToolRiskRead},
+	)
+	items := registry.CatalogForSurface("external")
+	if len(items) != 2 || items[0].Name != "external.only" || items[1].Name != "shared.read" {
+		t.Fatalf("external catalog = %#v", items)
+	}
+	if registry.SupportsSurface("agent.only", "external") {
+		t.Fatal("agent-only tool unexpectedly supports external surface")
+	}
+	if !registry.SupportsSurface("shared.read", "external") {
+		t.Fatal("shared tool must support external surface")
+	}
+}
+
+
+func TestBlogRegistryDoesNotAdvertiseKnowledgeExternallyWithoutKnowledgeService(t *testing.T) {
+	registry := NewBlogRegistry(nil, nil, nil, nil)
+	if registry.SupportsSurface("content.search_knowledge", "external") {
+		t.Fatal("knowledge search must not advertise external availability without a knowledge service")
+	}
+	if !registry.SupportsSurface("content.list_published_posts", "external") {
+		t.Fatal("published content read capability must remain externally available without AI")
+	}
+}
+
+
+func TestExternalCatalogDoesNotExposeAdministrativeAnalyticsSummary(t *testing.T) {
+	registry := NewBlogRegistry(nil, nil, nil, nil)
+	if registry.SupportsSurface("analytics.get_summary", "external") {
+		t.Fatal("administrative analytics summary must not be exposed externally")
+	}
+	if !registry.SupportsSurface("analytics.list_low_engagement_posts", "external") {
+		t.Fatal("published low-engagement analysis should remain externally available")
+	}
+}
+
+func TestExternalContentCatalogNeverExposesAdminStateReaders(t *testing.T) {
+	registry := NewBlogRegistry(nil, nil, nil, nil)
+
+	for _, name := range []string{
+		"content.list_posts",
+		"content.get_post",
+		"content.list_pages",
+		"content.get_page",
+		"content.find_related",
+	} {
+		if registry.SupportsSurface(name, "external") {
+			t.Fatalf("admin-state tool %q must not be exposed externally", name)
+		}
+	}
+
+	for _, name := range []string{
+		"content.list_published_posts",
+		"content.get_published_post",
+		"content.list_published_pages",
+		"content.get_published_page",
+	} {
+		if !registry.SupportsSurface(name, "external") {
+			t.Fatalf("published-safe tool %q must be exposed externally", name)
+		}
+	}
+}

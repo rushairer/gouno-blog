@@ -27,6 +27,9 @@ import (
 	"github.com/rushairer/blog-backend/internal/connector"
 	connectorcontroller "github.com/rushairer/blog-backend/internal/connector/controller"
 	"github.com/rushairer/blog-backend/internal/dbtx"
+	externalcontroller "github.com/rushairer/blog-backend/internal/externalcapability/controller"
+	externalrepository "github.com/rushairer/blog-backend/internal/externalcapability/repository"
+	externalservice "github.com/rushairer/blog-backend/internal/externalcapability/service"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	knowledgecontroller "github.com/rushairer/blog-backend/internal/knowledge/controller"
 	"github.com/rushairer/blog-backend/internal/media"
@@ -40,6 +43,7 @@ import (
 	postrepository "github.com/rushairer/blog-backend/internal/post/repository"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
+	"github.com/rushairer/blog-backend/internal/ratelimit"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
@@ -167,7 +171,14 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			"/api/admin/ai-index/search":            aiTextRequestTimeout,
 			"/api/admin/ai-index/rebuild":           aiTextRequestTimeout,
 		}),
-		gounoMiddleware.RateLimitMiddleware(ctx, globalConfig.WebServerConfig.RateLimitPerMinute, time.Minute),
+		middleware.SkipPathPrefixes(
+			gounoMiddleware.RateLimitMiddleware(
+				ctx,
+				globalConfig.WebServerConfig.RateLimitPerMinute,
+				time.Minute,
+			),
+			"/api/external/v1/",
+		),
 	)
 	newApplication(ctx, applicationConfig{
 		Global: globalConfig, Env: env, DB: db, Engine: engine, Logger: logger,
@@ -296,8 +307,10 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	var agentCtrl *agentcontroller.Controller
 	var knowledgeCtrl *knowledgecontroller.Controller
 	var connectorCtrl *connectorcontroller.Controller
+	var externalCtrl *externalcontroller.Controller
 	var operationsCtrl *operationscontroller.Controller
 	var workflowCtrl *workflowcontroller.Controller
+	var toolRegistry *tool.Registry
 	if cfg.Global.AIAgentConfig.Enabled {
 		secrets, err := secretbox.NewKeyring(
 			readSecretFromFileOrEnv(os.Getenv("BLOG_AGENT_MASTER_KEY_FILE"), os.Getenv("BLOG_AGENT_MASTER_KEY")),
@@ -323,7 +336,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
 		knowledgeCtrl = knowledgecontroller.New(knowledgeSvc)
-		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, pageSvc, knowledgeSvc)
+		toolRegistry = tool.NewBlogRegistry(postSvc, communitySvc, pageSvc, knowledgeSvc)
+		tool.BindKnowledge(toolRegistry, knowledgeSvc)
 		tool.BindAnalytics(toolRegistry, analyticsSvc)
 		operationsSvc := operations.NewService(cfg.DB, toolRegistry, cfg.Logger, transactor)
 		operationsSvc.ConfigureGovernanceRepositories(agentRunRepo, agentApprovalRepo, postSvc)
@@ -384,6 +398,23 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		agentservice.NewScheduler(agentDefinitionRepo, runner, cfg.Global.AIAgentConfig.SchedulerInterval, cfg.Logger).Start(ctx)
 	}
 
+	if toolRegistry == nil {
+		toolRegistry = tool.NewBlogRegistry(postSvc, communitySvc, pageSvc, nil)
+		tool.BindAnalytics(toolRegistry, analyticsSvc)
+	}
+	var externalLimiter ratelimit.Limiter
+	if dsn := strings.TrimSpace(cfg.Global.RedisConfig.DSN); dsn != "" {
+		limiter, limiterErr := ratelimit.NewRedisLimiter(dsn)
+		if limiterErr != nil {
+			cfg.Logger.Warn("External Capability Redis limiter unavailable; using bounded process fallback", zap.Error(limiterErr))
+		} else {
+			externalLimiter = limiter
+		}
+	}
+	externalCtrl = externalcontroller.New(externalservice.New(
+		externalrepository.New(cfg.DB), toolRegistry, externalLimiter,
+	))
+
 	verifier := gounoAuth.NewVerifier(cfg.JWKSURL)
 	accessService := access.NewService(cfg.DB, access.Bootstrap{
 		Issuer: os.Getenv("BLOG_BOOTSTRAP_OWNER_ISSUER"), Subject: os.Getenv("BLOG_BOOTSTRAP_OWNER_SUBJECT"),
@@ -393,7 +424,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
 		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
-		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, KnowledgeCtrl: knowledgeCtrl, ConnectorCtrl: connectorCtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
+		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, KnowledgeCtrl: knowledgeCtrl, ConnectorCtrl: connectorCtrl, ExternalCtrl: externalCtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
 	})

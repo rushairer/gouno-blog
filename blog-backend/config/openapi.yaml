@@ -1347,6 +1347,160 @@ paths:
       parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
       responses: {'200': {description: Failed item returned to approved sandbox delivery state}}
 
+
+  /external/v1/capabilities:
+    get:
+      summary: List capabilities authorized for this external API client
+      description: Server-to-server only. Browser requests carrying Origin are rejected.
+      security:
+        - ExternalAPIKey: []
+      responses:
+        '200':
+          description: Read-only capability catalog filtered by the client scope.
+        '401':
+          description: Missing, invalid, expired, disabled, or revoked external API key.
+        '429':
+          description: Client rate limit exceeded.
+
+  /external/v1/capabilities/{name}/invoke:
+    post:
+      summary: Invoke one authorized read-only Blog capability
+      description: |
+        Invokes the canonical Blog Tool Registry through an explicit client scope.
+        v1 rejects write/propose Tools even if a client record is misconfigured.
+        The API is server-to-server only and rejects browser Origin requests.
+      security:
+        - ExternalAPIKey: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalCapabilityInvokeRequest'
+      responses:
+        '200':
+          description: Capability result.
+        '400':
+          description: Invalid capability arguments.
+        '401':
+          description: Missing, invalid, expired, disabled, or revoked external API key.
+        '403':
+          description: Capability is not authorized for this client or is not externally readable.
+        '429':
+          description: Client rate limit exceeded.
+
+  /admin/external-api/capabilities:
+    get:
+      summary: List capabilities eligible for external API clients
+      security:
+        - BlogSessionCookie: []
+      responses:
+        '200':
+          description: Read-only capabilities currently exposed on the external surface.
+
+  /admin/external-api/clients:
+    get:
+      summary: List external API clients
+      security:
+        - BlogSessionCookie: []
+      responses:
+        '200':
+          description: Client metadata. Raw API keys are never returned.
+    post:
+      summary: Create an external API client
+      description: Requires recent MFA. The raw API key is returned exactly once in this response and is never stored in plaintext.
+      security:
+        - BlogSessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalAPIClientCreateRequest'
+      responses:
+        '201':
+          description: Client created and one-time API key returned.
+        '400':
+          description: Invalid expiry or rate limit.
+        '403':
+          description: Requested capability is not externally available or is not read-only.
+
+  /admin/external-api/clients/{id}:
+    put:
+      summary: Update an external API client policy
+      description: Requires recent MFA. Updating policy never reveals or replaces the current raw key.
+      security:
+        - BlogSessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalAPIClientUpdateRequest'
+      responses:
+        '200':
+          description: Client policy updated.
+        '404':
+          description: Client not found or already revoked.
+    delete:
+      summary: Revoke an external API client
+      description: Requires recent MFA. Revocation is permanent; invocation audits are retained.
+      security:
+        - BlogSessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Client revoked.
+        '404':
+          description: Client not found or already revoked.
+
+  /admin/external-api/clients/{id}/rotate:
+    post:
+      summary: Rotate an external API client key
+      description: Requires recent MFA. The replacement raw key is returned exactly once and the previous key stops authenticating immediately.
+      security:
+        - BlogSessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Key rotated and one-time replacement key returned.
+        '404':
+          description: Client not found or revoked.
+
+  /admin/external-api/audits:
+    get:
+      summary: List external capability invocation audits
+      security:
+        - BlogSessionCookie: []
+      parameters:
+        - name: client_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        '200':
+          description: Newest invocation audits, optionally filtered by client.
+
 components:
   parameters:
     ResourceID:
@@ -1361,6 +1515,11 @@ components:
       type: apiKey
       in: cookie
       name: __Host-Http-blog-session
+    ExternalAPIKey:
+      type: http
+      scheme: bearer
+      bearerFormat: GounoExternalAPIKey
+      description: High-entropy gouno_live_* server credential. Do not embed in browser code.
   schemas:
     AIWorkflowScopePolicy:
       type: object
@@ -1455,6 +1614,118 @@ components:
         label: {type: string}
         version_token: {type: string}
         snapshot: {type: object, additionalProperties: true}
+        created_at: {type: string, format: date-time}
+    ExternalCapability:
+      type: object
+      required: [name, description, parameters, surfaces, risk_level]
+      properties:
+        name: {type: string}
+        description: {type: string}
+        description_zh: {type: string}
+        parameters: {type: object, additionalProperties: true}
+        output_schema: {type: object, additionalProperties: true}
+        surfaces:
+          type: array
+          items: {type: string}
+        risk_level:
+          type: string
+          enum: [read]
+        scope: {type: object, additionalProperties: true}
+    ExternalAPIClient:
+      type: object
+      required: [id, name, key_prefix, capabilities, enabled, rate_limit_per_minute, created_at, updated_at]
+      properties:
+        id: {type: integer, format: int64}
+        name: {type: string}
+        key_prefix:
+          type: string
+          description: Non-secret prefix used to identify the credential. The full key is never returned after creation or rotation.
+        capabilities:
+          type: array
+          uniqueItems: true
+          items: {type: string}
+        enabled: {type: boolean}
+        rate_limit_per_minute: {type: integer, minimum: 1, maximum: 6000}
+        expires_at: {type: string, format: date-time, nullable: true}
+        last_used_at: {type: string, format: date-time, nullable: true}
+        revoked_at: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    ExternalAPIClientCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string}
+        capabilities:
+          type: array
+          uniqueItems: true
+          items: {type: string}
+          description: Exact Tool names from the external capability catalog. Empty means no callable capability.
+        enabled:
+          type: boolean
+          default: true
+          description: Initial client state. A disabled client receives a key but cannot authenticate until explicitly enabled.
+        rate_limit_per_minute: {type: integer, minimum: 1, maximum: 6000, default: 60}
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Must be in the future when supplied.
+    ExternalAPIClientUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [name, enabled]
+      properties:
+        name: {type: string}
+        capabilities:
+          type: array
+          uniqueItems: true
+          items: {type: string}
+          description: Exact Tool names from the external capability catalog. Empty means no callable capability.
+        enabled:
+          type: boolean
+          description: Required explicitly so a policy update cannot silently re-enable a disabled client.
+        rate_limit_per_minute: {type: integer, minimum: 1, maximum: 6000, default: 60}
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Must be in the future when supplied; null clears automatic expiry.
+    ExternalAPICreatedClient:
+      type: object
+      required: [client, api_key]
+      properties:
+        client:
+          $ref: '#/components/schemas/ExternalAPIClient'
+        api_key:
+          type: string
+          writeOnly: true
+          example: gouno_live_example-secret-shown-once
+          description: Returned only on create or rotate. Store it securely; the server persists only its SHA-256 digest.
+    ExternalCapabilityInvokeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        arguments:
+          type: object
+          additionalProperties: true
+          default: {}
+    ExternalInvocationAudit:
+      type: object
+      required: [id, client_id, capability, result, status_code, source_ip, input_digest, duration_ms, created_at]
+      properties:
+        id: {type: integer, format: int64}
+        client_id: {type: integer, format: int64}
+        request_id: {type: string}
+        capability: {type: string}
+        result: {type: string, enum: [success, denied, failed, rate_limited]}
+        status_code: {type: integer}
+        source_ip: {type: string}
+        input_digest:
+          type: string
+          description: SHA-256 digest of capability arguments; raw arguments are not stored in this audit table.
+        duration_ms: {type: integer, format: int64}
         created_at: {type: string, format: date-time}
     ProviderProfileRequest:
       type: object
