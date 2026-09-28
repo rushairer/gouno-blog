@@ -46,6 +46,21 @@ func TestRegisterOperationalToolsAreReadOnly(t *testing.T) {
 	}
 }
 
+
+func TestEditorialCategoryCountsStayOffExternalSurface(t *testing.T) {
+	registry := tool.New()
+	service := NewService(nil, registry, nil, testTransactor(t))
+	if err := service.RegisterTools(); err != nil {
+		t.Fatal(err)
+	}
+	if registry.SupportsSurface("content.list_categories", "external") {
+		t.Fatal("editorial category counts must not be exposed on the external surface")
+	}
+	if !registry.SupportsSurface("content.list_categories", "agent") {
+		t.Fatal("category counts must remain available to the agent surface")
+	}
+}
+
 func TestProductionToolCatalogIsJSONSerializable(t *testing.T) {
 	registry := tool.NewBlogRegistry(nil, nil, nil, nil)
 	if err := NewService(nil, registry, nil, testTransactor(t)).RegisterTools(); err != nil {
