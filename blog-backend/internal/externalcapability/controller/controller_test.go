@@ -28,7 +28,7 @@ func (s *fakeCapabilityService) ExternalCatalog() []tool.CatalogItem {
 func (s *fakeCapabilityService) CatalogForClient(*externaldomain.Client) []tool.CatalogItem {
 	return []tool.CatalogItem{{Name: "content.list_published_posts"}}
 }
-func (s *fakeCapabilityService) CreateClient(context.Context, string, []string, int, *time.Time, *int64) (*externaldomain.CreatedClient, error) {
+func (s *fakeCapabilityService) CreateClient(context.Context, string, []string, bool, int, *time.Time, *int64) (*externaldomain.CreatedClient, error) {
 	return s.created, nil
 }
 func (s *fakeCapabilityService) ListClients(context.Context) ([]externaldomain.Client, error) {
