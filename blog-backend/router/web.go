@@ -16,6 +16,7 @@ import (
 	communitycontroller "github.com/rushairer/blog-backend/internal/community/controller"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	connectorcontroller "github.com/rushairer/blog-backend/internal/connector/controller"
+	externalcontroller "github.com/rushairer/blog-backend/internal/externalcapability/controller"
 	feedcontroller "github.com/rushairer/blog-backend/internal/feed/controller"
 	knowledgecontroller "github.com/rushairer/blog-backend/internal/knowledge/controller"
 	"github.com/rushairer/blog-backend/internal/media"
@@ -62,6 +63,7 @@ type WebRouterOptions struct {
 	AgentCtrl          *agentcontroller.Controller
 	KnowledgeCtrl      *knowledgecontroller.Controller
 	ConnectorCtrl      *connectorcontroller.Controller
+	ExternalCtrl       *externalcontroller.Controller
 	OperationsCtrl     *operationscontroller.Controller
 	WorkflowCtrl       *workflowcontroller.Controller
 	Logger             *zap.Logger
@@ -78,15 +80,31 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	if opts.Verifier == nil || opts.AccessService == nil {
 		panic("RegisterWebRouterWithOptions: verifier and access service are required")
 	}
-	server.Use(middleware.CORSMiddleware(opts.CORSAllowedOrigins))
+	server.Use(middleware.SkipPathPrefixes(
+		middleware.CORSMiddleware(opts.CORSAllowedOrigins),
+		"/api/external/v1/",
+	))
 	server.Use(middleware.RequestBodyLimitMiddleware())
 	server.Use(middleware.BlogCSRFMiddleware(opts.SecureCookies))
 	if opts.BFFClient != nil {
-		server.Use(opts.BFFClient.SessionMiddleware())
+		server.Use(middleware.SkipPathPrefixes(
+			opts.BFFClient.SessionMiddleware(),
+			"/api/external/v1/",
+		))
 		opts.BFFClient.RegisterRoutes(server)
 	}
 	if opts.ConnectorCtrl != nil {
 		server.GET("/api/auth/connectors/google/callback", opts.ConnectorCtrl.CompleteSearchConsoleOAuthCallback)
+	}
+	if opts.ExternalCtrl != nil {
+		externalAPI := server.Group("/api/external/v1")
+		externalAPI.Use(
+			opts.ExternalCtrl.RejectBrowserOrigin(),
+			opts.ExternalCtrl.Authenticate(),
+			opts.ExternalCtrl.RateLimit(),
+		)
+		externalAPI.GET("/capabilities", opts.ExternalCtrl.Catalog)
+		externalAPI.POST("/capabilities/:name/invoke", opts.ExternalCtrl.Invoke)
 	}
 	server.GET("/healthz", func(ctx *gin.Context) {
 		if opts.DB == nil || opts.DB.PingContext(ctx.Request.Context()) != nil {
@@ -416,6 +434,15 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.POST("/admin/ai-index/retry", knowledgeCtrl.RetryIndex)
 				aiOps.PUT("/admin/ai-index/evaluation-cases", knowledgeCtrl.ReplaceIndexEvaluation)
 				aiOps.POST("/admin/ai-index/evaluate", knowledgeCtrl.EvaluateIndex)
+			}
+			if opts.ExternalCtrl != nil {
+				aiOps.GET("/admin/external-api/capabilities", opts.ExternalCtrl.ListExternalCapabilities)
+				aiOps.GET("/admin/external-api/clients", opts.ExternalCtrl.ListClients)
+				aiOps.GET("/admin/external-api/audits", opts.ExternalCtrl.ListAudits)
+				aiOps.POST("/admin/external-api/clients", opts.ExternalCtrl.CreateClient)
+				aiOps.PUT("/admin/external-api/clients/:id", opts.ExternalCtrl.UpdateClient)
+				aiOps.POST("/admin/external-api/clients/:id/rotate", opts.ExternalCtrl.RotateClientKey)
+				aiOps.DELETE("/admin/external-api/clients/:id", opts.ExternalCtrl.RevokeClient)
 			}
 			if connectorCtrl != nil {
 				aiOps.GET("/admin/ai-connectors", connectorCtrl.ListConnectorProfiles)
