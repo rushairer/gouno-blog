@@ -248,6 +248,10 @@ export function ProviderForm({
   const activeVendor =
     value.vendor || fallbackVendor(value.provider_type || "openai");
   const activeVendorPreset = vendorPresets[activeVendor];
+  const supportsOpenAI = activeVendorPreset.protocols.includes("openai");
+  const supportsAnthropic = activeVendorPreset.protocols.includes("anthropic");
+  const supportsGemini = activeVendorPreset.protocols.includes("gemini");
+  const modelPlaceholder = activeVendorPreset.modelPlaceholder || "model-id";
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -464,30 +468,13 @@ export function ProviderForm({
               <FormGrid columns={2}>
                 <Field label={labels.providerProtocol || "接口协议"}>
                   <Select value={value.provider_type} onChange={setProviderType}>
-                    <option
-                      value="openai"
-                      disabled={
-                        !activeVendorPreset.protocols.includes("openai")
-                      }
-                    >
+                    <option value="openai" disabled={!supportsOpenAI}>
                       {labels.protocolOpenAICompatible || "OpenAI Compatible"}
                     </option>
-                    <option
-                      value="anthropic"
-                      disabled={
-                        !activeVendorPreset.protocols.includes(
-                          "anthropic",
-                        )
-                      }
-                    >
+                    <option value="anthropic" disabled={!supportsAnthropic}>
                       {labels.protocolAnthropicMessages || "Anthropic Messages"}
                     </option>
-                    <option
-                      value="gemini"
-                      disabled={
-                        !activeVendorPreset.protocols.includes("gemini")
-                      }
-                    >
+                    <option value="gemini" disabled={!supportsGemini}>
                       {labels.protocolGeminiNative || "Gemini Native"}
                     </option>
                   </Select>
@@ -512,9 +499,7 @@ export function ProviderForm({
                 <Input
                   className="font-mono"
                   required
-                  placeholder={
-                    activeVendorPreset.modelPlaceholder || "model-id"
-                  }
+                  placeholder={modelPlaceholder}
                   value={value.model}
                   onChange={(event) =>
                     setValue((current) => ({
