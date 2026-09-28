@@ -1,4 +1,11 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -80,7 +87,9 @@ describe("ExternalAPIWorkspace", () => {
 
   it("does not load protected client or audit data before sudo mode is active", async () => {
     mocks.sudoActive = false;
-    render(<ExternalAPIWorkspace locale="zh" formatDateTime={(value) => value} />);
+    render(
+      <ExternalAPIWorkspace locale="zh" formatDateTime={(value) => value} />,
+    );
 
     expect(screen.getByText("高权限操作需要身份验证")).toBeInTheDocument();
     await Promise.resolve();
@@ -89,7 +98,9 @@ describe("ExternalAPIWorkspace", () => {
   });
 
   it("creates a client and exposes the returned key only in the one-time modal", async () => {
-    render(<ExternalAPIWorkspace locale="zh" formatDateTime={(value) => value} />);
+    render(
+      <ExternalAPIWorkspace locale="zh" formatDateTime={(value) => value} />,
+    );
 
     await screen.findByText("Editorial Reporting SDK");
     fireEvent.click(screen.getByRole("button", { name: "创建 API Client" }));
@@ -97,24 +108,35 @@ describe("ExternalAPIWorkspace", () => {
     fireEvent.change(within(drawer).getByLabelText(/Client 名称/), {
       target: { value: "Partner Worker" },
     });
-    fireEvent.click(within(drawer).getByRole("button", { name: "保存 API Client" }));
+    fireEvent.click(
+      within(drawer).getByRole("button", { name: "保存 API Client" }),
+    );
 
     await waitFor(() => expect(mocks.createClient).toHaveBeenCalledOnce());
-    const keyModal = await screen.findByRole("dialog", { name: "保存一次性 API Key" });
+    const keyModal = await screen.findByRole("dialog", {
+      name: "保存一次性 API Key",
+    });
     expect(
-      (within(keyModal).getByLabelText("一次性 API Key") as HTMLInputElement).value,
+      (within(keyModal).getByLabelText("一次性 API Key") as HTMLInputElement)
+        .value,
     ).toBe("gouno_live_one-time-secret");
   });
 
   it("requires destructive confirmation before revoking a client", async () => {
-    render(<ExternalAPIWorkspace locale="zh" formatDateTime={(value) => value} />);
+    render(
+      <ExternalAPIWorkspace locale="zh" formatDateTime={(value) => value} />,
+    );
 
     await screen.findByText("Editorial Reporting SDK");
-    fireEvent.click(screen.getByRole("button", { name: "撤销 Editorial Reporting SDK" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "撤销 Editorial Reporting SDK" }),
+    );
     expect(mocks.revokeClient).not.toHaveBeenCalled();
 
     const dialog = screen.getByRole("dialog", { name: "确认撤销 API Client" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "撤销并使 Key 失效" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "撤销并使 Key 失效" }),
+    );
 
     await waitFor(() => expect(mocks.revokeClient).toHaveBeenCalledWith(91));
   });
