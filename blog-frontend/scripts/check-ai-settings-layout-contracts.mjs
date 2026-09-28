@@ -26,6 +26,9 @@ const connectorWorkspace = await source(
 const knowledgeWorkspace = await source(
   "src/components/agent/KnowledgeWorkspace.tsx",
 );
+const externalApiWorkspace = await source(
+  "src/components/agent/ExternalAPIWorkspace.tsx",
+);
 requireText(
   sharedLead,
   'data-pattern="tab-panel-lead"',
@@ -48,6 +51,26 @@ requireText(
   connectorWorkspace,
   "<TabPanelLead",
   "Connector collection must consume the shared TabPanelLead pattern",
+);
+requireText(
+  externalApiWorkspace,
+  "<TabPanelLead",
+  "API Access collection must consume the shared TabPanelLead pattern",
+);
+requireText(
+  externalApiWorkspace,
+  "<TabPanelFeedback>",
+  "API Access must preserve canonical panel feedback ordering",
+);
+requireText(
+  externalApiWorkspace,
+  "<SudoGate",
+  "API Access must use the shared privileged-access boundary",
+);
+requireText(
+  externalApiWorkspace,
+  'data-pattern="settings-composition"',
+  "API Access must expose the settings composition boundary",
 );
 
 for (const [marker, label] of [
@@ -149,6 +172,37 @@ requireText(
   'form="ai-settings-connector-editor"',
   "Connector Drawer footer must own the submit action",
 );
+requireText(
+  externalApiWorkspace,
+  "<Drawer",
+  "API Client editing must use a contextual Drawer task surface",
+);
+requireText(
+  externalApiWorkspace,
+  'data-pattern="contextual-list-editor"',
+  "API Client editor must remain contextual to the API Client collection",
+);
+requireText(
+  externalApiWorkspace,
+  'data-pattern="editor-form-composition"',
+  "API Client Drawer body must use the shared editor form composition",
+);
+requireText(
+  externalApiWorkspace,
+  'form="ai-settings-external-client-editor"',
+  "API Client Drawer footer must own the submit action",
+);
+for (const marker of [
+  "GET /api/external/v1/capabilities",
+  "POST /api/external/v1/capabilities/{name}/invoke",
+  "Authorization: Bearer gouno_live_…",
+]) {
+  requireText(
+    externalApiWorkspace,
+    marker,
+    `API Access must retain invocation protocol guidance: ${marker}`,
+  );
+}
 
 requireText(
   editorPatterns,
@@ -189,6 +243,7 @@ for (const path of [
   "src/components/agent/ProviderForm.tsx",
   "src/components/agent/EmbeddingForm.tsx",
   "src/components/agent/ConnectorWorkspace.tsx",
+  "src/components/agent/ExternalAPIWorkspace.tsx",
 ]) {
   const text = await source(path);
   requireText(

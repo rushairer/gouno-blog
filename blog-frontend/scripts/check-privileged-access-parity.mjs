@@ -20,6 +20,7 @@ const usersPath = "pages/admin/Users.tsx";
 const settingsPath = "pages/admin/SiteSettings.tsx";
 const advancedPath = "components/agent/AdvancedWorkspace.tsx";
 const knowledgePath = "components/agent/KnowledgeWorkspace.tsx";
+const externalApiPath = "components/agent/ExternalAPIWorkspace.tsx";
 const gate = await read(gatePath);
 const sudo = await read(sudoPath);
 const stepUp = await read(stepUpPath);
@@ -28,6 +29,7 @@ const users = await read(usersPath);
 const settings = await read(settingsPath);
 const advanced = await read(advancedPath);
 const knowledge = await read(knowledgePath);
+const externalApi = await read(externalApiPath);
 
 for (const [text, reason] of [
   ['data-slot="blog-privileged-access-gate"', "must expose the canonical privileged-access slot"],
@@ -79,6 +81,7 @@ for (const [relativePath, source] of [
   [settingsPath, settings],
   [advancedPath, advanced],
   [knowledgePath, knowledge],
+  [externalApiPath, externalApi],
 ]) {
   requireText(
     source,
@@ -131,6 +134,7 @@ if (providerPolicyTitleCount !== 1) {
 for (const [relativePath, source] of [
   [advancedPath, advanced],
   [knowledgePath, knowledge],
+  [externalApiPath, externalApi],
 ]) {
   if (source.includes("敏感配置需要近期 MFA")) {
     failures.push(
@@ -149,6 +153,25 @@ requireText(
   knowledgePath,
   'description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"',
   "knowledge policy description must match Showcase",
+);
+
+requireText(
+  externalApi,
+  externalApiPath,
+  "创建、修改、轮换或撤销服务端 API Client 会改变外部访问权限，需要近期多因素身份认证。",
+  "External API client policy description must match Showcase",
+);
+requireText(
+  api,
+  apiPath,
+  '"/api/admin/external-api"',
+  "External API administration must participate in bounded Step-Up replay",
+);
+requireText(
+  externalApi,
+  externalApiPath,
+  "if (!isSudoActive) return;",
+  "External API protected client/audit data must not load before sudo mode is active",
 );
 
 if (failures.length) {

@@ -10,6 +10,9 @@ import {
   connectorOutbox,
   connectorProfiles,
   embeddingProfile,
+  externalApiAudits,
+  externalApiClients,
+  externalCapabilities,
   indexStatus,
   indexedKnowledgeContent,
   knowledgeSearchResponse,
@@ -32,6 +35,7 @@ const knownAiPath = (path) =>
   path.startsWith("/api/admin/agents/") ||
   path.startsWith("/api/admin/provider-profiles") ||
   path.startsWith("/api/admin/embedding-profiles") ||
+  path.startsWith("/api/admin/external-api") ||
   path.startsWith("/api/admin/ai-");
 
 export async function installAiFixtures(page) {
@@ -67,6 +71,9 @@ export async function installAiFixtures(page) {
     if (path === "/api/admin/agent-skills") return respond([aiSkill]);
     if (path === "/api/admin/provider-profiles") return respond([aiProvider]);
     if (path === "/api/admin/embedding-profiles") return respond([embeddingProfile]);
+    if (path === "/api/admin/external-api/capabilities") return respond(externalCapabilities);
+    if (path === "/api/admin/external-api/clients") return respond(externalApiClients);
+    if (path === "/api/admin/external-api/audits") return respond(externalApiAudits);
     if (path === "/api/admin/ai-connectors") return respond(connectorProfiles);
     if (path === "/api/admin/ai-connector-outbox") return respond(connectorOutbox);
     if (path === "/api/admin/ai-index/status") return respond(indexStatus);

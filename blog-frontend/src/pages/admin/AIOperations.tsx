@@ -53,6 +53,7 @@ const LEGACY_SETTINGS_SECTIONS = new Set([
   "tools",
   "knowledge",
   "providers",
+  "api-access",
   "connectors",
 ]);
 

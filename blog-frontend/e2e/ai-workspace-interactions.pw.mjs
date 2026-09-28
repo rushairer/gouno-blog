@@ -280,6 +280,29 @@ test("Skill copy uses a controlled modal without submitting a mutation", async (
   await attachScreenshot(page, testInfo, "u04a-skill-copy-modal");
 });
 
+test("API Access exposes the server protocol and contextual client editor without writes", async ({ page }, testInfo) => {
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-settings?section=api-access",
+    { width: 390, height: 844, theme: "dark" },
+  );
+
+  await expect(page.getByRole("heading", { name: "Invocation protocol" })).toBeVisible();
+  await expect(page.getByText("GET /api/external/v1/capabilities")).toBeVisible();
+  await expect(
+    page.getByText("POST /api/external/v1/capabilities/{name}/invoke"),
+  ).toBeVisible();
+  await expect(page.getByText("Editorial Reporting SDK", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Create API Client" }).click();
+  const drawer = page.getByRole("dialog", { name: "Create API Client" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText("Capability allowlist")).toBeVisible();
+  await expectNoDocumentOverflow(page);
+  expectFixtureHealth(fixtureState, consoleProblems);
+  await attachScreenshot(page, testInfo, "u04a-api-access-client-drawer");
+});
+
 test("Provider settings expose provider and embedding configuration without writes", async ({ page }, testInfo) => {
   const { consoleProblems, fixtureState } = await openAiPage(
     page,

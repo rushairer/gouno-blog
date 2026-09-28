@@ -87,6 +87,89 @@ export const connectorOutbox = [
   },
 ];
 
+export const externalCapabilities = [
+  {
+    name: "content.list_published_posts",
+    description: "List published posts through the public content boundary.",
+    description_zh: "通过公开内容边界分页读取已发布文章目录与基础元数据。",
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+  {
+    name: "content.get_published_post",
+    description: "Read one published post through the public content boundary.",
+    description_zh: "通过公开内容边界读取一篇已发布文章。",
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+  {
+    name: "content.search_posts",
+    description: "Search published Blog posts.",
+    description_zh: "按关键词检索已发布 Blog 文章。",
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+];
+
+export const externalApiClients = [
+  {
+    id: 91,
+    name: "Editorial Reporting SDK",
+    key_prefix: "gouno_live_A7k3Q2p9",
+    capabilities: [
+      "content.list_published_posts",
+      "content.get_published_post",
+    ],
+    enabled: true,
+    rate_limit_per_minute: 120,
+    expires_at: "2026-12-31T15:59:00Z",
+    last_used_at: "2026-09-28T13:42:00Z",
+    revoked_at: null,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: 92,
+    name: "Knowledge Export Worker",
+    key_prefix: "gouno_live_K9m2V6s4",
+    capabilities: ["content.search_posts"],
+    enabled: false,
+    rate_limit_per_minute: 30,
+    expires_at: null,
+    last_used_at: "2026-09-27T22:16:00Z",
+    revoked_at: null,
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+export const externalApiAudits = [
+  {
+    id: 701,
+    client_id: 91,
+    request_id: "req-external-701",
+    capability: "content.list_published_posts",
+    result: "success",
+    status_code: 200,
+    source_ip: "203.0.113.10",
+    input_digest: "fixture-digest-701",
+    duration_ms: 42,
+    created_at: "2026-09-28T13:42:18Z",
+  },
+  {
+    id: 702,
+    client_id: 92,
+    request_id: "req-external-702",
+    capability: "content.get_published_post",
+    result: "denied",
+    status_code: 403,
+    source_ip: "203.0.113.11",
+    input_digest: "fixture-digest-702",
+    duration_ms: 1,
+    created_at: "2026-09-27T22:16:04Z",
+  },
+];
+
 export const embeddingProfile = {
   id: 1,
   name: "Primary Embeddings",

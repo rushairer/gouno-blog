@@ -39,6 +39,9 @@ const connectorWorkspace = await readBlog(
 const knowledgeWorkspace = await readBlog(
   "src/components/agent/KnowledgeWorkspace.tsx",
 );
+const externalApiWorkspace = await readBlog(
+  "src/components/agent/ExternalAPIWorkspace.tsx",
+);
 const forms = await Promise.all(
   [
     "src/components/agent/AgentForm.tsx",
@@ -119,6 +122,29 @@ requireBlog(
   knowledgeWorkspace,
   "Knowledge shared TabPanelFeedback usage",
 );
+
+for (const [canonicalMarker, blogMarker, label] of [
+  ['case "api-access"', 'key: "api-access"', "API Access route-level settings tab"],
+  ["onCreateExternalClient", "ExternalAPIWorkspace", "API Access collection ownership"],
+]) {
+  if (!canonicalSections.includes(canonicalMarker) && !canonicalSettings.includes(canonicalMarker)) {
+    failures.push(`Canonical API Access changed: missing ${label}: ${canonicalMarker}`);
+  }
+  requireBlog(blogMarker, workspace, label);
+}
+for (const [marker, label] of [
+  ["<TabPanelLead", "API Access shared TabPanelLead usage"],
+  ["<TabPanelFeedback>", "API Access feedback ordering"],
+  ["<SudoGate", "API Access privileged-access gate"],
+  ['data-pattern="settings-composition"', "API Access settings composition"],
+  ['data-pattern="contextual-list-editor"', "API Access contextual editor"],
+  ['data-pattern="editor-form-composition"', "API Access editor-form composition"],
+  ['form="ai-settings-external-client-editor"', "API Access Drawer submit ownership"],
+  ["GET /api/external/v1/capabilities", "API Access catalog protocol"],
+  ["POST /api/external/v1/capabilities/{name}/invoke", "API Access invoke protocol"],
+]) {
+  requireBlog(marker, externalApiWorkspace, label);
+}
 requireBlog(
   "type-family-mono type-body-sm type-weight-semibold",
   workspace,
@@ -222,6 +248,7 @@ for (const [text, label] of [
   [forms[2], "ProviderForm"],
   [forms[3], "EmbeddingForm"],
   [connectorWorkspace, "ConnectorWorkspace"],
+  [externalApiWorkspace, "ExternalAPIWorkspace"],
 ]) {
   requireBlog(
     "grid gap-5 xl:grid-cols-2",

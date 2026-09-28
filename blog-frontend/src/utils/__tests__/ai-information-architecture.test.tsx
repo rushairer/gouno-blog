@@ -46,6 +46,8 @@ describe("Blog Admin AI information architecture", () => {
     expect(operationsSource).not.toContain("getEmbeddingProfiles");
     expect(operationsSource).not.toContain("getIndexStatus");
     expect(operationsSource).not.toContain("getAgentSkills");
+    expect(operationsSource).not.toContain("ExternalAPIWorkspace");
+    expect(operationsSource).toContain('"api-access"');
     expect(operationsSource).toContain('params.get("tab") !== "advanced"');
     expect(operationsSource).toContain("/admin/ai-settings");
   });
