@@ -28,9 +28,10 @@ var (
 )
 
 const (
-	apiKeyPrefix            = "gouno_live_"
-	defaultRateLimitPerMin  = 60
-	maxRateLimitPerMinute   = 6000
+	apiKeyPrefix                    = "gouno_live_"
+	defaultRateLimitPerMin          = 60
+	maxRateLimitPerMinute           = 6000
+	authFailureRateLimitPerMinute   = 60
 )
 
 type ClientRepository interface {
@@ -206,6 +207,26 @@ func (s *Service) Authenticate(ctx context.Context, rawKey string) (*externaldom
 	}
 	s.repo.TouchLastUsed(ctx, client.ID)
 	return client, nil
+}
+
+func (s *Service) AllowAuthenticationFailure(ctx context.Context, sourceIP string) error {
+	sourceIP = strings.TrimSpace(sourceIP)
+	if sourceIP == "" {
+		sourceIP = "unknown"
+	}
+	allowed, err := s.limiter.Allow(
+		ctx,
+		"external-auth-failure:"+sourceIP,
+		authFailureRateLimitPerMinute,
+		time.Minute,
+	)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return ErrRateLimited
+	}
+	return nil
 }
 
 func (s *Service) Allow(ctx context.Context, client *externaldomain.Client) error {
