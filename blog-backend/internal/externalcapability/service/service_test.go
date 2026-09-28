@@ -225,6 +225,13 @@ func TestInvokeRequiresExplicitReadScopeAndRecordsAudit(t *testing.T) {
 	}
 }
 
+func TestAuthenticationFailureRateLimitFailsClosedAtServiceBoundary(t *testing.T) {
+	svc := New(&fakeRepository{}, externalRegistry(), fixedLimiter{allowed: false})
+	if err := svc.AllowAuthenticationFailure(context.Background(), "203.0.113.10"); !errors.Is(err, ErrRateLimited) {
+		t.Fatalf("authentication failure rate limit error = %v", err)
+	}
+}
+
 func TestRateLimitFailsClosedAtServiceBoundary(t *testing.T) {
 	svc := New(&fakeRepository{}, externalRegistry(), fixedLimiter{allowed: false})
 	client := &externaldomain.Client{ID: 1, KeyPrefix: "gouno_live_example", RateLimitPerMinute: 1}
