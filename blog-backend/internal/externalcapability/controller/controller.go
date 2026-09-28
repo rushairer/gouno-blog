@@ -23,7 +23,7 @@ const externalClientContextKey = "external_api_client"
 type CapabilityService interface {
 	ExternalCatalog() []tool.CatalogItem
 	CatalogForClient(*externaldomain.Client) []tool.CatalogItem
-	CreateClient(context.Context, string, []string, int, *time.Time, *int64) (*externaldomain.CreatedClient, error)
+	CreateClient(context.Context, string, []string, bool, int, *time.Time, *int64) (*externaldomain.CreatedClient, error)
 	ListClients(context.Context) ([]externaldomain.Client, error)
 	ListAudits(context.Context, int64, int) ([]externaldomain.InvocationAudit, error)
 	UpdateClient(context.Context, int64, string, []string, bool, int, *time.Time) (*externaldomain.Client, error)
@@ -47,6 +47,7 @@ func New(service CapabilityService) *Controller {
 type createClientRequest struct {
 	Name               string     `json:"name"`
 	Capabilities       []string   `json:"capabilities"`
+	Enabled            *bool      `json:"enabled,omitempty"`
 	RateLimitPerMinute int        `json:"rate_limit_per_minute,omitempty"`
 	ExpiresAt          *time.Time `json:"expires_at,omitempty"`
 }
@@ -139,9 +140,13 @@ func (ctrl *Controller) CreateClient(c *gin.Context) {
 			principalID = &parsed
 		}
 	}
+	enabled := true
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
 	created, err := ctrl.service.CreateClient(
 		c.Request.Context(), req.Name, req.Capabilities,
-		req.RateLimitPerMinute, req.ExpiresAt, principalID,
+		enabled, req.RateLimitPerMinute, req.ExpiresAt, principalID,
 	)
 	if err != nil {
 		writeError(c, err)
