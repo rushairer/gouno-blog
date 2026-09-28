@@ -73,6 +73,38 @@ function formatCapability(value: string) {
   return value.replace(".", " / ").replaceAll("_", " ");
 }
 
+function providerVendorLabel(
+  provider: ProviderProfile,
+  locale: "en" | "zh",
+) {
+  const vendor = provider.vendor || provider.provider_type;
+  const labelsByVendor: Record<string, string> = {
+    openai: "OpenAI",
+    anthropic: "Anthropic",
+    google: "Google Gemini",
+    deepseek: "DeepSeek",
+    alibaba: locale === "zh" ? "阿里云百炼 / Qwen" : "Alibaba Model Studio / Qwen",
+    volcengine: locale === "zh" ? "火山方舟 / 豆包" : "Volcengine Ark / Doubao",
+    moonshot: "Moonshot / Kimi",
+    tencent: locale === "zh" ? "腾讯 TokenHub / 混元" : "Tencent TokenHub / Hunyuan",
+    zhipu: locale === "zh" ? "智谱 GLM" : "Zhipu GLM",
+    baidu: locale === "zh" ? "百度千帆" : "Baidu Qianfan",
+    minimax: "MiniMax",
+    xai: "xAI",
+    mistral: "Mistral AI",
+    custom: locale === "zh" ? "自定义 / 兼容服务" : "Custom / Compatible",
+  };
+  return labelsByVendor[vendor] || vendor;
+}
+
+function providerProtocolLabel(provider: ProviderProfile) {
+  return {
+    openai: "OpenAI Compatible",
+    anthropic: "Anthropic Messages",
+    gemini: "Gemini Native",
+  }[provider.provider_type] || provider.provider_type;
+}
+
 interface AdvancedWorkspaceProps {
   locale: "en" | "zh";
   labels: Record<string, string>;
@@ -830,8 +862,8 @@ export function AdvancedWorkspace({
                             <div className="min-w-0">
                               <strong>{provider.name}</strong>
                               <Text size="xs" tone="muted">
-                                {provider.vendor || provider.provider_type} ·{" "}
-                                {provider.provider_type} · {provider.model}
+                                {providerVendorLabel(provider, locale)} ·{" "}
+                                {providerProtocolLabel(provider)} · {provider.model}
                               </Text>
                             </div>
                             <Tag
