@@ -30,6 +30,7 @@ type CapabilityService interface {
 	RotateClientKey(context.Context, int64) (*externaldomain.CreatedClient, error)
 	RevokeClient(context.Context, int64) error
 	Authenticate(context.Context, string) (*externaldomain.Client, error)
+	AllowAuthenticationFailure(context.Context, string) error
 	Allow(context.Context, *externaldomain.Client) error
 	RecordRateLimited(context.Context, *externaldomain.Client, string, string, string)
 	Invoke(context.Context, *externaldomain.Client, string, json.RawMessage, string, string) (json.RawMessage, error)
@@ -220,6 +221,16 @@ func (ctrl *Controller) Authenticate() gin.HandlerFunc {
 			c.Request.Context(), strings.TrimSpace(strings.TrimPrefix(header, "Bearer ")),
 		)
 		if err != nil {
+			if errors.Is(err, externalservice.ErrUnauthorized) {
+				if limitErr := ctrl.service.AllowAuthenticationFailure(
+					c.Request.Context(),
+					c.ClientIP(),
+				); limitErr != nil {
+					writeError(c, limitErr)
+					c.Abort()
+					return
+				}
+			}
 			writeError(c, err)
 			c.Abort()
 			return
