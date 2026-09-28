@@ -1,6 +1,6 @@
 # Blog Admin CSA-A005 Consumer Recertification
 
-Status: **verified**
+Status: **CSA-A005 recertified / overall AI Settings scope pending CSA-A006**
 
 Date: 2026-09-28
 
@@ -70,13 +70,14 @@ That merge marks `CSA-A005.consumerImpact["rushairer/gouno-blog"]` as `recertifi
 
 ## Result
 
-The cross-repository state is now consistent:
+CSA-A005 itself is fully recertified:
 
 - Canonical amendment CSA-A005 is accepted.
 - Blog Product propagation is merged.
 - Fresh Blog manual/browser/parity evidence is retained.
 - Reciprocal Gouno UI Blog Consumer Parity passed against Blog main.
 - Gouno UI records the Blog consumer as `recertified`.
-- Blog may therefore promote `blog-admin-ai` from `needs-manual-recertification` to `verified`.
 
-This status closes only CSA-A005. It does not weaken future post-freeze amendment rules or treat CI alone as design evidence.
+However, the same `blog-admin-ai-settings` scope was subsequently extended by the merged Canonical API Access work at Gouno UI commit `6941ec3cebeec48e07952bfc714086c98d6af373`. That new server-to-server API Client surface is tracked as CSA-A006 and has not yet been reverse-migrated into Blog Admin.
+
+Therefore the overall `blog-admin-ai` certification intentionally remains `needs-manual-recertification` until CSA-A006 Product propagation, browser evidence and reciprocal parity are complete. This avoids treating completion of A005 as proof that a later Canonical extension is already present in the Consumer.
