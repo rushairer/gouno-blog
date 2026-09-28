@@ -329,9 +329,23 @@ if (upstreamRoot) {
           );
         }
       }
+    } else if (impact === "needs-manual-recertification") {
+      if (!affectedEntries.length) {
+        fail(
+          `${amendment.id}: upstream marks Blog pending recertification, but no Blog certification owns scopes ${(amendment.scopes ?? []).join(", ")}.`,
+        );
+        continue;
+      }
+      for (const entry of affectedEntries) {
+        if (entry.status !== "needs-manual-recertification") {
+          fail(
+            `${entry.id}: upstream amendment ${amendment.id} is still pending Blog recertification, so the local certification must remain needs-manual-recertification rather than ${entry.status}.`,
+          );
+        }
+      }
     } else if (impact !== "not-affected") {
       fail(
-        `${amendment.id}: unsupported Blog consumerImpact "${impact}"; expected recertified or not-affected.`,
+        `${amendment.id}: unsupported Blog consumerImpact "${impact}"; expected needs-manual-recertification, recertified or not-affected.`,
       );
     }
   }
