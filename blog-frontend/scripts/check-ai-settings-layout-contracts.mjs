@@ -23,6 +23,9 @@ const editorPatterns = await source(
 const connectorWorkspace = await source(
   "src/components/agent/ConnectorWorkspace.tsx",
 );
+const externalApiWorkspace = await source(
+  "src/components/agent/ExternalAPIWorkspace.tsx",
+);
 const knowledgeWorkspace = await source(
   "src/components/agent/KnowledgeWorkspace.tsx",
 );
@@ -48,6 +51,29 @@ requireText(
   connectorWorkspace,
   "<TabPanelLead",
   "Connector collection must consume the shared TabPanelLead pattern",
+);
+for (const [marker, label] of [
+  ["<TabPanelLead", "shared panel lead"],
+  ["<TabPanelFeedback>", "panel feedback ordering"],
+  ['data-pattern="settings-composition"', "settings composition"],
+  ['data-pattern="contextual-list-editor"', "contextual Drawer editor"],
+  ['data-pattern="editor-form-composition"', "editor form composition"],
+  ["grid gap-5 xl:grid-cols-2", "two-column Client policy editor"],
+  ["GET /api/external/v1/capabilities", "catalog endpoint documentation"],
+  ["POST /api/external/v1/capabilities/{name}/invoke", "invoke endpoint documentation"],
+  ["确认撤销 API Client", "destructive revoke confirmation"],
+  ["保存一次性 API Key", "one-time key result state"],
+]) {
+  requireText(
+    externalApiWorkspace,
+    marker,
+    `External API Access must preserve canonical ${label}`,
+  );
+}
+requireText(
+  externalApiWorkspace,
+  'form={EXTERNAL_CLIENT_FORM_ID}',
+  "External API Drawer footer must own the submit action",
 );
 
 for (const [marker, label] of [
@@ -189,6 +215,7 @@ for (const path of [
   "src/components/agent/ProviderForm.tsx",
   "src/components/agent/EmbeddingForm.tsx",
   "src/components/agent/ConnectorWorkspace.tsx",
+  "src/components/agent/ExternalAPIWorkspace.tsx",
 ]) {
   const text = await source(path);
   requireText(
