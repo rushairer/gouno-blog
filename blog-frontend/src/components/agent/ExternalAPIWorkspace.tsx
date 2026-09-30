@@ -65,7 +65,7 @@ function formatTimestamp(value: string | null | undefined, locale: "en" | "zh") 
 
 function resultColor(result: ExternalInvocationAudit["result"]) {
   if (result === "success") return "success" as const;
-  if (result === "denied" || result === "rate_limited") return "warning" as const;
+  if (result === "denied") return "warning" as const;
   return "error" as const;
 }
 
@@ -81,7 +81,10 @@ export function ExternalAPIWorkspace({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<{
+    type: "success" | "warning";
+    text: string;
+  } | null>(null);
   const [editor, setEditor] = useState<ClientEditorState>(null);
   const [revokeTarget, setRevokeTarget] = useState<ExternalAPIClient | null>(null);
   const [oneTimeKey, setOneTimeKey] = useState<ExternalAPICreatedClient | null>(null);
@@ -123,7 +126,7 @@ export function ExternalAPIWorkspace({
   const openEditor = (value: ExternalAPIClient | "new") => {
     setEditor(value);
     setError("");
-    setNotice("");
+    setNotice(null);
     if (value === "new") {
       setName("");
       setEnabled(true);
@@ -193,11 +196,12 @@ export function ExternalAPIWorkspace({
           expires_at: expiry,
         });
         setOneTimeKey(created);
-        setNotice(
-          zh
+        setNotice({
+          type: "success",
+          text: zh
             ? `${trimmedName} 已创建；请立即安全保存一次性 API Key。`
             : `${trimmedName} created. Store the one-time API key now.`,
-        );
+        });
       } else {
         await externalCapabilityApi.updateClient(editor.id, {
           name: trimmedName,
@@ -206,11 +210,12 @@ export function ExternalAPIWorkspace({
           rate_limit_per_minute: parsedRate,
           expires_at: expiry,
         });
-        setNotice(
-          zh
+        setNotice({
+          type: "success",
+          text: zh
             ? `${trimmedName} 的 API Client 策略已更新。`
             : `${trimmedName} API client policy updated.`,
-        );
+        });
       }
       closeEditor();
       await load();
@@ -227,11 +232,12 @@ export function ExternalAPIWorkspace({
     try {
       const rotated = await externalCapabilityApi.rotateClientKey(client.id);
       setOneTimeKey(rotated);
-      setNotice(
-        zh
+      setNotice({
+        type: "success",
+        text: zh
           ? `${client.name} 的 API Key 已轮换；旧 Key 立即失效。`
           : `${client.name} API key rotated. The previous key is invalid now.`,
-      );
+      });
       await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Request failed");
@@ -248,11 +254,12 @@ export function ExternalAPIWorkspace({
     try {
       await externalCapabilityApi.revokeClient(target.id);
       setRevokeTarget(null);
-      setNotice(
-        zh
+      setNotice({
+        type: "warning",
+        text: zh
           ? `${target.name} 已撤销；该 API Key 不可恢复。`
           : `${target.name} revoked. The API key cannot be restored.`,
-      );
+      });
       await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Request failed");
@@ -300,8 +307,8 @@ export function ExternalAPIWorkspace({
           </Alert>
         ) : null}
         {notice ? (
-          <Alert type="success" showIcon role="status">
-            {notice}
+          <Alert type={notice.type} showIcon role="status">
+            {notice.text}
           </Alert>
         ) : null}
       </TabPanelFeedback>
