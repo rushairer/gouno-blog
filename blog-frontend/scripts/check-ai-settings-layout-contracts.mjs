@@ -23,6 +23,9 @@ const editorPatterns = await source(
 const connectorWorkspace = await source(
   "src/components/agent/ConnectorWorkspace.tsx",
 );
+const externalWorkspace = await source(
+  "src/components/agent/ExternalAPIWorkspace.tsx",
+);
 const knowledgeWorkspace = await source(
   "src/components/agent/KnowledgeWorkspace.tsx",
 );
@@ -49,6 +52,22 @@ requireText(
   "<TabPanelLead",
   "Connector collection must consume the shared TabPanelLead pattern",
 );
+for (const [marker, label] of [
+  ["<TabPanelLead", "shared panel lead"],
+  ["<TabPanelFeedback>", "feedback ordering"],
+  ["<Drawer", "contextual Drawer editor"],
+  ['data-pattern="contextual-list-editor"', "contextual editor ownership"],
+  ['data-pattern="editor-form-composition"', "editor form composition"],
+  ['form="ai-settings-external-client-editor"', "Drawer footer submission"],
+  ["GET /api/external/v1/capabilities", "machine catalog protocol"],
+  ['POST /api/external/v1/capabilities/{name}/invoke', "machine invoke protocol"],
+]) {
+  requireText(
+    externalWorkspace,
+    marker,
+    `External API Access must preserve canonical ${label}`,
+  );
+}
 
 for (const [marker, label] of [
   ["<TabPanelLead", "shared panel lead"],
@@ -82,7 +101,7 @@ requireCount(
 requireCount(
   workspace,
   'data-pattern="settings-composition"',
-  5,
+  6,
   "AdvancedWorkspace-owned AI Settings collections must expose the settings composition boundary",
 );
 requireText(
@@ -189,6 +208,7 @@ for (const path of [
   "src/components/agent/ProviderForm.tsx",
   "src/components/agent/EmbeddingForm.tsx",
   "src/components/agent/ConnectorWorkspace.tsx",
+  "src/components/agent/ExternalAPIWorkspace.tsx",
 ]) {
   const text = await source(path);
   requireText(
