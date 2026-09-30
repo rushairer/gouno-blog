@@ -19,6 +19,7 @@ const apiPath = "api/client.ts";
 const usersPath = "pages/admin/Users.tsx";
 const settingsPath = "pages/admin/SiteSettings.tsx";
 const advancedPath = "components/agent/AdvancedWorkspace.tsx";
+const externalAPIPath = "components/agent/ExternalAPIWorkspace.tsx";
 const knowledgePath = "components/agent/KnowledgeWorkspace.tsx";
 const gate = await read(gatePath);
 const sudo = await read(sudoPath);
@@ -27,6 +28,7 @@ const api = await read(apiPath);
 const users = await read(usersPath);
 const settings = await read(settingsPath);
 const advanced = await read(advancedPath);
+const externalAPI = await read(externalAPIPath);
 const knowledge = await read(knowledgePath);
 
 for (const [text, reason] of [
@@ -64,6 +66,13 @@ requireText(
   "STEP_UP_CANCELLED_EVENT",
   "Step-Up UI must distinguish explicit cancellation from verification completion",
 );
+requireText(
+  api,
+  apiPath,
+  '"/api/admin/external-api"',
+  "External API administration must participate in shared recent-MFA Step-Up replay",
+);
+
 for (const [text, reason] of [
   ["waitForStepUp", "protected AI operations must wait for Step-Up completion"],
   ["STEP_UP_COMPLETED_EVENT", "protected AI operations must resume after completed Step-Up"],
@@ -78,6 +87,7 @@ for (const [relativePath, source] of [
   [usersPath, users],
   [settingsPath, settings],
   [advancedPath, advanced],
+  [externalAPIPath, externalAPI],
   [knowledgePath, knowledge],
 ]) {
   requireText(
@@ -149,6 +159,18 @@ requireText(
   knowledgePath,
   'description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"',
   "knowledge policy description must match Showcase",
+);
+requireText(
+  externalAPI,
+  externalAPIPath,
+  '创建、修改、轮换或撤销服务端 API Client 会改变外部访问权限，需要近期多因素身份认证。',
+  "External API client policy description must match Showcase",
+);
+requireText(
+  externalAPI,
+  externalAPIPath,
+  "if (!isSudoActive)",
+  "External API management data must not preload before the privileged gate is unlocked",
 );
 
 if (failures.length) {
