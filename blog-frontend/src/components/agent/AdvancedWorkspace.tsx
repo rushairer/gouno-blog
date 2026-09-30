@@ -981,7 +981,9 @@ export function AdvancedWorkspace({
                 ? "创建、修改、轮换或撤销服务端 API Client 会改变外部访问权限，需要近期多因素身份认证。"
                 : "Creating, changing, rotating, or revoking server API clients changes external access and requires recent multi-factor authentication."
             }
-            actionLabel={locale === "zh" ? "解锁以管理 API Access" : "Unlock API Access"}
+            actionLabel={
+              locale === "zh" ? "解锁以管理 API Access" : "Unlock API Access"
+            }
             deferChildrenUntilUnlocked
           >
             <ExternalAPIWorkspace locale={locale} />

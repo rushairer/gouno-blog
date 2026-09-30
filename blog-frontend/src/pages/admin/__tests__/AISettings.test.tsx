@@ -157,7 +157,8 @@ function responseFor(url: string) {
       },
     ];
   if (url === "/api/admin/agent-skills") return [skill];
-  if (url === "/api/admin/external-api/capabilities") return externalCapabilities;
+  if (url === "/api/admin/external-api/capabilities")
+    return externalCapabilities;
   if (url === "/api/admin/external-api/clients") return [externalClient];
   if (url.startsWith("/api/admin/external-api/audits")) return [externalAudit];
   throw new Error(`unexpected URL: ${url}`);
@@ -210,9 +211,9 @@ describe("AISettings", () => {
     const before = vi
       .mocked(apiFetch)
       .mock.calls.map(([input]) => input.toString());
-    expect(before.some((url) => url.startsWith("/api/admin/external-api"))).toBe(
-      false,
-    );
+    expect(
+      before.some((url) => url.startsWith("/api/admin/external-api")),
+    ).toBe(false);
 
     await user.click(screen.getByRole("tab", { name: "API Access" }));
 

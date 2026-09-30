@@ -51,7 +51,9 @@ describe("SudoGate", () => {
         description="API Client metadata requires recent MFA."
         deferChildrenUntilUnlocked
       >
-        <div data-testid="external-api-sensitive-data">secret client metadata</div>
+        <div data-testid="external-api-sensitive-data">
+          secret client metadata
+        </div>
       </SudoGate>,
     );
 

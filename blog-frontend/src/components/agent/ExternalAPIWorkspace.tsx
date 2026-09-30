@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import {
-  Edit2,
-  KeyRound,
-  Plus,
-  RotateCcw,
-  ShieldOff,
-} from "lucide-react";
+import { Edit2, KeyRound, Plus, RotateCcw, ShieldOff } from "lucide-react";
 import {
   Alert,
   Button,
@@ -53,7 +47,10 @@ function toISOValue(value: string) {
   return date.toISOString();
 }
 
-function formatTimestamp(value: string | null | undefined, locale: "en" | "zh") {
+function formatTimestamp(
+  value: string | null | undefined,
+  locale: "en" | "zh",
+) {
   if (!value) return locale === "zh" ? "尚未调用" : "Never used";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -69,11 +66,7 @@ function resultColor(result: ExternalInvocationAudit["result"]) {
   return "error" as const;
 }
 
-export function ExternalAPIWorkspace({
-  locale,
-}: {
-  locale: "en" | "zh";
-}) {
+export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
   const zh = locale === "zh";
   const [clients, setClients] = useState<ExternalAPIClient[]>([]);
   const [capabilities, setCapabilities] = useState<ExternalCapability[]>([]);
@@ -86,14 +79,20 @@ export function ExternalAPIWorkspace({
     text: string;
   } | null>(null);
   const [editor, setEditor] = useState<ClientEditorState>(null);
-  const [revokeTarget, setRevokeTarget] = useState<ExternalAPIClient | null>(null);
-  const [oneTimeKey, setOneTimeKey] = useState<ExternalAPICreatedClient | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<ExternalAPIClient | null>(
+    null,
+  );
+  const [oneTimeKey, setOneTimeKey] = useState<ExternalAPICreatedClient | null>(
+    null,
+  );
 
   const [name, setName] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [rateLimit, setRateLimit] = useState("60");
   const [expiresAt, setExpiresAt] = useState("");
-  const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([]);
+  const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>(
+    [],
+  );
 
   const clientMap = useMemo(
     () => new Map(clients.map((client) => [client.id, client])),
@@ -294,7 +293,9 @@ export function ExternalAPIWorkspace({
         <Alert
           type="info"
           showIcon
-          title={zh ? "Server-to-server API 边界" : "Server-to-server API boundary"}
+          title={
+            zh ? "Server-to-server API 边界" : "Server-to-server API boundary"
+          }
           description={
             zh
               ? "长期 API Key 只供服务端调用；浏览器请求不会使用这条通道。v1 仅开放显式授权的 read-only Capability。"
@@ -361,7 +362,10 @@ export function ExternalAPIWorkspace({
         </div>
       </Card>
 
-      <section className="flex flex-col gap-3" aria-labelledby="external-clients-title">
+      <section
+        className="flex flex-col gap-3"
+        aria-labelledby="external-clients-title"
+      >
         <div>
           <Heading id="external-clients-title" level={2} variant="compact">
             API Clients
@@ -375,7 +379,10 @@ export function ExternalAPIWorkspace({
         <Card padding="none" className="overflow-hidden">
           {loading ? (
             <CardContent className="p-6">
-              <div role="status" aria-label={zh ? "正在加载 API Clients" : "Loading API clients"}>
+              <div
+                role="status"
+                aria-label={zh ? "正在加载 API Clients" : "Loading API clients"}
+              >
                 <Skeleton className="h-24 w-full" />
               </div>
             </CardContent>
@@ -404,7 +411,13 @@ export function ExternalAPIWorkspace({
                       <div className="flex flex-wrap items-center gap-2">
                         <strong>{client.name}</strong>
                         <Tag
-                          color={revoked ? "error" : client.enabled ? "success" : "default"}
+                          color={
+                            revoked
+                              ? "error"
+                              : client.enabled
+                                ? "success"
+                                : "default"
+                          }
                         >
                           {revoked
                             ? zh
@@ -440,7 +453,9 @@ export function ExternalAPIWorkspace({
                     </div>
                     <div className="flex min-w-max flex-nowrap items-center gap-1">
                       <IconButton
-                        label={zh ? `编辑 ${client.name}` : `Edit ${client.name}`}
+                        label={
+                          zh ? `编辑 ${client.name}` : `Edit ${client.name}`
+                        }
                         icon={<Edit2 />}
                         variant="ghost"
                         disabled={revoked || busy}
@@ -458,7 +473,9 @@ export function ExternalAPIWorkspace({
                         onClick={() => void rotateKey(client)}
                       />
                       <IconButton
-                        label={zh ? `撤销 ${client.name}` : `Revoke ${client.name}`}
+                        label={
+                          zh ? `撤销 ${client.name}` : `Revoke ${client.name}`
+                        }
                         icon={<ShieldOff />}
                         variant="ghost"
                         color="error"
@@ -512,7 +529,10 @@ export function ExternalAPIWorkspace({
         </Card>
       </section>
 
-      <section className="flex flex-col gap-3" aria-labelledby="external-audits-title">
+      <section
+        className="flex flex-col gap-3"
+        aria-labelledby="external-audits-title"
+      >
         <div>
           <Heading id="external-audits-title" level={2} variant="compact">
             {zh ? "最近调用" : "Recent invocations"}
@@ -528,7 +548,9 @@ export function ExternalAPIWorkspace({
             {audits.length === 0 ? (
               <div className="p-6">
                 <Empty
-                  description={zh ? "暂无外部调用记录" : "No external invocation records"}
+                  description={
+                    zh ? "暂无外部调用记录" : "No external invocation records"
+                  }
                 />
               </div>
             ) : (
@@ -542,8 +564,9 @@ export function ExternalAPIWorkspace({
                       {audit.capability}
                     </strong>
                     <Text size="xs" tone="muted">
-                      {clientMap.get(audit.client_id)?.name || `Client #${audit.client_id}`} ·{" "}
-                      {formatTimestamp(audit.created_at, locale)}
+                      {clientMap.get(audit.client_id)?.name ||
+                        `Client #${audit.client_id}`}{" "}
+                      · {formatTimestamp(audit.created_at, locale)}
                     </Text>
                   </div>
                   <Tag color={resultColor(audit.result)}>
@@ -697,7 +720,9 @@ export function ExternalAPIWorkspace({
               >
                 <div className="grid gap-3 sm:grid-cols-2">
                   {capabilities.map((capability) => {
-                    const checked = selectedCapabilities.includes(capability.name);
+                    const checked = selectedCapabilities.includes(
+                      capability.name,
+                    );
                     return (
                       <label
                         key={capability.name}
@@ -706,7 +731,10 @@ export function ExternalAPIWorkspace({
                         <Checkbox
                           checked={checked}
                           onChange={(event) =>
-                            toggleCapability(capability.name, event.target.checked)
+                            toggleCapability(
+                              capability.name,
+                              event.target.checked,
+                            )
                           }
                         />
                         <span className="min-w-0 flex-1">
@@ -715,7 +743,8 @@ export function ExternalAPIWorkspace({
                           </strong>
                           <Text size="xs" tone="muted">
                             {zh
-                              ? capability.description_zh || capability.description
+                              ? capability.description_zh ||
+                                capability.description
                               : capability.description}
                           </Text>
                         </span>
@@ -754,7 +783,9 @@ export function ExternalAPIWorkspace({
           <Alert
             type="warning"
             showIcon
-            title={zh ? "不要放入浏览器代码" : "Do not put this in browser code"}
+            title={
+              zh ? "不要放入浏览器代码" : "Do not put this in browser code"
+            }
             description={
               zh
                 ? "这个长期凭据只供服务端调用；服务端数据库只保存它的哈希。"
