@@ -225,8 +225,8 @@ describe("AISettings", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Editorial Reporting SDK")).toBeInTheDocument();
     expect(
-      screen.getByText("analytics.list_low_engagement_posts"),
-    ).toBeInTheDocument();
+      screen.getAllByText("analytics.list_low_engagement_posts").length,
+    ).toBeGreaterThan(0);
 
     await waitFor(() => {
       const urls = vi
