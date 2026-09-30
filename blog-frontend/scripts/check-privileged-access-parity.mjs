@@ -150,8 +150,14 @@ requireText(
 requireText(
   advanced,
   advancedPath,
-  'deferChildrenUntilUnlocked',
-  "API Access must not mount sensitive management data while the shared SudoGate is locked",
+  "const { isSudoActive } = useSudoMode();",
+  "API Access must gate sensitive management data on the existing sudo session without changing SudoGate ownership",
+);
+requireText(
+  advanced,
+  advancedPath,
+  "return isSudoActive ? <ExternalAPIWorkspace",
+  "API Access must not mount its sensitive data loader while sudo is locked",
 );
 requireText(
   advanced,
