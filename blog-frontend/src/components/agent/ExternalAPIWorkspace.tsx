@@ -279,7 +279,7 @@ function ExternalAPIClientForm({
   );
 }
 
-function ExternalAPIWorkspace({
+export function ExternalAPIWorkspace({
   locale,
 }: {
   locale: "en" | "zh";
