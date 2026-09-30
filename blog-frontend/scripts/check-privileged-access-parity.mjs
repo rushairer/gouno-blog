@@ -19,6 +19,7 @@ const apiPath = "api/client.ts";
 const usersPath = "pages/admin/Users.tsx";
 const settingsPath = "pages/admin/SiteSettings.tsx";
 const advancedPath = "components/agent/AdvancedWorkspace.tsx";
+const externalPath = "components/agent/ExternalAPIWorkspace.tsx";
 const knowledgePath = "components/agent/KnowledgeWorkspace.tsx";
 const gate = await read(gatePath);
 const sudo = await read(sudoPath);
@@ -27,6 +28,7 @@ const api = await read(apiPath);
 const users = await read(usersPath);
 const settings = await read(settingsPath);
 const advanced = await read(advancedPath);
+const external = await read(externalPath);
 const knowledge = await read(knowledgePath);
 
 for (const [text, reason] of [
@@ -70,6 +72,7 @@ for (const [text, reason] of [
   ["STEP_UP_CANCELLED_EVENT", "protected AI operations must stop when Step-Up is cancelled"],
   ["retryArgs", "protected AI operations must preserve the pending request for one replay"],
   ["allowRetry", "protected AI operations must bound Step-Up replay to prevent retry loops"],
+  ["/api/admin/external-api", "External API client management must participate in Step-Up replay"],
 ]) {
   requireText(api, apiPath, text, reason);
 }
@@ -144,6 +147,30 @@ requireText(
   'description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"',
   "model credential policy description must match Showcase",
 );
+requireText(
+  advanced,
+  advancedPath,
+  'deferChildrenUntilUnlocked',
+  "API Access must not mount sensitive management data while the shared SudoGate is locked",
+);
+requireText(
+  advanced,
+  advancedPath,
+  'External API Client 与长期密钥保护',
+  "API Access privileged policy title must match Canonical",
+);
+for (const marker of [
+  "GET /api/external/v1/capabilities",
+  'POST /api/external/v1/capabilities/{name}/invoke',
+  "Authorization: Bearer gouno_live_…",
+]) {
+  requireText(
+    external,
+    externalPath,
+    marker,
+    "External API Access must preserve the server-only invocation boundary",
+  );
+}
 requireText(
   knowledge,
   knowledgePath,
