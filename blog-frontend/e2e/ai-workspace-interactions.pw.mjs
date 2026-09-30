@@ -343,3 +343,86 @@ test("Provider settings expose provider and embedding configuration without writ
   expectFixtureHealth(fixtureState, consoleProblems);
   await attachScreenshot(page, testInfo, "u04a-provider-editor");
 });
+
+
+test("API Access manages server-only client lifecycle with one-time keys", async ({ page }, testInfo) => {
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-settings?section=api-access",
+    { width: 1440, height: 1000, theme: "dark" },
+  );
+
+  await expect(page.getByRole("heading", { name: "Invocation protocol" })).toBeVisible();
+  await expect(page.getByText("GET /api/external/v1/capabilities")).toBeVisible();
+  await expect(
+    page.getByText("POST /api/external/v1/capabilities/{name}/invoke"),
+  ).toBeVisible();
+  await expect(page.getByText("Editorial Reporting SDK", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Create API Client" }).click();
+  const drawer = page.getByRole("dialog", { name: "Create API Client" });
+  await expect(drawer).toBeVisible();
+  await drawer.getByLabel("Client name").fill("Partner Reporting Worker");
+  const capabilityCard = drawer
+    .locator("label")
+    .filter({ hasText: "content.list_published_posts" });
+  await capabilityCard.getByRole("checkbox").check();
+  await drawer.getByRole("button", { name: "Save API Client" }).click();
+
+  const createdKeyDialog = page.getByRole("dialog", { name: "Save one-time API key" });
+  await expect(createdKeyDialog.getByLabel("One-time API key")).toHaveValue(
+    /gouno_live_fixture-created-/,
+  );
+  await createdKeyDialog
+    .getByRole("button", { name: "I saved it securely" })
+    .click();
+  await expect(page.getByText("Partner Reporting Worker", { exact: true })).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Rotate Editorial Reporting SDK key" })
+    .click();
+  const rotatedKeyDialog = page.getByRole("dialog", { name: "Save one-time API key" });
+  await expect(rotatedKeyDialog.getByLabel("One-time API key")).toHaveValue(
+    /gouno_live_fixture-rotated-91_/,
+  );
+  await rotatedKeyDialog
+    .getByRole("button", { name: "I saved it securely" })
+    .click();
+
+  await page
+    .getByRole("button", { name: "Revoke Knowledge Export Worker" })
+    .click();
+  const revokeDialog = page.getByRole("dialog", {
+    name: "Confirm API client revocation",
+  });
+  await expect(revokeDialog).toContainText("cannot be undone");
+  await revokeDialog
+    .getByRole("button", { name: "Revoke and invalidate key" })
+    .click();
+  await expect(
+    page.getByText(
+      "Knowledge Export Worker revoked. Its current key is invalid and cannot be restored.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  expect(
+    fixtureState.externalRequests.some((request) =>
+      request.includes("POST /api/admin/external-api/clients"),
+    ),
+  ).toBe(true);
+  expect(
+    fixtureState.externalRequests.some((request) =>
+      request.includes("POST /api/admin/external-api/clients/91/rotate"),
+    ),
+  ).toBe(true);
+  expect(
+    fixtureState.externalRequests.some((request) =>
+      request.includes("DELETE /api/admin/external-api/clients/92"),
+    ),
+  ).toBe(true);
+
+  await expectNoDocumentOverflow(page);
+  expectFixtureHealth(fixtureState, consoleProblems);
+  await attachScreenshot(page, testInfo, "a006-api-access-lifecycle");
+});

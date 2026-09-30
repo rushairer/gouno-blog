@@ -36,6 +36,9 @@ const editorPatterns = await readBlog(
 const connectorWorkspace = await readBlog(
   "src/components/agent/ConnectorWorkspace.tsx",
 );
+const externalAPIWorkspace = await readBlog(
+  "src/components/agent/ExternalAPIWorkspace.tsx",
+);
 const knowledgeWorkspace = await readBlog(
   "src/components/agent/KnowledgeWorkspace.tsx",
 );
@@ -87,6 +90,40 @@ requireBlog(
   connectorWorkspace,
   "Connector shared TabPanelFeedback usage",
 );
+
+for (const [marker, label] of [
+  ["API Access", "API Access route-level tab"],
+  ["调用协议", "External API invocation protocol"],
+  ["GET /api/external/v1/capabilities", "External API catalog endpoint"],
+  ["POST /api/external/v1/capabilities/{name}/invoke", "External API invoke endpoint"],
+  ["确认撤销 API Client", "External API revoke confirmation"],
+  ["保存一次性 API Key", "External API one-time key state"],
+]) {
+  if (
+    !canonicalSettings.includes(marker) &&
+    !canonicalSections.includes(marker) &&
+    !canonicalEditors.includes(marker)
+  ) {
+    failures.push(`Canonical API Access changed: missing ${label}: ${marker}`);
+  }
+}
+for (const [marker, label] of [
+  ["<TabPanelLead", "API Access shared TabPanelLead usage"],
+  ["<TabPanelFeedback>", "API Access shared TabPanelFeedback usage"],
+  ["<SudoGate", "API Access privileged-access ownership"],
+  ["if (!isSudoActive)", "API Access locked-state data loading guard"],
+  ["externalCapabilityApi.getClients()", "API Access real Client API binding"],
+  ["externalCapabilityApi.getCapabilities()", "API Access real Capability API binding"],
+  ["externalCapabilityApi.getAudits", "API Access real audit API binding"],
+  ["GET /api/external/v1/capabilities", "API Access catalog endpoint guidance"],
+  ["POST /api/external/v1/capabilities/{name}/invoke", "API Access invoke endpoint guidance"],
+  ['data-pattern="editor-form-composition"', "API Access shared editor form grammar"],
+  ['form="ai-settings-external-client-editor"', "API Access Drawer form ownership"],
+  ["Confirm API client revocation", "API Access irreversible revoke confirmation"],
+  ["Save one-time API key", "API Access one-time credential delivery"],
+]) {
+  requireBlog(marker, externalAPIWorkspace, label);
+}
 
 for (const [marker, label] of [
   ['id="knowledge-overview-title"', "Knowledge index overview"],
@@ -222,6 +259,7 @@ for (const [text, label] of [
   [forms[2], "ProviderForm"],
   [forms[3], "EmbeddingForm"],
   [connectorWorkspace, "ConnectorWorkspace"],
+  [externalAPIWorkspace, "ExternalAPIWorkspace"],
 ]) {
   requireBlog(
     "grid gap-5 xl:grid-cols-2",
