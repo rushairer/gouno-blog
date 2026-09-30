@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useSudoMode } from "../../hooks/useSudoMode";
 import {
   Bot,
   CirclePause,
@@ -107,6 +108,15 @@ function providerProtocolLabel(provider: ProviderProfile) {
   return (
     providerProtocolLabels[provider.provider_type] || provider.provider_type
   );
+}
+
+function ExternalAPIProtectedContent({
+  locale,
+}: {
+  locale: "en" | "zh";
+}) {
+  const { isSudoActive } = useSudoMode();
+  return isSudoActive ? <ExternalAPIWorkspace locale={locale} /> : null;
 }
 
 interface AdvancedWorkspaceProps {
@@ -984,9 +994,8 @@ export function AdvancedWorkspace({
             actionLabel={
               locale === "zh" ? "解锁以管理 API Access" : "Unlock API Access"
             }
-            deferChildrenUntilUnlocked
           >
-            <ExternalAPIWorkspace locale={locale} />
+            <ExternalAPIProtectedContent locale={locale} />
           </SudoGate>
         </div>
       ) : null}
