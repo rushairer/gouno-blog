@@ -67,7 +67,10 @@ function expiresAtPayload(value: string): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function displayDateTime(value: string | null | undefined, locale: "en" | "zh") {
+function displayDateTime(
+  value: string | null | undefined,
+  locale: "en" | "zh",
+) {
   if (!value) return locale === "zh" ? "尚未调用" : "Never";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -281,10 +284,12 @@ export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState<ExternalClientEditor>(null);
-  const [oneTimeKey, setOneTimeKey] =
-    useState<ExternalAPICreatedClient | null>(null);
-  const [revokeTarget, setRevokeTarget] =
-    useState<ExternalAPIClient | null>(null);
+  const [oneTimeKey, setOneTimeKey] = useState<ExternalAPICreatedClient | null>(
+    null,
+  );
+  const [revokeTarget, setRevokeTarget] = useState<ExternalAPIClient | null>(
+    null,
+  );
   const [busyAction, setBusyAction] = useState("");
   const clientMap = useMemo(
     () => new Map(clients.map((client) => [client.id, client])),
@@ -431,9 +436,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
           type="info"
           showIcon
           title={
-            zh
-              ? "Server-to-server API 边界"
-              : "Server-to-server API boundary"
+            zh ? "Server-to-server API 边界" : "Server-to-server API boundary"
           }
           description={
             zh
@@ -471,7 +474,9 @@ export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
             </div>
             <div className="rounded-md border p-4">
               <Text size="xs" tone="muted">
-                {zh ? "执行已授权 Capability" : "Invoke an authorized capability"}
+                {zh
+                  ? "执行已授权 Capability"
+                  : "Invoke an authorized capability"}
               </Text>
               <strong className="mt-1 block type-family-mono type-body-sm type-weight-semibold [overflow-wrap:anywhere]">
                 {"POST /api/external/v1/capabilities/{name}/invoke"}
@@ -555,11 +560,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
                         </Tag>
                         <Tag>{client.rate_limit_per_minute}/min</Tag>
                       </div>
-                      <Text
-                        size="xs"
-                        tone="muted"
-                        className="type-family-mono"
-                      >
+                      <Text size="xs" tone="muted" className="type-family-mono">
                         {client.key_prefix}••••
                       </Text>
                       <div className="flex flex-wrap gap-2">
@@ -583,9 +584,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
                     <div className="flex min-w-max flex-nowrap items-center gap-1">
                       <IconButton
                         label={
-                          zh
-                            ? `编辑 ${client.name}`
-                            : `Edit ${client.name}`
+                          zh ? `编辑 ${client.name}` : `Edit ${client.name}`
                         }
                         icon={<Edit2 />}
                         variant="ghost"
@@ -607,9 +606,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
                       />
                       <IconButton
                         label={
-                          zh
-                            ? `撤销 ${client.name}`
-                            : `Revoke ${client.name}`
+                          zh ? `撤销 ${client.name}` : `Revoke ${client.name}`
                         }
                         icon={<ShieldOff />}
                         variant="ghost"
@@ -829,7 +826,9 @@ export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
           <Alert
             type="warning"
             showIcon
-            title={zh ? "不要放入浏览器代码" : "Do not put this in browser code"}
+            title={
+              zh ? "不要放入浏览器代码" : "Do not put this in browser code"
+            }
             description={
               zh
                 ? "这个长期凭据只供服务端调用；服务器只保存其摘要，不保存明文。"
