@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useSudoMode } from "../../hooks/useSudoMode";
 import {
   Bot,
   CirclePause,
@@ -35,6 +36,7 @@ import type { ProviderFormValue } from "./ProviderForm";
 import { EmbeddingForm } from "./EmbeddingForm";
 import type { EmbeddingFormValue } from "./EmbeddingForm";
 import { ConnectorWorkspace } from "./ConnectorWorkspace";
+import { ExternalAPIWorkspace } from "./ExternalAPIWorkspace";
 import { KnowledgeWorkspace } from "./KnowledgeWorkspace";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { SudoGate } from "../auth/SudoGate";
@@ -61,6 +63,7 @@ export type AdvancedSection =
   | "tools"
   | "knowledge"
   | "providers"
+  | "api-access"
   | "connectors";
 export type DeleteTarget =
   | { kind: "agent"; value: Agent }
@@ -105,6 +108,11 @@ function providerProtocolLabel(provider: ProviderProfile) {
   return (
     providerProtocolLabels[provider.provider_type] || provider.provider_type
   );
+}
+
+function ExternalAPIProtectedContent({ locale }: { locale: "en" | "zh" }) {
+  const { isSudoActive } = useSudoMode();
+  return isSudoActive ? <ExternalAPIWorkspace locale={locale} /> : null;
 }
 
 interface AdvancedWorkspaceProps {
@@ -260,9 +268,14 @@ export function AdvancedWorkspace({
             icon: <KeyRound aria-hidden="true" className="size-4" />,
           },
           {
+            key: "api-access",
+            label: "API Access",
+            icon: <LockKeyhole aria-hidden="true" className="size-4" />,
+          },
+          {
             key: "connectors",
             label: locale === "zh" ? "Sandbox 连接器" : "Sandbox connectors",
-            icon: <LockKeyhole aria-hidden="true" className="size-4" />,
+            icon: <GitBranch aria-hidden="true" className="size-4" />,
           },
         ]}
       />
@@ -957,6 +970,28 @@ export function AdvancedWorkspace({
                 </div>
               )}
             </div>
+          </SudoGate>
+        </div>
+      ) : null}
+
+      {!editingAgent && !editingSkill && advancedSection === "api-access" ? (
+        <div data-pattern="settings-composition" className="contents">
+          <SudoGate
+            title={
+              locale === "zh"
+                ? "External API Client 与长期密钥保护"
+                : "External API clients and long-lived key protection"
+            }
+            description={
+              locale === "zh"
+                ? "创建、修改、轮换或撤销服务端 API Client 会改变外部访问权限，需要近期多因素身份认证。"
+                : "Creating, changing, rotating, or revoking server API clients changes external access and requires recent multi-factor authentication."
+            }
+            actionLabel={
+              locale === "zh" ? "解锁以管理 API Access" : "Unlock API Access"
+            }
+          >
+            <ExternalAPIProtectedContent locale={locale} />
           </SudoGate>
         </div>
       ) : null}

@@ -19,6 +19,56 @@ vi.mock("../../../auth", async () => {
   };
 });
 
+const externalCapabilities = [
+  {
+    name: "content.list_published_posts",
+    description: "List published posts",
+    description_zh: "读取已发布文章",
+    parameters: {},
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+  {
+    name: "analytics.list_low_engagement_posts",
+    description: "List low-engagement published posts",
+    description_zh: "读取低互动已发布文章",
+    parameters: {},
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+];
+
+const externalClient = {
+  id: 91,
+  name: "Editorial Reporting SDK",
+  key_prefix: "gouno_live_A7k3Q2p9",
+  capabilities: [
+    "content.list_published_posts",
+    "analytics.list_low_engagement_posts",
+  ],
+  enabled: true,
+  rate_limit_per_minute: 120,
+  expires_at: "2026-12-31T15:59:00Z",
+  last_used_at: "2026-09-28T05:42:00Z",
+  created_by_principal_id: 1,
+  revoked_at: null,
+  created_at: "2026-09-20T08:00:00Z",
+  updated_at: "2026-09-28T05:42:00Z",
+};
+
+const externalAudit = {
+  id: 701,
+  client_id: 91,
+  request_id: "req-ext-701",
+  capability: "analytics.list_low_engagement_posts",
+  result: "success",
+  status_code: 200,
+  source_ip: "203.0.113.10",
+  input_digest: "a".repeat(64),
+  duration_ms: 42,
+  created_at: "2026-09-28T05:42:18Z",
+};
+
 const provider = {
   id: 1,
   name: "OpenAI",
@@ -107,6 +157,10 @@ function responseFor(url: string) {
       },
     ];
   if (url === "/api/admin/agent-skills") return [skill];
+  if (url === "/api/admin/external-api/capabilities")
+    return externalCapabilities;
+  if (url === "/api/admin/external-api/clients") return [externalClient];
+  if (url.startsWith("/api/admin/external-api/audits")) return [externalAudit];
   throw new Error(`unexpected URL: ${url}`);
 }
 
@@ -147,6 +201,65 @@ describe("AISettings", () => {
     );
     expect(urls).not.toContain("/api/admin/ai-workflows");
     expect(urls).not.toContain("/api/admin/ai-suggestions?status=all");
+  });
+
+  it("defers External API management data until API Access is selected", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    await screen.findByRole("button", { name: "Create Agent" });
+
+    const before = vi
+      .mocked(apiFetch)
+      .mock.calls.map(([input]) => input.toString());
+    expect(
+      before.some((url) => url.startsWith("/api/admin/external-api")),
+    ).toBe(false);
+
+    await user.click(screen.getByRole("tab", { name: "API Access" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Invocation protocol" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("GET /api/external/v1/capabilities"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Editorial Reporting SDK")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("analytics.list_low_engagement_posts").length,
+    ).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      const urls = vi
+        .mocked(apiFetch)
+        .mock.calls.map(([input]) => input.toString());
+      expect(urls).toContain("/api/admin/external-api/capabilities");
+      expect(urls).toContain("/api/admin/external-api/clients");
+      expect(
+        urls.some((url) => url.startsWith("/api/admin/external-api/audits")),
+      ).toBe(true);
+    });
+    expect(window.location.search).toBe("?section=api-access");
+  });
+
+  it("does not mount External API data loaders while the sudo gate is locked", async () => {
+    localStorage.removeItem("gouno:sudo_activated_at");
+    window.history.replaceState(
+      null,
+      "",
+      "/admin/ai-settings?section=api-access",
+    );
+
+    renderSettings();
+
+    expect(
+      await screen.findByText("高权限操作需要身份验证"),
+    ).toBeInTheDocument();
+    const urls = vi
+      .mocked(apiFetch)
+      .mock.calls.map(([input]) => input.toString());
+    expect(urls.some((url) => url.startsWith("/api/admin/external-api"))).toBe(
+      false,
+    );
   });
 
   it("copies a Skill from the dedicated Skills settings section", async () => {

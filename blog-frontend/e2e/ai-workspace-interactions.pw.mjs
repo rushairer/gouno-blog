@@ -280,6 +280,86 @@ test("Skill copy uses a controlled modal without submitting a mutation", async (
   await attachScreenshot(page, testInfo, "u04a-skill-copy-modal");
 });
 
+test("API Access preserves server-only client and one-time key lifecycle", async ({ page }, testInfo) => {
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-settings?section=api-access",
+    { width: 1440, height: 1000, theme: "dark" },
+  );
+
+  await expect(page.getByRole("heading", { name: "Invocation protocol" })).toBeVisible();
+  await expect(
+    page.getByText("GET /api/external/v1/capabilities", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("POST /api/external/v1/capabilities/{name}/invoke", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Editorial Reporting SDK", { exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Create API Client" }).click();
+  const drawer = page.getByRole("dialog", { name: "Create API Client" });
+  await expect(drawer).toBeVisible();
+  await drawer.getByLabel("Client name").fill("Partner Reporting Worker");
+
+  const capabilityRow = drawer
+    .getByText("content.list_published_posts", { exact: true })
+    .locator("xpath=ancestor::label[1]");
+  await capabilityRow.getByRole("checkbox").check();
+  await drawer.getByRole("button", { name: "Save API Client" }).click();
+
+  const createdKey = page.getByRole("dialog", { name: "Save one-time API key" });
+  await expect(createdKey).toBeVisible();
+  await expect(createdKey.getByLabel("One-time API key")).toHaveValue(
+    /gouno_live_fixture-secret-once_/,
+  );
+  await expect(
+    createdKey.getByText("Do not put this in browser code"),
+  ).toBeVisible();
+  await createdKey
+    .getByRole("button", { name: "I stored it securely" })
+    .click();
+  await expect(
+    page.getByText("Partner Reporting Worker", { exact: true }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Rotate Editorial Reporting SDK key" })
+    .click();
+  const rotatedKey = page.getByRole("dialog", { name: "Save one-time API key" });
+  await expect(rotatedKey.getByLabel("One-time API key")).toHaveValue(
+    /gouno_live_rotated-secret-once_91/,
+  );
+  await rotatedKey
+    .getByRole("button", { name: "I stored it securely" })
+    .click();
+
+  await page
+    .getByRole("button", { name: "Revoke Knowledge Export Worker" })
+    .click();
+  const revokeDialog = page.getByRole("dialog", {
+    name: "Confirm API client revocation",
+  });
+  await expect(
+    revokeDialog.getByText("Revoke “Knowledge Export Worker”?"),
+  ).toBeVisible();
+  await revokeDialog
+    .getByRole("button", { name: "Revoke and invalidate key" })
+    .click();
+  await expect(
+    page.getByText(
+      "Knowledge Export Worker revoked. The API key cannot be restored.",
+    ),
+  ).toBeVisible();
+
+  await expectNoDocumentOverflow(page);
+  expectFixtureHealth(fixtureState, consoleProblems);
+  await attachScreenshot(page, testInfo, "u04b-api-access-client-lifecycle");
+});
+
 test("Provider settings expose provider and embedding configuration without writes", async ({ page }, testInfo) => {
   const { consoleProblems, fixtureState } = await openAiPage(
     page,
