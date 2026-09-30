@@ -110,11 +110,7 @@ function providerProtocolLabel(provider: ProviderProfile) {
   );
 }
 
-function ExternalAPIProtectedContent({
-  locale,
-}: {
-  locale: "en" | "zh";
-}) {
+function ExternalAPIProtectedContent({ locale }: { locale: "en" | "zh" }) {
   const { isSudoActive } = useSudoMode();
   return isSudoActive ? <ExternalAPIWorkspace locale={locale} /> : null;
 }
