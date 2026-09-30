@@ -1,9 +1,4 @@
-import {
-  Edit2,
-  Plus,
-  RotateCcw,
-  ShieldOff,
-} from "lucide-react";
+import { Edit2, Plus, RotateCcw, ShieldOff } from "lucide-react";
 import {
   type FormEvent,
   useCallback,
@@ -277,11 +272,7 @@ function ExternalAPIClientForm({
   );
 }
 
-export function ExternalAPIWorkspace({
-  locale,
-}: {
-  locale: "en" | "zh";
-}) {
+export function ExternalAPIWorkspace({ locale }: { locale: "en" | "zh" }) {
   const zh = locale === "zh";
   const [capabilities, setCapabilities] = useState<ExternalCapability[]>([]);
   const [clients, setClients] = useState<ExternalAPIClient[]>([]);
@@ -439,7 +430,11 @@ export function ExternalAPIWorkspace({
         <Alert
           type="info"
           showIcon
-          title={zh ? "Server-to-server API 边界" : "Server-to-server API boundary"}
+          title={
+            zh
+              ? "Server-to-server API 边界"
+              : "Server-to-server API boundary"
+          }
           description={
             zh
               ? "长期 API Key 只供服务端调用；浏览器请求不会使用这条通道。v1 仅开放显式授权的 read-only Capability。"
@@ -498,7 +493,10 @@ export function ExternalAPIWorkspace({
         </div>
       </Card>
 
-      <section className="flex flex-col gap-3" aria-labelledby="external-clients-title">
+      <section
+        className="flex flex-col gap-3"
+        aria-labelledby="external-clients-title"
+      >
         <div>
           <Heading id="external-clients-title" level={2} variant="compact">
             API Clients
@@ -669,7 +667,10 @@ export function ExternalAPIWorkspace({
         </Card>
       </section>
 
-      <section className="flex flex-col gap-3" aria-labelledby="external-audits-title">
+      <section
+        className="flex flex-col gap-3"
+        aria-labelledby="external-audits-title"
+      >
         <div>
           <Heading id="external-audits-title" level={2} variant="compact">
             {zh ? "最近调用" : "Recent invocations"}
@@ -783,7 +784,9 @@ export function ExternalAPIWorkspace({
             : "Revocation invalidates the current API key immediately and cannot be undone. Reconnecting requires a new client."
         }
         onOpenChange={(open) => {
-          if (!open && !busyAction.startsWith("revoke:")) setRevokeTarget(null);
+          if (!open && !busyAction.startsWith("revoke:")) {
+            setRevokeTarget(null);
+          }
         }}
         onOk={() => void revokeClient()}
         okText={zh ? "撤销并使 Key 失效" : "Revoke and invalidate key"}
