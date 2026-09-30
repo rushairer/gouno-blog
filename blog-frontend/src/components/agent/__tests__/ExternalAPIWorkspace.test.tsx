@@ -108,9 +108,7 @@ describe("ExternalAPIWorkspace", () => {
   it("does not mount or fetch sensitive API Access data while sudo is locked", async () => {
     render(<ExternalAPIAccessWorkspaceGate locale="zh" />);
 
-    expect(
-      screen.getByText("高权限操作需要身份验证"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("高权限操作需要身份验证")).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "API Clients" }),
     ).not.toBeInTheDocument();
@@ -127,14 +125,20 @@ describe("ExternalAPIWorkspace", () => {
     expect(
       await screen.findByRole("heading", { name: "调用协议" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("GET /api/external/v1/capabilities")).toBeInTheDocument();
+    expect(
+      screen.getByText("GET /api/external/v1/capabilities"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("POST /api/external/v1/capabilities/{name}/invoke"),
     ).toBeInTheDocument();
     expect(screen.getByText("Editorial Reporting SDK")).toBeInTheDocument();
-    expect(screen.getAllByText("content.list_published_posts").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("content.list_published_posts").length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText("read-only").length).toBeGreaterThan(0);
-    expect(screen.queryByDisplayValue(/gouno_live_.+secret/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByDisplayValue(/gouno_live_.+secret/i),
+    ).not.toBeInTheDocument();
   });
 
   it("creates a scoped client and shows the returned key exactly as one-time state", async () => {
@@ -159,8 +163,9 @@ describe("ExternalAPIWorkspace", () => {
       "Partner Reporting Worker",
     );
     await user.click(
-      within(drawer).getByText("content.list_published_posts").closest("label")!
-        .querySelector("input")!,
+      within(drawer).getByRole("checkbox", {
+        name: /content\.list_published_posts/,
+      }),
     );
     await user.click(
       within(drawer).getByRole("button", { name: "保存 API Client" }),
@@ -184,7 +189,9 @@ describe("ExternalAPIWorkspace", () => {
       (within(keyDialog).getByLabelText("一次性 API Key") as HTMLInputElement)
         .value,
     ).toBe("gouno_live_secret-once-93");
-    expect(within(keyDialog).getByText("不要放入浏览器代码")).toBeInTheDocument();
+    expect(
+      within(keyDialog).getByText("不要放入浏览器代码"),
+    ).toBeInTheDocument();
   });
 
   it("requires destructive confirmation before revoking a client", async () => {
