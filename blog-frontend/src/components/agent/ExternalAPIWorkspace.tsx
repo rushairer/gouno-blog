@@ -16,13 +16,13 @@ import {
   Drawer,
   Empty,
   Field,
-  FormGrid,
   FormLayout,
   Heading,
   IconButton,
   Input,
   Modal,
   Skeleton,
+  Switch,
   Tag,
   Text,
 } from "@gouno/ui/core";
@@ -33,10 +33,7 @@ import type {
   ExternalCapability,
   ExternalInvocationAudit,
 } from "../../types/externalCapability";
-import {
-  AISettingsEditorHeader,
-  AISettingsEditorSection,
-} from "./AISettingsEditorPatterns";
+import { AISettingsEditorSection } from "./AISettingsEditorPatterns";
 import { TabPanelFeedback, TabPanelLead } from "../patterns/TabPanelLead";
 
 type ClientEditorState = ExternalAPIClient | "new" | null;
@@ -600,23 +597,6 @@ export function ExternalAPIWorkspace({
               data-pattern="editor-form-composition"
               onSubmit={saveClient}
             >
-              <AISettingsEditorHeader
-                title={
-                  editor === "new"
-                    ? zh
-                      ? "创建 API Client"
-                      : "Create API Client"
-                    : zh
-                      ? `编辑 API Client：${editor.name}`
-                      : `Edit API Client: ${editor.name}`
-                }
-                description={
-                  zh
-                    ? "API Client 只用于服务端调用；浏览器前端不得保存或使用长期 API Key。"
-                    : "API clients are server-only. Browser code must never store or use long-lived API keys."
-                }
-                icon={<KeyRound />}
-              />
               <div className="grid gap-5 xl:grid-cols-2">
                 <AISettingsEditorSection
                   title={zh ? "Client 身份" : "Client identity"}
@@ -651,13 +631,11 @@ export function ExternalAPIWorkspace({
                       </Text>
                     )}
                     <Field label={zh ? "状态" : "Status"}>
-                      <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
-                        <Checkbox
-                          checked={enabled}
-                          onChange={(event) => setEnabled(event.target.checked)}
-                        />
-                        {zh ? "启用 Client" : "Enable client"}
-                      </label>
+                      <Switch
+                        checked={enabled}
+                        onChange={(event) => setEnabled(event.target.checked)}
+                        label={zh ? "启用 Client" : "Enable client"}
+                      />
                     </Field>
                   </div>
                 </AISettingsEditorSection>
@@ -671,35 +649,33 @@ export function ExternalAPIWorkspace({
                   }
                 >
                   <div className="flex flex-col gap-5">
-                    <FormGrid columns={2}>
-                      <Field
-                        label={zh ? "每分钟请求上限" : "Requests per minute"}
+                    <Field
+                      label={zh ? "每分钟请求上限" : "Requests per minute"}
+                      required
+                    >
+                      <Input
                         required
-                      >
-                        <Input
-                          required
-                          type="number"
-                          min={1}
-                          max={6000}
-                          value={rateLimit}
-                          onChange={(event) => setRateLimit(event.target.value)}
-                        />
-                      </Field>
-                      <Field
-                        label={zh ? "到期时间" : "Expiration"}
-                        hint={
-                          zh
-                            ? "留空表示不自动到期；生产环境建议设置轮换周期。"
-                            : "Leave blank for no automatic expiry. Production clients should use a rotation schedule."
-                        }
-                      >
-                        <Input
-                          type="datetime-local"
-                          value={expiresAt}
-                          onChange={(event) => setExpiresAt(event.target.value)}
-                        />
-                      </Field>
-                    </FormGrid>
+                        type="number"
+                        min={1}
+                        max={6000}
+                        value={rateLimit}
+                        onChange={(event) => setRateLimit(event.target.value)}
+                      />
+                    </Field>
+                    <Field
+                      label={zh ? "到期时间" : "Expiration"}
+                      hint={
+                        zh
+                          ? "留空表示不自动到期；生产环境建议设置轮换周期。"
+                          : "Leave blank for no automatic expiry. Production clients should use a rotation schedule."
+                      }
+                    >
+                      <Input
+                        type="datetime-local"
+                        value={expiresAt}
+                        onChange={(event) => setExpiresAt(event.target.value)}
+                      />
+                    </Field>
                   </div>
                 </AISettingsEditorSection>
               </div>
