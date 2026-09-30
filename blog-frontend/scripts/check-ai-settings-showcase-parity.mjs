@@ -91,8 +91,15 @@ requireBlog(
   "Connector shared TabPanelFeedback usage",
 );
 
+if (
+  !canonicalSettings.includes('"api-access"') &&
+  !canonicalSections.includes('case "api-access"')
+) {
+  failures.push("Canonical AI Settings no longer exposes the API Access route");
+}
+requireBlog('"api-access"', workspace, "API Access route ownership");
+
 for (const [canonicalMarker, blogMarker, label] of [
-  ['case "api-access"', '"api-access"', "API Access route ownership"],
   ["GET /api/external/v1/capabilities", "GET /api/external/v1/capabilities", "External Capability catalog endpoint"],
   ["POST /api/external/v1/capabilities/{name}/invoke", "POST /api/external/v1/capabilities/{name}/invoke", "External Capability invoke endpoint"],
   ["确认撤销 API Client", "确认撤销 API Client", "External API revoke confirmation"],
