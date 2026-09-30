@@ -226,4 +226,67 @@ for (const theme of ["light", "dark"]) {
     await pairScreenshot(showcase, product, `privileged-ai-knowledge-${theme}`, testInfo);
     await context.close();
   });
+
+  test(`AI API Access locked state does not preload privileged data (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown, unexpectedWrites, externalRequests } =
+      await openPair(
+        browser,
+        "blog-admin-ai-settings",
+        "/admin/ai-settings?section=api-access",
+        theme,
+        { activeSudo: false, ai: true },
+      );
+
+    await showcase.getByRole("tab", { name: "API Access" }).click();
+    await chooseShowcaseSecurity(showcase, "已锁定");
+    await expect(showcase.getByText("高权限操作需要身份验证")).toBeVisible();
+    await expect(product.getByText("高权限操作需要身份验证")).toBeVisible();
+    await expectGateParity(showcase, product);
+    expect(externalRequests).toEqual([]);
+    expect(unknown).toEqual([]);
+    expect(unexpectedWrites).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `privileged-ai-api-access-locked-${theme}`,
+      testInfo,
+    );
+    await context.close();
+  });
+
+  test(`AI API Access unlocked state matches Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown, unexpectedWrites, externalRequests } =
+      await openPair(
+        browser,
+        "blog-admin-ai-settings",
+        "/admin/ai-settings?section=api-access",
+        theme,
+        { activeSudo: true, ai: true },
+      );
+
+    await showcase.getByRole("tab", { name: "API Access" }).click();
+    await expect(showcase.getByText("高权限操作已解锁")).toBeVisible();
+    await expect(product.getByText("高权限操作已解锁")).toBeVisible();
+    await expect(product.getByRole("heading", { name: "调用协议" })).toBeVisible();
+    await expectGateParity(showcase, product);
+    expect(
+      externalRequests.some((request) =>
+        request.includes("GET /api/admin/external-api/clients"),
+      ),
+    ).toBe(true);
+    expect(unknown).toEqual([]);
+    expect(unexpectedWrites).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `privileged-ai-api-access-unlocked-${theme}`,
+      testInfo,
+    );
+    await context.close();
+  });
+
 }

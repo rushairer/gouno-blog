@@ -284,6 +284,27 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
 
   return (
     <>
+      <TabPanelLead
+        description={
+          zh
+            ? "把 Blog 的受控只读 Capability 提供给服务端调用方；Client 独立持有 scope、限流与到期策略。"
+            : "Expose governed read-only Blog capabilities to server callers. Each client owns its scopes, rate limit, and expiry policy."
+        }
+        actions={
+          <Button
+            size="small"
+            variant="solid"
+            color="primary"
+            icon={<Plus />}
+            type="button"
+            disabled={!isSudoActive}
+            onClick={() => openEditor("new")}
+          >
+            {zh ? "创建 API Client" : "Create API Client"}
+          </Button>
+        }
+      />
+
       <SudoGate
         title={
           zh
@@ -299,26 +320,6 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
       >
         {isSudoActive ? (
           <div className="flex min-w-0 flex-col gap-5">
-            <TabPanelLead
-              description={
-                zh
-                  ? "把 Blog 的受控只读 Capability 提供给服务端调用方；Client 独立持有 scope、限流与到期策略。"
-                  : "Expose governed read-only Blog capabilities to server callers. Each client owns its scopes, rate limit, and expiry policy."
-              }
-              actions={
-                <Button
-                  size="small"
-                  variant="solid"
-                  color="primary"
-                  icon={<Plus />}
-                  type="button"
-                  onClick={() => openEditor("new")}
-                >
-                  {zh ? "创建 API Client" : "Create API Client"}
-                </Button>
-              }
-            />
-
             <TabPanelFeedback>
               <Alert
                 type="info"

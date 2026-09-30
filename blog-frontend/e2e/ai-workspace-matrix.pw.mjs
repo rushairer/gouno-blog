@@ -12,6 +12,7 @@ const routeCases = [
   { name: "settings-tools", path: "/admin/ai-settings?section=tools", heading: "AI Settings" },
   { name: "settings-knowledge", path: "/admin/ai-settings?section=knowledge", heading: "AI Settings" },
   { name: "settings-providers", path: "/admin/ai-settings?section=providers", heading: "AI Settings" },
+  { name: "settings-api-access", path: "/admin/ai-settings?section=api-access", heading: "AI Settings" },
 ];
 
 const viewports = [

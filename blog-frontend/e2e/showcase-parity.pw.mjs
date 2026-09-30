@@ -630,6 +630,7 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
     "Tools",
     "知识库",
     "模型连接",
+    "API Access",
     "Sandbox 连接器",
   ]) {
     await showcase.getByRole("tab", { name: tab, exact: true }).click();
