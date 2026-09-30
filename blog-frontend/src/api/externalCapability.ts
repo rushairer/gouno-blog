@@ -10,9 +10,7 @@ import { apiClient } from "./client";
 
 export const externalCapabilityApi = {
   listCapabilities: () =>
-    apiClient.get<ExternalCapability[]>(
-      "/api/admin/external-api/capabilities",
-    ),
+    apiClient.get<ExternalCapability[]>("/api/admin/external-api/capabilities"),
   listClients: () =>
     apiClient.get<ExternalAPIClient[]>("/api/admin/external-api/clients"),
   listAudits: (options?: { clientId?: number; limit?: number }) =>
