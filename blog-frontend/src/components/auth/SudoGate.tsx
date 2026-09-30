@@ -10,6 +10,8 @@ export interface SudoGateProps {
   className?: string;
   /** Forces the visual lock state for controlled/test scenarios. */
   locked?: boolean;
+  /** Do not mount protected children while locked. Use for sensitive data loaders. */
+  deferChildrenUntilUnlocked?: boolean;
 }
 
 export function SudoGate({
@@ -19,6 +21,7 @@ export function SudoGate({
   actionLabel = "验证并解锁",
   className = "",
   locked: forceLocked,
+  deferChildrenUntilUnlocked = false,
 }: SudoGateProps) {
   const {
     isSudoActive,
@@ -86,7 +89,7 @@ export function SudoGate({
 
       {locked ? (
         <div className="hidden" inert={true} aria-hidden="true">
-          {children}
+          {deferChildrenUntilUnlocked ? null : children}
         </div>
       ) : (
         children
