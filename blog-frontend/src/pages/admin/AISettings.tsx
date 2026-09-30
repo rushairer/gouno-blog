@@ -45,6 +45,7 @@ const SETTINGS_SECTIONS = new Set<AdvancedSection>([
   "tools",
   "knowledge",
   "providers",
+  "api-access",
   "connectors",
 ]);
 
@@ -431,8 +432,8 @@ function AISettingsContent() {
   const title = locale === "zh" ? "AI 设置" : "AI Settings";
   const description =
     locale === "zh"
-      ? "管理长期稳定的 AI 能力、模型与连接器配置；运行、审批和执行证据留在 AI 运营。"
-      : "Manage stable AI capabilities, models, and connector configuration. Runs, approvals, and execution evidence stay in AI Operations.";
+      ? "管理长期稳定的 AI 能力、模型、API Access 与连接器配置；运行、审批和执行证据留在 AI 运营。"
+      : "Manage stable AI capabilities, models, API Access, and connector configuration. Runs, approvals, and execution evidence stay in AI Operations.";
   const pageHeader = (
     <PageHeader
       title={title}
