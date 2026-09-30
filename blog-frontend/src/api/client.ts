@@ -12,6 +12,7 @@ const aiHighPrivilegePrefixes = [
   "/api/admin/agents",
   "/api/admin/agent-",
   "/api/admin/ai-",
+  "/api/admin/external-api",
 ] as const;
 
 function requestPath(input: unknown): string {
