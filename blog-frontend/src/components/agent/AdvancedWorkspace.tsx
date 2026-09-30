@@ -35,6 +35,7 @@ import type { ProviderFormValue } from "./ProviderForm";
 import { EmbeddingForm } from "./EmbeddingForm";
 import type { EmbeddingFormValue } from "./EmbeddingForm";
 import { ConnectorWorkspace } from "./ConnectorWorkspace";
+import { ExternalAPIAccessWorkspaceGate } from "./ExternalAPIWorkspace";
 import { KnowledgeWorkspace } from "./KnowledgeWorkspace";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { SudoGate } from "../auth/SudoGate";
@@ -61,6 +62,7 @@ export type AdvancedSection =
   | "tools"
   | "knowledge"
   | "providers"
+  | "api-access"
   | "connectors";
 export type DeleteTarget =
   | { kind: "agent"; value: Agent }
@@ -258,6 +260,11 @@ export function AdvancedWorkspace({
             key: "providers",
             label: labels.providers,
             icon: <KeyRound aria-hidden="true" className="size-4" />,
+          },
+          {
+            key: "api-access",
+            label: "API Access",
+            icon: <LockKeyhole aria-hidden="true" className="size-4" />,
           },
           {
             key: "connectors",
@@ -959,6 +966,10 @@ export function AdvancedWorkspace({
             </div>
           </SudoGate>
         </div>
+      ) : null}
+
+      {!editingAgent && !editingSkill && advancedSection === "api-access" ? (
+        <ExternalAPIAccessWorkspaceGate locale={locale} />
       ) : null}
 
       {!editingAgent && !editingSkill && advancedSection === "connectors" ? (
