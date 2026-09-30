@@ -630,6 +630,7 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
     "Tools",
     "知识库",
     "模型连接",
+    "API Access",
     "Sandbox 连接器",
   ]) {
     await showcase.getByRole("tab", { name: tab, exact: true }).click();
@@ -646,6 +647,16 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
     ]);
     expect(productFingerprint).toEqual(showcaseFingerprint);
     expect(productFingerprint.minHeight).toBe("36px");
+
+    if (tab === "API Access") {
+      for (const endpoint of [
+        "GET /api/external/v1/capabilities",
+        "POST /api/external/v1/capabilities/{name}/invoke",
+      ]) {
+        await expect(showcase.getByText(endpoint, { exact: true })).toBeVisible();
+        await expect(product.getByText(endpoint, { exact: true })).toBeVisible();
+      }
+    }
 
     await pairScreenshot(
       showcase,
@@ -709,6 +720,7 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
   for (const { tab, createLabel } of [
     { tab: "模型连接", createLabel: "添加模型连接" },
     { tab: "知识库", createLabel: "添加 Embedding 模型" },
+    { tab: "API Access", createLabel: "创建 API Client" },
     { tab: "Sandbox 连接器", createLabel: "添加 Connector Profile" },
   ]) {
     await showcase.getByRole("tab", { name: tab, exact: true }).click();
