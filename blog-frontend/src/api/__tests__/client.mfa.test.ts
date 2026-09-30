@@ -102,9 +102,7 @@ describe("AI API high-privilege interception", () => {
       )
       .mockResolvedValueOnce({ ok: true });
 
-    const pending = apiClient.post(
-      "/api/admin/external-api/clients/91/rotate",
-    );
+    const pending = apiClient.post("/api/admin/external-api/clients/91/rotate");
 
     await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
     expect(postMock).toHaveBeenCalledTimes(1);

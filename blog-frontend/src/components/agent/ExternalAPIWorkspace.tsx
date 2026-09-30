@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import { Edit2, KeyRound, Plus, RotateCcw, ShieldOff } from "lucide-react";
 import { externalCapabilityApi } from "../../api/external-capability";
 import type {
