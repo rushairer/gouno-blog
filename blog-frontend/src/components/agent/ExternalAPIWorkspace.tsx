@@ -112,8 +112,6 @@ function ExternalAPIClientForm({
     rateLimitPerMinute: initial?.rate_limit_per_minute ?? 60,
     expiresAt: dateTimeLocalValue(initial?.expires_at),
   }));
-  const [saving, setSaving] = useState(false);
-
   const toggleCapability = (name: string, checked: boolean) => {
     setValue((current) => ({
       ...current,
@@ -125,18 +123,13 @@ function ExternalAPIClientForm({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setSaving(true);
-    try {
-      await onSave({
-        name: value.name.trim(),
-        capabilities: value.capabilities,
-        enabled: value.enabled,
-        rate_limit_per_minute: value.rateLimitPerMinute,
-        expires_at: expiresAtPayload(value.expiresAt),
-      });
-    } finally {
-      setSaving(false);
-    }
+    await onSave({
+      name: value.name.trim(),
+      capabilities: value.capabilities,
+      enabled: value.enabled,
+      rate_limit_per_minute: value.rateLimitPerMinute,
+      expires_at: expiresAtPayload(value.expiresAt),
+    });
   };
 
   return (
@@ -282,9 +275,6 @@ function ExternalAPIClientForm({
           </div>
         </AISettingsEditorSection>
       </div>
-      <button type="submit" className="sr-only" disabled={saving}>
-        {zh ? "保存 API Client" : "Save API client"}
-      </button>
     </FormLayout>
   );
 }
