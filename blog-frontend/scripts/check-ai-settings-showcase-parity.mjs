@@ -36,6 +36,9 @@ const editorPatterns = await readBlog(
 const connectorWorkspace = await readBlog(
   "src/components/agent/ConnectorWorkspace.tsx",
 );
+const externalApiWorkspace = await readBlog(
+  "src/components/agent/ExternalAPIWorkspace.tsx",
+);
 const knowledgeWorkspace = await readBlog(
   "src/components/agent/KnowledgeWorkspace.tsx",
 );
@@ -86,6 +89,49 @@ requireBlog(
   "<TabPanelFeedback>",
   connectorWorkspace,
   "Connector shared TabPanelFeedback usage",
+);
+
+for (const [canonicalMarker, blogMarker, label] of [
+  ['case "api-access"', '"api-access"', "API Access route ownership"],
+  ["GET /api/external/v1/capabilities", "GET /api/external/v1/capabilities", "External Capability catalog endpoint"],
+  ["POST /api/external/v1/capabilities/{name}/invoke", "POST /api/external/v1/capabilities/{name}/invoke", "External Capability invoke endpoint"],
+  ["确认撤销 API Client", "确认撤销 API Client", "External API revoke confirmation"],
+  ["保存一次性 API Key", "保存一次性 API Key", "External API one-time key state"],
+]) {
+  if (!canonicalSettings.includes(canonicalMarker) && !canonicalSections.includes(canonicalMarker)) {
+    failures.push(`Canonical API Access changed: missing ${label}: ${canonicalMarker}`);
+  }
+  requireBlog(blogMarker, externalApiWorkspace, label);
+}
+requireBlog(
+  "<TabPanelLead",
+  externalApiWorkspace,
+  "External API shared TabPanelLead usage",
+);
+requireBlog(
+  "<TabPanelFeedback>",
+  externalApiWorkspace,
+  "External API shared TabPanelFeedback usage",
+);
+requireBlog(
+  'data-pattern="settings-composition"',
+  externalApiWorkspace,
+  "External API settings composition",
+);
+requireBlog(
+  'data-pattern="contextual-list-editor"',
+  externalApiWorkspace,
+  "External API contextual Drawer editing",
+);
+requireBlog(
+  'data-pattern="editor-form-composition"',
+  externalApiWorkspace,
+  "External API editor composition",
+);
+requireBlog(
+  'form={EXTERNAL_CLIENT_FORM_ID}',
+  externalApiWorkspace,
+  "External API Drawer submit ownership",
 );
 
 for (const [marker, label] of [
@@ -222,6 +268,7 @@ for (const [text, label] of [
   [forms[2], "ProviderForm"],
   [forms[3], "EmbeddingForm"],
   [connectorWorkspace, "ConnectorWorkspace"],
+  [externalApiWorkspace, "ExternalAPIWorkspace"],
 ]) {
   requireBlog(
     "grid gap-5 xl:grid-cols-2",
