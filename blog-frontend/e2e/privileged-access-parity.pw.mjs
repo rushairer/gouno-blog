@@ -206,6 +206,36 @@ for (const theme of ["light", "dark"]) {
     await context.close();
   });
 
+  test(`AI API Access privileged gate matches Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown, unexpectedWrites } = await openPair(
+      browser,
+      "blog-admin-ai-settings",
+      "/admin/ai-settings?section=api-access",
+      theme,
+      { activeSudo: true, ai: true },
+    );
+
+    await showcase.getByRole("tab", { name: "API Access" }).click();
+    await product.getByRole("tab", { name: "API Access" }).click();
+    await expect(showcase.getByText("高权限操作已解锁")).toBeVisible();
+    await expect(product.getByText("高权限操作已解锁")).toBeVisible();
+    await expectGateParity(showcase, product);
+    await expect(
+      product.getByText("GET /api/external/v1/capabilities", { exact: true }),
+    ).toBeVisible();
+    expect(unknown).toEqual([]);
+    expect(unexpectedWrites).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `privileged-ai-api-access-${theme}`,
+      testInfo,
+    );
+    await context.close();
+  });
+
   test(`AI knowledge privileged gate matches Showcase (${theme})`, async ({
     browser,
   }, testInfo) => {
