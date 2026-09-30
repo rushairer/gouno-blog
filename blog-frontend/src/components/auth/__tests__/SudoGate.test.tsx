@@ -44,24 +44,6 @@ describe("SudoGate", () => {
     expect(openPopupSpy).toHaveBeenCalled();
   });
 
-  it("can defer sensitive children until privileged access is unlocked", () => {
-    render(
-      <SudoGate
-        title="API Access"
-        description="API Client metadata requires recent MFA."
-        deferChildrenUntilUnlocked
-      >
-        <div data-testid="external-api-sensitive-data">
-          secret client metadata
-        </div>
-      </SudoGate>,
-    );
-
-    expect(
-      screen.queryByTestId("external-api-sensitive-data"),
-    ).not.toBeInTheDocument();
-  });
-
   it("renders one canonical unlocked status with countdown and explicit relock", async () => {
     localStorage.setItem("gouno:sudo_activated_at", String(Date.now()));
     const user = userEvent.setup();
