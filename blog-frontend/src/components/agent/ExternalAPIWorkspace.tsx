@@ -114,8 +114,9 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
     clientName: string;
     apiKey: string;
   } | null>(null);
-  const [revokeTarget, setRevokeTarget] =
-    useState<ExternalAPIClient | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<ExternalAPIClient | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [rotatingId, setRotatingId] = useState<number | null>(null);
@@ -432,9 +433,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                   <CardContent className="p-6">
                     <Empty
                       icon={<KeyRound />}
-                      title={
-                        zh ? "还没有 API Client" : "No API clients yet"
-                      }
+                      title={zh ? "还没有 API Client" : "No API clients yet"}
                       description={
                         zh
                           ? "创建 Client 后再分配显式只读 Capability。"
@@ -594,11 +593,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
               aria-labelledby="external-audits-title"
             >
               <div>
-                <Heading
-                  id="external-audits-title"
-                  level={2}
-                  variant="compact"
-                >
+                <Heading id="external-audits-title" level={2} variant="compact">
                   {zh ? "最近调用" : "Recent invocations"}
                 </Heading>
                 <Text size="sm" tone="muted">
@@ -707,10 +702,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                   }
                 >
                   <div className="flex flex-col gap-5">
-                    <Field
-                      label={zh ? "Client 名称" : "Client name"}
-                      required
-                    >
+                    <Field label={zh ? "Client 名称" : "Client name"} required>
                       <Input
                         value={draft.name}
                         placeholder="Editorial Reporting SDK"
@@ -762,9 +754,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                 >
                   <div className="flex flex-col gap-5">
                     <Field
-                      label={
-                        zh ? "每分钟请求上限" : "Requests per minute"
-                      }
+                      label={zh ? "每分钟请求上限" : "Requests per minute"}
                     >
                       <Input
                         type="number"
@@ -826,9 +816,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                         className="flex min-w-0 items-start gap-3 rounded-md border p-4"
                       >
                         <Checkbox
-                          checked={draft.capabilities.includes(
-                            capability.name,
-                          )}
+                          checked={draft.capabilities.includes(capability.name)}
                           onChange={(event) =>
                             toggleCapability(
                               capability.name,
@@ -903,7 +891,9 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
           <Alert
             type="warning"
             showIcon
-            title={zh ? "不要放入浏览器代码" : "Do not put this in browser code"}
+            title={
+              zh ? "不要放入浏览器代码" : "Do not put this in browser code"
+            }
             description={
               zh
                 ? "这个长期凭据只供服务端调用；后端只保存其哈希，不保存明文。"
