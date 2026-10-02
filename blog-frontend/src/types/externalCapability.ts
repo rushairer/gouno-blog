@@ -69,5 +69,4 @@ export interface ExternalAPIClientCreateInput {
   expires_at?: string | null;
 }
 
-export interface ExternalAPIClientUpdateInput
-  extends ExternalAPIClientCreateInput {}
+export type ExternalAPIClientUpdateInput = ExternalAPIClientCreateInput;
