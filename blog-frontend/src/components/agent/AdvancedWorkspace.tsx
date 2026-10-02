@@ -35,6 +35,7 @@ import type { ProviderFormValue } from "./ProviderForm";
 import { EmbeddingForm } from "./EmbeddingForm";
 import type { EmbeddingFormValue } from "./EmbeddingForm";
 import { ConnectorWorkspace } from "./ConnectorWorkspace";
+import { ExternalAPIWorkspace } from "./ExternalAPIWorkspace";
 import { KnowledgeWorkspace } from "./KnowledgeWorkspace";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { SudoGate } from "../auth/SudoGate";
@@ -61,6 +62,7 @@ export type AdvancedSection =
   | "tools"
   | "knowledge"
   | "providers"
+  | "api-access"
   | "connectors";
 export type DeleteTarget =
   | { kind: "agent"; value: Agent }
@@ -260,9 +262,14 @@ export function AdvancedWorkspace({
             icon: <KeyRound aria-hidden="true" className="size-4" />,
           },
           {
+            key: "api-access",
+            label: "API Access",
+            icon: <LockKeyhole aria-hidden="true" className="size-4" />,
+          },
+          {
             key: "connectors",
             label: locale === "zh" ? "Sandbox 连接器" : "Sandbox connectors",
-            icon: <LockKeyhole aria-hidden="true" className="size-4" />,
+            icon: <GitBranch aria-hidden="true" className="size-4" />,
           },
         ]}
       />
@@ -957,6 +964,18 @@ export function AdvancedWorkspace({
                 </div>
               )}
             </div>
+          </SudoGate>
+        </div>
+      ) : null}
+
+      {!editingAgent && !editingSkill && advancedSection === "api-access" ? (
+        <div data-pattern="settings-composition" className="contents">
+          <SudoGate
+            title="External API Client 与长期密钥保护"
+            description="创建、修改、轮换或撤销服务端 API Client 会改变外部访问权限，需要近期多因素身份认证。"
+            actionLabel="解锁以管理 API Access"
+          >
+            <ExternalAPIWorkspace locale={locale} onRefresh={onRefresh} />
           </SudoGate>
         </div>
       ) : null}
