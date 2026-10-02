@@ -650,7 +650,7 @@ export function ExternalAPIWorkspace({
                       )}
                       <Switch
                         checked={enabled}
-                        onChange={setEnabled}
+                        onChange={(event) => setEnabled(event.target.checked)}
                         label={zh ? "启用 Client" : "Enable client"}
                       />
                     </div>
@@ -721,8 +721,11 @@ export function ExternalAPIWorkspace({
                           >
                             <Checkbox
                               checked={checked}
-                              onChange={(next) =>
-                                toggleCapability(capability.name, next)
+                              onChange={(event) =>
+                                toggleCapability(
+                                  capability.name,
+                                  event.target.checked,
+                                )
                               }
                             />
                             <span className="min-w-0 flex-1">
