@@ -45,6 +45,7 @@ const SETTINGS_SECTIONS = new Set<AdvancedSection>([
   "tools",
   "knowledge",
   "providers",
+  "api-access",
   "connectors",
 ]);
 
