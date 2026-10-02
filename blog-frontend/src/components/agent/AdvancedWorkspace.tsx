@@ -975,7 +975,7 @@ export function AdvancedWorkspace({
             description="创建、修改、轮换或撤销服务端 API Client 会改变外部访问权限，需要近期多因素身份认证。"
             actionLabel="解锁以管理 API Access"
           >
-            <ExternalAPIWorkspace locale={locale} onRefresh={onRefresh} />
+            <ExternalAPIWorkspace locale={locale} />
           </SudoGate>
         </div>
       ) : null}
