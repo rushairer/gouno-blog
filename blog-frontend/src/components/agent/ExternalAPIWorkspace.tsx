@@ -1,10 +1,4 @@
-import {
-  Edit2,
-  KeyRound,
-  Plus,
-  RotateCcw,
-  ShieldOff,
-} from "lucide-react";
+import { Edit2, Plus, RotateCcw, ShieldOff } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -29,7 +23,6 @@ import {
   Drawer,
   Empty,
   Field,
-  FormGrid,
   FormLayout,
   Heading,
   IconButton,
@@ -66,13 +59,7 @@ function errorText(reason: unknown) {
   return reason instanceof Error ? reason.message : "Request failed";
 }
 
-export function ExternalAPIWorkspace({
-  locale,
-  onRefresh,
-}: {
-  locale: Locale;
-  onRefresh: () => Promise<void>;
-}) {
+export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
   const zh = locale === "zh";
   const { isSudoActive } = useSudoMode();
   const [capabilities, setCapabilities] = useState<ExternalCapability[]>([]);
@@ -111,9 +98,7 @@ export function ExternalAPIWorkspace({
         externalCapabilityApi.getClients(),
         externalCapabilityApi.getAudits({ limit: 100 }),
       ]);
-      setCapabilities(
-        Array.isArray(capabilityData) ? capabilityData : [],
-      );
+      setCapabilities(Array.isArray(capabilityData) ? capabilityData : []);
       setClients(Array.isArray(clientData) ? clientData : []);
       setAudits(Array.isArray(auditData) ? auditData : []);
       setLoaded(true);
@@ -194,13 +179,10 @@ export function ExternalAPIWorkspace({
         );
       } else {
         await externalCapabilityApi.updateClient(editing.id, payload);
-        setMessage(
-          zh ? `${name} 已更新。` : `${name} updated.`,
-        );
+        setMessage(zh ? `${name} 已更新。` : `${name} updated.`);
       }
       closeEditor();
       await load();
-      await onRefresh();
     } catch (reason) {
       setError(errorText(reason));
     }
@@ -237,7 +219,6 @@ export function ExternalAPIWorkspace({
           : `${target.name} revoked. Its key cannot be restored.`,
       );
       await load();
-      await onRefresh();
     } catch (reason) {
       setError(errorText(reason));
     }
@@ -272,15 +253,29 @@ export function ExternalAPIWorkspace({
 
         <TabPanelFeedback>
           {error ? (
-            <Alert type="error" showIcon title={zh ? "操作失败" : "Operation failed"} description={error} />
+            <Alert
+              type="error"
+              showIcon
+              title={zh ? "操作失败" : "Operation failed"}
+              description={error}
+            />
           ) : null}
           {message ? (
-            <Alert type="success" showIcon title={zh ? "操作完成" : "Operation complete"} description={message} />
+            <Alert
+              type="success"
+              showIcon
+              title={zh ? "操作完成" : "Operation complete"}
+              description={message}
+            />
           ) : null}
           <Alert
             type="info"
             showIcon
-            title={zh ? "Server-to-server API 边界" : "Server-to-server API boundary"}
+            title={
+              zh
+                ? "Server-to-server API 边界"
+                : "Server-to-server API boundary"
+            }
             description={
               zh
                 ? "长期 API Key 只供服务端调用；浏览器请求不会使用这条通道。v1 仅开放显式授权的 read-only Capability。"
@@ -339,7 +334,10 @@ export function ExternalAPIWorkspace({
 
         {loading && !loaded ? (
           <Card padding="base">
-            <div className="flex flex-col gap-3" aria-label={zh ? "正在加载 API Access" : "Loading API Access"}>
+            <div
+              className="flex flex-col gap-3"
+              aria-label={zh ? "正在加载 API Access" : "Loading API Access"}
+            >
               <Skeleton className="h-8 w-1/3" />
               <Skeleton className="h-24 w-full" />
               <Skeleton className="h-24 w-full" />
@@ -436,7 +434,11 @@ export function ExternalAPIWorkspace({
                           </div>
                           <div className="flex min-w-max flex-nowrap items-center gap-1">
                             <IconButton
-                              label={zh ? `编辑 ${client.name}` : `Edit ${client.name}`}
+                              label={
+                                zh
+                                  ? `编辑 ${client.name}`
+                                  : `Edit ${client.name}`
+                              }
                               icon={<Edit2 />}
                               variant="ghost"
                               disabled={revoked}
@@ -454,7 +456,11 @@ export function ExternalAPIWorkspace({
                               onClick={() => void rotateClient(client)}
                             />
                             <IconButton
-                              label={zh ? `撤销 ${client.name}` : `Revoke ${client.name}`}
+                              label={
+                                zh
+                                  ? `撤销 ${client.name}`
+                                  : `Revoke ${client.name}`
+                              }
                               icon={<ShieldOff />}
                               variant="ghost"
                               color="error"
@@ -665,7 +671,11 @@ export function ExternalAPIWorkspace({
                     }
                   >
                     <div className="flex flex-col gap-5">
-                      <Field label={zh ? "每分钟请求上限" : "Requests per minute"}>
+                      <Field
+                        label={
+                          zh ? "每分钟请求上限" : "Requests per minute"
+                        }
+                      >
                         <Input
                           type="number"
                           min="1"
@@ -790,7 +800,9 @@ export function ExternalAPIWorkspace({
 
       <Modal
         open={Boolean(revokeTarget)}
-        title={zh ? "确认撤销 API Client" : "Confirm API client revocation"}
+        title={
+          zh ? "确认撤销 API Client" : "Confirm API client revocation"
+        }
         description={
           zh
             ? "撤销后该 Client 的当前 API Key 立即失效，且不能恢复；如需再次接入必须重新创建 Client。"
