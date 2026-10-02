@@ -59,6 +59,28 @@ describe("AI API high-privilege interception", () => {
     expect(postMock).toHaveBeenCalledTimes(2);
   });
 
+  it("holds and replays External API client mutations after successful Step-Up", async () => {
+    const listener = listenForStepUp();
+    postMock
+      .mockRejectedValueOnce(
+        new Error("recent multi-factor authentication required"),
+      )
+      .mockResolvedValueOnce({ client: { id: 91 }, api_key: "shown-once" });
+
+    const pending = apiClient.post("/api/admin/external-api/clients");
+
+    await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
+    expect(postMock).toHaveBeenCalledTimes(1);
+
+    window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
+
+    await expect(pending).resolves.toEqual({
+      client: { id: 91 },
+      api_key: "shown-once",
+    });
+    expect(postMock).toHaveBeenCalledTimes(2);
+  });
+
   it("rejects the held AI operation when Step-Up is explicitly cancelled", async () => {
     const listener = listenForStepUp();
     postMock.mockRejectedValueOnce(
