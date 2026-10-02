@@ -107,6 +107,31 @@ function responseFor(url: string) {
       },
     ];
   if (url === "/api/admin/agent-skills") return [skill];
+  if (url === "/api/admin/external-api/capabilities")
+    return [
+      {
+        name: "content.list_published_posts",
+        description: "List published posts",
+        description_zh: "读取已发布文章",
+        parameters: {},
+        surfaces: ["external"],
+        risk_level: "read",
+      },
+    ];
+  if (url === "/api/admin/external-api/clients")
+    return [
+      {
+        id: 91,
+        name: "Editorial Reporting SDK",
+        key_prefix: "gouno_live_test",
+        capabilities: ["content.list_published_posts"],
+        enabled: true,
+        rate_limit_per_minute: 60,
+        created_at: "2026-07-30T00:00:00Z",
+        updated_at: "2026-07-30T00:00:00Z",
+      },
+    ];
+  if (url.startsWith("/api/admin/external-api/audits")) return [];
   throw new Error(`unexpected URL: ${url}`);
 }
 
@@ -147,6 +172,32 @@ describe("AISettings", () => {
     );
     expect(urls).not.toContain("/api/admin/ai-workflows");
     expect(urls).not.toContain("/api/admin/ai-suggestions?status=all");
+  });
+
+  it("deep-links directly to API Access and loads privileged client data only for that section", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/admin/ai-settings?section=api-access",
+    );
+
+    renderSettings();
+
+    const tab = await screen.findByRole("tab", { name: "API Access" });
+    expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(
+      await screen.findByRole("heading", { name: "Invocation protocol" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Editorial Reporting SDK")).toBeInTheDocument();
+
+    const urls = vi
+      .mocked(apiFetch)
+      .mock.calls.map(([input]) => input.toString());
+    expect(urls).toContain("/api/admin/external-api/capabilities");
+    expect(urls).toContain("/api/admin/external-api/clients");
+    expect(
+      urls.some((url) => url.startsWith("/api/admin/external-api/audits")),
+    ).toBe(true);
   });
 
   it("copies a Skill from the dedicated Skills settings section", async () => {
