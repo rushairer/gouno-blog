@@ -7,6 +7,7 @@ import {
 } from "../mfa";
 
 const SUDO_STORAGE_KEY = "gouno:sudo_activated_at";
+export const SUDO_SESSION_CLEARED_EVENT = "gouno:sudo-session-cleared";
 export const SUDO_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes, aligns with backend recent MFA validity
 
 export interface SudoModeState {
@@ -72,6 +73,7 @@ export function useSudoMode(): SudoModeState {
     }
     setSudoSessionStale(false);
     setRemainingMs(0);
+    window.dispatchEvent(new Event(SUDO_SESSION_CLEARED_EVENT));
   }, []);
 
   useEffect(() => {
@@ -85,6 +87,12 @@ export function useSudoMode(): SudoModeState {
 
     const handleSudoSessionStale = () => {
       setSudoSessionStale(true);
+    };
+
+    const handleSudoSessionCleared = () => {
+      setSudoSessionStale(false);
+      setRemainingMs(0);
+      setActivating(false);
     };
 
     const handleStorage = (e: StorageEvent) => {
@@ -101,6 +109,10 @@ export function useSudoMode(): SudoModeState {
 
     window.addEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
     window.addEventListener(SUDO_SESSION_STALE_EVENT, handleSudoSessionStale);
+    window.addEventListener(
+      SUDO_SESSION_CLEARED_EVENT,
+      handleSudoSessionCleared,
+    );
     window.addEventListener("storage", handleStorage);
     window.addEventListener("focus", handleFocus);
     return () => {
@@ -109,6 +121,10 @@ export function useSudoMode(): SudoModeState {
       window.removeEventListener(
         SUDO_SESSION_STALE_EVENT,
         handleSudoSessionStale,
+      );
+      window.removeEventListener(
+        SUDO_SESSION_CLEARED_EVENT,
+        handleSudoSessionCleared,
       );
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", handleFocus);

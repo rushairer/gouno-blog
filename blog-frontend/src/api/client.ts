@@ -12,6 +12,7 @@ const aiHighPrivilegePrefixes = [
   "/api/admin/agents",
   "/api/admin/agent-",
   "/api/admin/ai-",
+  "/api/admin/external-api",
 ] as const;
 
 function requestPath(input: unknown): string {
@@ -109,7 +110,7 @@ const handler: ProxyHandler<typeof gossoClient> = {
   },
 };
 
-// AI administration APIs are protected by Recent MFA on the backend. Keep the
+// AI and External API administration APIs are protected by Recent MFA on the backend. Keep the
 // backend authoritative. If a protected request reports that Recent MFA has
 // expired, hold the original promise while the shared Step-Up UI verifies the
 // user, then replay that single request once. The second failure is surfaced

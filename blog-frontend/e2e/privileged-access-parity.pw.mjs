@@ -52,6 +52,13 @@ async function openPair(
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const showcase = await context.newPage();
   const product = await context.newPage();
+  const externalApiRequests = [];
+  product.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith("/api/admin/external-api")) {
+      externalApiRequests.push(`${request.method()} ${path}`);
+    }
+  });
 
   await setTheme(showcase, theme);
   await setTheme(product, theme);
@@ -77,7 +84,7 @@ async function openPair(
   );
   await product.goto(`${productOrigin}${productPath}`, { waitUntil: "networkidle" });
 
-  return { context, showcase, product, ...fixtureState };
+  return { context, showcase, product, externalApiRequests, ...fixtureState };
 }
 
 async function chooseShowcaseSecurity(showcase, accessibleName) {
@@ -203,6 +210,41 @@ for (const theme of ["light", "dark"]) {
     expect(unknown).toEqual([]);
     expect(unexpectedWrites).toEqual([]);
     await pairScreenshot(showcase, product, `privileged-ai-provider-${theme}`, testInfo);
+    await context.close();
+  });
+
+  test(`AI API Access locked gate does not fetch sensitive management data (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const {
+      context,
+      showcase,
+      product,
+      unknown,
+      unexpectedWrites,
+      externalApiRequests,
+    } = await openPair(
+      browser,
+      "blog-admin-ai-settings",
+      "/admin/ai-settings?section=api-access",
+      theme,
+      { activeSudo: false, ai: true },
+    );
+
+    await showcase.getByRole("tab", { name: "API Access" }).click();
+    await chooseShowcaseSecurity(showcase, "已锁定");
+    await expect(showcase.getByText("高权限操作需要身份验证")).toBeVisible();
+    await expect(product.getByText("高权限操作需要身份验证")).toBeVisible();
+    await expectGateParity(showcase, product);
+    expect(externalApiRequests).toEqual([]);
+    expect(unknown).toEqual([]);
+    expect(unexpectedWrites).toEqual([]);
+    await pairScreenshot(
+      showcase,
+      product,
+      `privileged-ai-api-access-locked-${theme}`,
+      testInfo,
+    );
     await context.close();
   });
 
