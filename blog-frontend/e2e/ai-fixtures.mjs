@@ -17,6 +17,129 @@ export const aiProvider = {
   updated_at: now,
 };
 
+export const externalCapabilities = [
+  {
+    name: "content.list_published_posts",
+    description: "List published Blog posts through the public content boundary.",
+    description_zh: "通过公开内容边界分页读取已发布文章。",
+    parameters: { type: "object", additionalProperties: false },
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+  {
+    name: "content.get_published_post",
+    description: "Read one published Blog post by numeric ID.",
+    description_zh: "按数字 ID 读取一篇已发布文章。",
+    parameters: { type: "object", additionalProperties: false },
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+  {
+    name: "content.list_published_pages",
+    description: "List published custom pages.",
+    description_zh: "读取已发布单页目录。",
+    parameters: { type: "object", additionalProperties: false },
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+  {
+    name: "content.search_posts",
+    description: "Search published Blog content.",
+    description_zh: "检索已发布 Blog 内容。",
+    parameters: { type: "object", additionalProperties: false },
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+  {
+    name: "content.search_knowledge",
+    description: "Search indexed published content.",
+    description_zh: "检索已建立索引的已发布内容。",
+    parameters: { type: "object", additionalProperties: false },
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+  {
+    name: "analytics.list_low_engagement_posts",
+    description: "List published posts with low engagement.",
+    description_zh: "读取低互动的已发布文章清单。",
+    parameters: { type: "object", additionalProperties: false },
+    surfaces: ["external"],
+    risk_level: "read",
+  },
+];
+
+export const externalApiClients = [
+  {
+    id: 91,
+    name: "Editorial Reporting SDK",
+    key_prefix: "gouno_live_A7k3Q2p9",
+    capabilities: [
+      "content.list_published_posts",
+      "content.get_published_post",
+      "analytics.list_low_engagement_posts",
+    ],
+    enabled: true,
+    rate_limit_per_minute: 120,
+    expires_at: "2026-12-31T15:59:00Z",
+    last_used_at: "2026-09-28T05:42:00Z",
+    revoked_at: null,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: 92,
+    name: "Knowledge Export Worker",
+    key_prefix: "gouno_live_K9m2V6s4",
+    capabilities: ["content.search_posts", "content.search_knowledge"],
+    enabled: false,
+    rate_limit_per_minute: 30,
+    expires_at: null,
+    last_used_at: "2026-09-27T14:16:00Z",
+    revoked_at: null,
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+export const externalApiAudits = [
+  {
+    id: 701,
+    client_id: 91,
+    request_id: "req-701",
+    capability: "analytics.list_low_engagement_posts",
+    result: "success",
+    status_code: 200,
+    source_ip: "203.0.113.10",
+    input_digest: "fixture-digest-701",
+    duration_ms: 42,
+    created_at: "2026-09-28T05:42:18Z",
+  },
+  {
+    id: 702,
+    client_id: 91,
+    request_id: "req-702",
+    capability: "content.get_published_post",
+    result: "success",
+    status_code: 200,
+    source_ip: "203.0.113.10",
+    input_digest: "fixture-digest-702",
+    duration_ms: 31,
+    created_at: "2026-09-28T05:41:52Z",
+  },
+  {
+    id: 703,
+    client_id: 92,
+    request_id: "req-703",
+    capability: "content.get_published_post",
+    result: "denied",
+    status_code: 403,
+    source_ip: "203.0.113.11",
+    input_digest: "fixture-digest-703",
+    duration_ms: 1,
+    created_at: "2026-09-27T14:16:04Z",
+  },
+];
+
 export const connectorProfiles = [
   {
     id: 31,
