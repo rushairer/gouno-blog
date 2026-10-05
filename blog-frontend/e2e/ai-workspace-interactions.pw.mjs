@@ -80,6 +80,82 @@ test("legacy advanced deep link redirects to the dedicated Provider settings sec
   await attachScreenshot(page, testInfo, "u04a-legacy-advanced-redirect");
 });
 
+test("API Access creates one-time credentials and confirms irreversible revocation", async ({ page }, testInfo) => {
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-settings?section=api-access",
+    { width: 1440, height: 1000 },
+  );
+
+  await expect(page.getByRole("tab", { name: "API Access" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Invocation protocol" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("GET /api/external/v1/capabilities"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("POST /api/external/v1/capabilities/{name}/invoke"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Editorial Reporting SDK", { exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Create API Client" }).click();
+  const createDrawer = page.getByRole("dialog", {
+    name: "Create API Client",
+  });
+  await expect(createDrawer).toBeVisible();
+  await createDrawer.getByLabel("Client name").fill("Partner Reporting Worker");
+  await createDrawer
+    .getByLabel(/content\.list_published_posts/)
+    .check();
+  await createDrawer
+    .getByRole("button", { name: "Save API Client" })
+    .click();
+
+  const keyDialog = page.getByRole("dialog", {
+    name: "Save one-time API key",
+  });
+  await expect(keyDialog).toBeVisible();
+  await expect(
+    keyDialog.getByLabel("One-time API key"),
+  ).toHaveValue(/gouno_live_fixture-secret-once_/);
+  await expect(
+    keyDialog.getByText("Do not put this in browser code"),
+  ).toBeVisible();
+  await keyDialog.getByRole("button", { name: "I saved it securely" }).click();
+  await expect(
+    page.getByText("Partner Reporting Worker", { exact: true }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Revoke Knowledge Export Worker" })
+    .click();
+  const revokeDialog = page.getByRole("dialog", {
+    name: "Confirm API client revocation",
+  });
+  await expect(revokeDialog).toBeVisible();
+  await expect(
+    revokeDialog.getByText('Revoke "Knowledge Export Worker"?'),
+  ).toBeVisible();
+  await revokeDialog
+    .getByRole("button", { name: "Revoke and invalidate key" })
+    .click();
+  await expect(
+    page.getByText(
+      "Knowledge Export Worker revoked. Its key cannot be restored.",
+    ),
+  ).toBeVisible();
+
+  await expectNoDocumentOverflow(page);
+  expectFixtureHealth(fixtureState, consoleProblems);
+  await attachScreenshot(page, testInfo, "u04b-api-access-lifecycle");
+});
+
 test("failed approval drills from the mobile decision queue into one workbench pane", async ({ page }, testInfo) => {
   const { consoleProblems, fixtureState } = await openAiPage(
     page,

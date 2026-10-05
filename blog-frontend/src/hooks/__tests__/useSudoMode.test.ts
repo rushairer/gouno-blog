@@ -1,6 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { useSudoMode, SUDO_MAX_AGE_MS } from "../useSudoMode";
+import {
+  useSudoMode,
+  SUDO_MAX_AGE_MS,
+  SUDO_SESSION_CLEARED_EVENT,
+} from "../useSudoMode";
 import { STEP_UP_COMPLETED_EVENT, SUDO_SESSION_STALE_EVENT } from "../../mfa";
 
 describe("useSudoMode", () => {
@@ -66,6 +70,29 @@ describe("useSudoMode", () => {
     expect(result.current.isSudoActive).toBe(true);
     expect(result.current.isSudoExpiring).toBe(false);
     expect(result.current.remainingMinutes).toBe(10);
+  });
+
+  it("broadcasts sudo clearing to other hook instances immediately", () => {
+    const now = Date.now();
+    localStorage.setItem("gouno:sudo_activated_at", String(now));
+
+    const first = renderHook(() => useSudoMode());
+    const second = renderHook(() => useSudoMode());
+    const observedEvents: string[] = [];
+    const listener = () => observedEvents.push(SUDO_SESSION_CLEARED_EVENT);
+    window.addEventListener(SUDO_SESSION_CLEARED_EVENT, listener);
+
+    expect(first.result.current.isSudoActive).toBe(true);
+    expect(second.result.current.isSudoActive).toBe(true);
+
+    act(() => {
+      first.result.current.clearSudo();
+    });
+
+    expect(second.result.current.isSudoActive).toBe(false);
+    expect(second.result.current.remainingMs).toBe(0);
+    expect(observedEvents).toEqual([SUDO_SESSION_CLEARED_EVENT]);
+    window.removeEventListener(SUDO_SESSION_CLEARED_EVENT, listener);
   });
 
   it("clears sudo upon clearSudo call", () => {

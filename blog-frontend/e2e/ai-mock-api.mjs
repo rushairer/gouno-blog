@@ -10,6 +10,9 @@ import {
   connectorOutbox,
   connectorProfiles,
   embeddingProfile,
+  externalApiAudits,
+  externalApiClients,
+  externalCapabilities,
   indexStatus,
   indexedKnowledgeContent,
   knowledgeSearchResponse,
@@ -32,11 +35,19 @@ const knownAiPath = (path) =>
   path.startsWith("/api/admin/agents/") ||
   path.startsWith("/api/admin/provider-profiles") ||
   path.startsWith("/api/admin/embedding-profiles") ||
+  path.startsWith("/api/admin/external-api") ||
   path.startsWith("/api/admin/ai-");
 
 export async function installAiFixtures(page) {
   const baseUnknown = await installApiFixtures(page);
   const unexpectedWrites = [];
+  let externalClients = externalApiClients.map((item) => ({
+    ...item,
+    capabilities: [...item.capabilities],
+  }));
+  let externalAudits = externalApiAudits.map((item) => ({ ...item }));
+  let nextExternalClientID =
+    externalClients.reduce((max, item) => Math.max(max, item.id), 0) + 1;
 
   await page.route(productApiUrl, async (route) => {
     const request = route.request();
@@ -49,18 +60,120 @@ export async function installAiFixtures(page) {
       return;
     }
 
+    const respond = (data, status = 200) =>
+      route.fulfill({
+        status,
+        contentType: "application/json",
+        body: envelope(data),
+      });
+
+    if (path.startsWith("/api/admin/external-api")) {
+      if (method === "GET" && path === "/api/admin/external-api/capabilities") {
+        return respond(externalCapabilities);
+      }
+      if (method === "GET" && path === "/api/admin/external-api/clients") {
+        return respond(externalClients);
+      }
+      if (method === "GET" && path === "/api/admin/external-api/audits") {
+        const clientID = Number(url.searchParams.get("client_id") || 0);
+        const limit = Number(url.searchParams.get("limit") || 100);
+        const filtered = clientID
+          ? externalAudits.filter((item) => item.client_id === clientID)
+          : externalAudits;
+        return respond(filtered.slice(0, limit));
+      }
+
+      if (method === "POST" && path === "/api/admin/external-api/clients") {
+        const payload = request.postDataJSON();
+        const client = {
+          id: nextExternalClientID++,
+          name: payload.name,
+          key_prefix: `gouno_live_fixture_${nextExternalClientID}`,
+          capabilities: [...(payload.capabilities || [])],
+          enabled: payload.enabled ?? true,
+          rate_limit_per_minute: payload.rate_limit_per_minute || 60,
+          expires_at: payload.expires_at ?? null,
+          last_used_at: null,
+          revoked_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        externalClients = [client, ...externalClients];
+        return respond(
+          {
+            client,
+            api_key: `gouno_live_fixture-secret-once_${client.id}`,
+          },
+          201,
+        );
+      }
+
+      const clientMatch = path.match(
+        /^\/api\/admin\/external-api\/clients\/(\d+)$/,
+      );
+      if (clientMatch && method === "PUT") {
+        const id = Number(clientMatch[1]);
+        const payload = request.postDataJSON();
+        externalClients = externalClients.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                name: payload.name,
+                capabilities: [...(payload.capabilities || [])],
+                enabled: payload.enabled,
+                rate_limit_per_minute:
+                  payload.rate_limit_per_minute || item.rate_limit_per_minute,
+                expires_at: payload.expires_at ?? null,
+                updated_at: new Date().toISOString(),
+              }
+            : item,
+        );
+        return respond(externalClients.find((item) => item.id === id));
+      }
+
+      const rotateMatch = path.match(
+        /^\/api\/admin\/external-api\/clients\/(\d+)\/rotate$/,
+      );
+      if (rotateMatch && method === "POST") {
+        const id = Number(rotateMatch[1]);
+        const rotatedPrefix = `gouno_live_rotated_${id}`;
+        externalClients = externalClients.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                key_prefix: rotatedPrefix,
+                updated_at: new Date().toISOString(),
+              }
+            : item,
+        );
+        return respond({
+          client: externalClients.find((item) => item.id === id),
+          api_key: `gouno_live_rotated-secret-once_${id}`,
+        });
+      }
+
+      if (clientMatch && method === "DELETE") {
+        const id = Number(clientMatch[1]);
+        const revokedAt = new Date().toISOString();
+        externalClients = externalClients.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                enabled: false,
+                revoked_at: revokedAt,
+                updated_at: revokedAt,
+              }
+            : item,
+        );
+        return respond({ revoked: true });
+      }
+    }
+
     if (method !== "GET" && method !== "HEAD") {
       unexpectedWrites.push(`${method} ${path}`);
       await route.fulfill({ status: 204, body: "" });
       return;
     }
-
-    const respond = (data) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: envelope(data),
-      });
 
     if (path === "/api/admin/agents") return respond(aiAgents);
     if (path === "/api/admin/agent-tools") return respond(aiTools);
