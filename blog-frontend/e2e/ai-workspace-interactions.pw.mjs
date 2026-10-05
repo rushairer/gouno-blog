@@ -100,7 +100,9 @@ test("API Access creates one-time credentials and confirms irreversible revocati
   await expect(
     page.getByText("POST /api/external/v1/capabilities/{name}/invoke"),
   ).toBeVisible();
-  await expect(page.getByText("Editorial Reporting SDK")).toBeVisible();
+  await expect(
+    page.getByText("Editorial Reporting SDK", { exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Create API Client" }).click();
   const createDrawer = page.getByRole("dialog", {
