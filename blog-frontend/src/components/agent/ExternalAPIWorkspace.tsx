@@ -272,9 +272,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
             type="info"
             showIcon
             title={
-              zh
-                ? "Server-to-server API 边界"
-                : "Server-to-server API boundary"
+              zh ? "Server-to-server API 边界" : "Server-to-server API boundary"
             }
             description={
               zh
@@ -435,9 +433,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                           <div className="flex min-w-max flex-nowrap items-center gap-1">
                             <IconButton
                               label={
-                                zh
-                                  ? `编辑 ${client.name}`
-                                  : `Edit ${client.name}`
+                                zh ? `编辑 ${client.name}` : `Edit ${client.name}`
                               }
                               icon={<Edit2 />}
                               variant="ghost"
@@ -457,9 +453,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                             />
                             <IconButton
                               label={
-                                zh
-                                  ? `撤销 ${client.name}`
-                                  : `Revoke ${client.name}`
+                                zh ? `撤销 ${client.name}` : `Revoke ${client.name}`
                               }
                               icon={<ShieldOff />}
                               variant="ghost"
@@ -672,9 +666,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                   >
                     <div className="flex flex-col gap-5">
                       <Field
-                        label={
-                          zh ? "每分钟请求上限" : "Requests per minute"
-                        }
+                        label={zh ? "每分钟请求上限" : "Requests per minute"}
                       >
                         <Input
                           type="number"
@@ -800,9 +792,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
 
       <Modal
         open={Boolean(revokeTarget)}
-        title={
-          zh ? "确认撤销 API Client" : "Confirm API client revocation"
-        }
+        title={zh ? "确认撤销 API Client" : "Confirm API client revocation"}
         description={
           zh
             ? "撤销后该 Client 的当前 API Key 立即失效，且不能恢复；如需再次接入必须重新创建 Client。"
