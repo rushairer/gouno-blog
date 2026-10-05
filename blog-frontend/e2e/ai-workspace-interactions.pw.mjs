@@ -128,7 +128,9 @@ test("API Access creates one-time credentials and confirms irreversible revocati
     keyDialog.getByText("Do not put this in browser code"),
   ).toBeVisible();
   await keyDialog.getByRole("button", { name: "I saved it securely" }).click();
-  await expect(page.getByText("Partner Reporting Worker")).toBeVisible();
+  await expect(
+    page.getByText("Partner Reporting Worker", { exact: true }),
+  ).toBeVisible();
 
   await page
     .getByRole("button", { name: "Revoke Knowledge Export Worker" })
