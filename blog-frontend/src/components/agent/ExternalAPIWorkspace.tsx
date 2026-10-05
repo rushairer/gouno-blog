@@ -70,10 +70,12 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState<EditorState>(null);
-  const [oneTimeKey, setOneTimeKey] =
-    useState<ExternalAPICreatedClient | null>(null);
-  const [revokeTarget, setRevokeTarget] =
-    useState<ExternalAPIClient | null>(null);
+  const [oneTimeKey, setOneTimeKey] = useState<ExternalAPICreatedClient | null>(
+    null,
+  );
+  const [revokeTarget, setRevokeTarget] = useState<ExternalAPIClient | null>(
+    null,
+  );
 
   const [name, setName] = useState("");
   const [enabled, setEnabled] = useState(true);
@@ -165,9 +167,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
         capabilities: selectedCapabilities,
         enabled,
         rate_limit_per_minute: rateLimit,
-        expires_at: expiresAt
-          ? new Date(expiresAt).toISOString()
-          : null,
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       };
       if (editing === "new") {
         const created = await externalCapabilityApi.createClient(payload);
@@ -308,7 +308,9 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
               </div>
               <div className="rounded-md border p-4">
                 <Text size="xs" tone="muted">
-                  {zh ? "执行已授权 Capability" : "Invoke authorized capability"}
+                  {zh
+                    ? "执行已授权 Capability"
+                    : "Invoke authorized capability"}
                 </Text>
                 <strong className="mt-1 block type-family-mono type-body-sm type-weight-semibold [overflow-wrap:anywhere]">
                   {"POST /api/external/v1/capabilities/{name}/invoke"}
@@ -348,7 +350,11 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
               aria-labelledby="external-clients-title"
             >
               <div>
-                <Heading id="external-clients-title" level={2} variant="compact">
+                <Heading
+                  id="external-clients-title"
+                  level={2}
+                  variant="compact"
+                >
                   API Clients
                 </Heading>
                 <Text size="sm" tone="muted">
@@ -433,7 +439,9 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                           <div className="flex min-w-max flex-nowrap items-center gap-1">
                             <IconButton
                               label={
-                                zh ? `编辑 ${client.name}` : `Edit ${client.name}`
+                                zh
+                                  ? `编辑 ${client.name}`
+                                  : `Edit ${client.name}`
                               }
                               icon={<Edit2 />}
                               variant="ghost"
@@ -453,7 +461,9 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                             />
                             <IconButton
                               label={
-                                zh ? `撤销 ${client.name}` : `Revoke ${client.name}`
+                                zh
+                                  ? `撤销 ${client.name}`
+                                  : `Revoke ${client.name}`
                               }
                               icon={<ShieldOff />}
                               variant="ghost"
@@ -625,7 +635,10 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                     }
                   >
                     <div className="flex flex-col gap-5">
-                      <Field label={zh ? "Client 名称" : "Client name"} required>
+                      <Field
+                        label={zh ? "Client 名称" : "Client name"}
+                        required
+                      >
                         <Input
                           required
                           value={name}
@@ -780,7 +793,9 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
           <Alert
             type="warning"
             showIcon
-            title={zh ? "不要放入浏览器代码" : "Do not put this in browser code"}
+            title={
+              zh ? "不要放入浏览器代码" : "Do not put this in browser code"
+            }
             description={
               zh
                 ? "这个长期凭据只供服务端调用；服务器只保存其哈希，不保存明文。"
