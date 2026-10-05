@@ -12,14 +12,14 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-05",
-      "manualReview": "docs/ui-redesign/blog-admin-csa-a006-pending-recertification.md",
+      "manualReview": "docs/ui-redesign/blog-admin-csa-a006-recertification.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
         "blog": "0a74d106bb60cc21b15acba76437d9f4dacdaa8f",
-        "gounoUi": "65e087d1b0cc6658f778a8ea31ca7536e520b748"
+        "gounoUi": "2871993d1d10adce8b26d8d0d75fdc1c519e88bb"
       },
       "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
@@ -67,6 +67,11 @@
             "name": "Images",
             "id": 37304331937,
             "result": "success"
+          },
+          {
+            "name": "Gouno UI Blog Consumer Parity",
+            "id": 37321144321,
+            "result": "success"
           }
         ],
         "artifacts": [
@@ -79,6 +84,11 @@
             "id": 11342698521,
             "name": "blog-browser-acceptance-37304332030",
             "sha256": "80bb808584a917244fce1408af0439c6b6b30b602fdc79dc2c4742b4d305880d"
+          },
+          {
+            "id": 11350421876,
+            "name": "gouno-ui-blog-consumer-parity-37321144321",
+            "sha256": "b9b0054447c0fc25d3c3c9f83f288485db675e7e1f595beb9a59ab6cb07e1a03"
           }
         ]
       },
@@ -99,10 +109,8 @@
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a005-recertification.md",
-      "recertificationReason": "CSA-A006 API Access Product propagation is merged and manually reviewed with fresh exact-head browser/parity evidence. Local status intentionally remains pending until Gouno UI marks the Blog consumer impact recertified and reciprocal Blog Consumer Parity passes against merged Blog main.",
-      "reopenedBy": "CSA-A006 External API Access Extension",
-      "reopenedDate": "2026-09-28"
+      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a006-pending-recertification.md",
+      "recertificationReason": "CSA-A006 API Access propagation is merged, manually reviewed, covered by fresh Blog exact-head evidence, and reciprocally accepted by Gouno UI Blog Consumer Parity. Gouno UI main now records the Blog consumer impact as recertified."
     },
     {
       "id": "blog-admin-core-support",
