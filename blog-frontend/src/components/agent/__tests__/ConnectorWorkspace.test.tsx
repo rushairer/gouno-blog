@@ -157,8 +157,12 @@ describe("ConnectorWorkspace", () => {
     );
 
     await screen.findAllByText("Primary newsletter");
+    const outboxRow = screen
+      .getByText("#9 · run-1", { selector: "strong" })
+      .closest('div[class*="sm:flex-row"]');
+    expect(outboxRow).not.toBeNull();
     expect(
-      screen.getByText("Primary newsletter · 0 attempts"),
+      within(outboxRow as HTMLElement).getByText(/0 attempts/),
     ).toBeInTheDocument();
 
     await user.click(
