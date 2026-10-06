@@ -104,6 +104,13 @@ describe("ConnectorWorkspace", () => {
     expect(
       (await screen.findAllByText("Newsletter sandbox")).length,
     ).toBeGreaterThan(0);
+    const outboxRow = screen
+      .getByText("#9 · run-1", { selector: "strong" })
+      .closest('div[class*="sm:flex-row"]');
+    expect(outboxRow).not.toBeNull();
+    expect(
+      within(outboxRow as HTMLElement).getByText(/0 attempts/),
+    ).toBeInTheDocument();
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Start mock OAuth" }));
@@ -157,13 +164,6 @@ describe("ConnectorWorkspace", () => {
     );
 
     await screen.findAllByText("Primary newsletter");
-    const outboxRow = screen
-      .getByText("#9 · run-1", { selector: "strong" })
-      .closest('div[class*="sm:flex-row"]');
-    expect(outboxRow).not.toBeNull();
-    expect(
-      within(outboxRow as HTMLElement).getByText(/0 attempts/),
-    ).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Add Connector Profile" }),
