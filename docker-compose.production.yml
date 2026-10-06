@@ -55,7 +55,7 @@ services:
 
   gosso:
     <<: *hardened
-    image: ${GOSSO_IMAGE:-ghcr.io/rushairer/gosso:main}
+    image: ${GOSSO_IMAGE:?GOSSO_IMAGE must be pinned by digest}
     pull_policy: always
     # Podman needs a writable mountpoint before it can bind file secrets into a
     # read-only root filesystem.
@@ -101,7 +101,7 @@ services:
 
   gosso-admin-seed:
     <<: *hardened
-    image: ${GOSSO_ADMIN_SEED_IMAGE:-ghcr.io/rushairer/gosso-admin-seed:main}
+    image: ${GOSSO_ADMIN_SEED_IMAGE:?GOSSO_ADMIN_SEED_IMAGE must be pinned by digest}
     pull_policy: always
     restart: 'no'
     tmpfs: [/tmp, /run/secrets]
@@ -119,7 +119,7 @@ services:
 
   blog-seed:
     <<: *hardened
-    image: ${GOUNO_BLOG_SEED_IMAGE:-ghcr.io/rushairer/gouno-blog-seed:main}
+    image: ${GOUNO_BLOG_SEED_IMAGE:?GOUNO_BLOG_SEED_IMAGE must be pinned by digest}
     pull_policy: always
     restart: 'no'
     tmpfs: [/tmp, /run/secrets]
@@ -151,7 +151,7 @@ services:
       gosso-admin-seed: {condition: service_completed_successfully}
 
   blog-media-init:
-    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend:main}
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:?GOUNO_BLOG_BACKEND_IMAGE must be pinned by digest}
     pull_policy: always
     user: "0:0"
     entrypoint: ["/bin/sh", "-c"]
@@ -166,7 +166,7 @@ services:
 
   blog-backend:
     <<: *hardened
-    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend:main}
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:?GOUNO_BLOG_BACKEND_IMAGE must be pinned by digest}
     pull_policy: always
     tmpfs: [/tmp, /run/secrets]
     environment:
@@ -232,7 +232,7 @@ services:
 
   blog-frontend:
     <<: *hardened
-    image: ${GOUNO_BLOG_FRONTEND_IMAGE:-ghcr.io/rushairer/gouno-blog-frontend:main}
+    image: ${GOUNO_BLOG_FRONTEND_IMAGE:?GOUNO_BLOG_FRONTEND_IMAGE must be pinned by digest}
     pull_policy: always
     tmpfs: [/tmp:mode=1777, /var/cache/nginx:mode=1777, /var/run:mode=1777]
     depends_on:
@@ -240,7 +240,7 @@ services:
 
   gosso-admin-frontend:
     <<: *hardened
-    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:-ghcr.io/rushairer/gosso-admin-frontend:main}
+    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:?GOSSO_ADMIN_FRONTEND_IMAGE must be pinned by digest}
     pull_policy: always
     tmpfs: [/tmp:mode=1777, /var/cache/nginx:mode=1777, /var/run:mode=1777]
     depends_on:

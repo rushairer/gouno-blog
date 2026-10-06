@@ -124,6 +124,8 @@ export GOSSO_ADMIN_FRONTEND_IMAGE=ghcr.io/rushairer/gosso-admin-frontend:vX.Y.Z@
 export GOSSO_ADMIN_SEED_IMAGE=ghcr.io/rushairer/gosso-admin-seed:vX.Y.Z@sha256:...
 ```
 
+Production Compose intentionally has no `:main` fallback for first-party application images. These six image variables are required and deployment fails closed unless operators provide immutable version+digest references.
+
 如果需要从当前 checkout 构建 blog 前后端源码，使用 source override：
 
 ```bash
