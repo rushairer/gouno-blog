@@ -1,8 +1,8 @@
 module github.com/rushairer/blog-backend
 
-go 1.27.1
+go 1.26.0
 
-toolchain go1.27.1
+toolchain go1.26.6
 
 require (
 	github.com/alicebob/miniredis/v2 v2.39.0
