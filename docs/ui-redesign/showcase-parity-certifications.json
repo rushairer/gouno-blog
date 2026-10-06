@@ -122,10 +122,10 @@
     {
       "id": "blog-public-account",
       "scope": "Public Blog + Blog Account",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-22",
-      "manualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
+      "manualReview": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md",
       "reviewedRefs": {
         "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
         "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
@@ -226,7 +226,9 @@
         "blog-account-notifications",
         "blog-account-settings",
         "blog-not-found"
-      ]
+      ],
+      "previousManualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
+      "recertificationReason": "MarkdownRenderer URL-scheme hardening changed a certified Product-owned path at 8a2310add7e69b108b68f823145fbafd942b4c37; manual-first visual/browser recertification is in progress."
     },
     {
       "id": "blog-admin-core-wave1",
@@ -407,10 +409,10 @@
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-09-24",
-      "manualReview": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md",
+      "manualReview": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md",
       "reviewedRefs": {
         "blog": "57c3249d14e15e8eb71a3dbc18bced516cda1e14",
         "gounoUi": "69019c4175bde817d56c5037f95fbc382b122c98"
@@ -510,8 +512,8 @@
         "blog-admin-users",
         "blog-admin-site-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-admin-dl17-typography-recertification.md",
-      "recertificationReason": "CSA-A003 semantic Typography propagation for Post/Page Editor, Media Library and Site Settings was manually re-reviewed with the complete Wave 3 composition retained."
+      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md",
+      "recertificationReason": "MarkdownRenderer URL-scheme hardening changed a certified Product-owned path at 8a2310add7e69b108b68f823145fbafd942b4c37; manual-first visual/browser recertification is in progress."
     }
   ]
 }
