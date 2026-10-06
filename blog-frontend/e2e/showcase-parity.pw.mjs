@@ -656,6 +656,44 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
     );
   }
 
+  await showcase
+    .getByRole("tab", { name: "Sandbox 连接器", exact: true })
+    .click();
+  await product
+    .getByRole("tab", { name: "Sandbox 连接器", exact: true })
+    .click();
+
+  for (const page of [showcase, product]) {
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Outbox 沙箱" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Profile" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("幂等键")).toBeVisible();
+    await expect(page.getByLabel("Payload JSON")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "加入 Outbox", exact: true }),
+    ).toBeVisible();
+  }
+
+  await showcase
+    .getByRole("heading", { level: 2, name: "Outbox 沙箱" })
+    .evaluate((element) =>
+      element.scrollIntoView({ block: "start", inline: "nearest" }),
+    );
+  await product
+    .getByRole("heading", { level: 2, name: "Outbox 沙箱" })
+    .evaluate((element) =>
+      element.scrollIntoView({ block: "start", inline: "nearest" }),
+    );
+  await pairScreenshot(
+    showcase,
+    product,
+    "ai-settings-Sandbox-连接器-outbox",
+    testInfo,
+  );
+
   for (const { tab, createLabel, backLabel } of [
     {
       tab: "Agents",

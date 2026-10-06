@@ -406,8 +406,8 @@ export function ConnectorWorkspace({
         }
         description={
           zh
-            ? "配置 Connector 的产品身份、授权范围、Sandbox 与凭据状态。"
-            : "Configure Connector identity, authorization boundary, Sandbox mode, and credential state."
+            ? "配置 Connector 的产品身份、类型、Sandbox、配置与凭据状态。"
+            : "Configure Connector identity, kind, Sandbox mode, configuration, and credential state."
         }
         onClose={closeProfileEditor}
         footer={
