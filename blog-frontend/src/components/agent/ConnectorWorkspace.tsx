@@ -20,7 +20,6 @@ import {
   Button,
   Card,
   CardContent,
-  Checkbox,
   Drawer,
   Empty,
   Field,
@@ -30,6 +29,7 @@ import {
   IconButton,
   Input,
   Select,
+  Switch,
   Tag,
   Text,
   Textarea,
@@ -406,8 +406,8 @@ export function ConnectorWorkspace({
         }
         description={
           zh
-            ? "配置 Connector 的产品身份、授权范围、Sandbox 与凭据状态。"
-            : "Configure Connector identity, authorization boundary, Sandbox mode, and credential state."
+            ? "配置 Connector 的产品身份、类型、Sandbox、配置与凭据状态。"
+            : "Configure Connector identity, kind, Sandbox mode, configuration, and credential state."
         }
         onClose={closeProfileEditor}
         footer={
@@ -457,7 +457,10 @@ export function ConnectorWorkspace({
                 >
                   <div className="flex flex-col gap-5">
                     <FormGrid columns={2}>
-                      <Field label={zh ? "名称" : "Name"}>
+                      <Field
+                        label={zh ? "Profile 名称" : "Profile name"}
+                        required
+                      >
                         <Input
                           required
                           value={name}
@@ -484,13 +487,13 @@ export function ConnectorWorkspace({
                       </Field>
                     </FormGrid>
                     <Field label={zh ? "状态" : "Status"}>
-                      <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
-                        <Checkbox
-                          checked={enabled}
-                          onChange={(event) => setEnabled(event.target.checked)}
-                        />
-                        {zh ? "启用 Connector" : "Enable Connector"}
-                      </label>
+                      <Switch
+                        checked={enabled}
+                        onChange={(event) =>
+                          setEnabled(event.currentTarget.checked)
+                        }
+                        label={zh ? "启用 Connector" : "Enable Connector"}
+                      />
                     </Field>
                   </div>
                 </AISettingsEditorSection>
@@ -499,30 +502,36 @@ export function ConnectorWorkspace({
                   title={zh ? "运行与凭据" : "Runtime and credentials"}
                   description={
                     zh
-                      ? "Sandbox、配置 JSON 与凭据状态显式分离；生产外部写入仍不在此能力范围。"
-                      : "Keep Sandbox mode, config JSON, and credential state explicit; production external writes remain outside this capability."
+                      ? "Sandbox、配置 JSON 与凭据状态显式分离；只有 Search Console 可以切换到只读 Google OAuth。"
+                      : "Keep Sandbox mode, config JSON, and credential state explicit; only Search Console may switch to read-only Google OAuth."
                   }
                 >
                   <div className="flex flex-col gap-5">
                     {kind === "search_console" ? (
                       <Field label={zh ? "连接模式" : "Connection mode"}>
-                        <label className="inline-flex items-center gap-2 type-body-sm type-weight-semibold">
-                          <Checkbox
-                            checked={sandbox}
-                            onChange={(event) =>
-                              setSandbox(event.target.checked)
-                            }
-                          />
-                          {zh
-                            ? "Sandbox（取消以启用只读 Google OAuth）"
-                            : "Sandbox (uncheck for read-only Google OAuth)"}
-                        </label>
+                        <Switch
+                          checked={sandbox}
+                          onChange={(event) =>
+                            setSandbox(event.currentTarget.checked)
+                          }
+                          label={
+                            zh
+                              ? "Sandbox（关闭后为只读 Google OAuth）"
+                              : "Sandbox (turn off for read-only Google OAuth)"
+                          }
+                        />
                       </Field>
-                    ) : null}
+                    ) : (
+                      <Text size="sm" tone="muted">
+                        {zh
+                          ? "Newsletter、Social 与 Webhook 当前只允许 Sandbox Mock，不执行真实外部写入。"
+                          : "Newsletter, Social, and Webhook currently allow Sandbox Mock only and never perform real external writes."}
+                      </Text>
+                    )}
 
                     <Field label={zh ? "配置 JSON" : "Config JSON"}>
                       <Textarea
-                        className="font-mono"
+                        className="type-family-mono"
                         value={config}
                         onChange={(event) => setConfig(event.target.value)}
                         rows={6}
@@ -544,9 +553,11 @@ export function ConnectorWorkspace({
                         editingProfile !== "new" &&
                         editingProfile.has_credential
                           ? zh
-                            ? "留空则保留现有凭据。"
-                            : "Leave blank to keep the existing credential."
-                          : undefined
+                            ? `已配置凭据 •••• ${editingProfile.credential_last4 || "----"}；留空则保留现有凭据。`
+                            : `Credential •••• ${editingProfile.credential_last4 || "----"} is configured; leave blank to keep it.`
+                          : zh
+                            ? "Sandbox 可不配置凭据；真实只读 OAuth 模式必须配置凭据并安全保存。"
+                            : "Credentials are optional for Sandbox; real read-only OAuth requires a securely stored credential."
                       }
                     >
                       <Input
@@ -559,6 +570,14 @@ export function ConnectorWorkspace({
                         }
                         onChange={(event) => setCredential(event.target.value)}
                         autoComplete="new-password"
+                        placeholder={
+                          editingProfile !== "new" &&
+                          editingProfile.has_credential
+                            ? zh
+                              ? "留空以保留"
+                              : "Leave blank to keep"
+                            : "credential-secret"
+                        }
                       />
                     </Field>
                   </div>
@@ -655,7 +674,7 @@ export function ConnectorWorkspace({
             </FormGrid>
             <Field label="Payload JSON">
               <Textarea
-                className="font-mono"
+                className="type-family-mono"
                 value={payload}
                 onChange={(event) => setPayload(event.target.value)}
                 rows={4}
@@ -706,6 +725,9 @@ export function ConnectorWorkspace({
                       <Text size="xs" tone="muted" className="mt-1">
                         {profile?.name ||
                           (zh ? "未知 Profile" : "Unknown profile")}
+                        {zh
+                          ? ` · 尝试 ${item.attempts} 次`
+                          : ` · ${item.attempts} attempt${item.attempts === 1 ? "" : "s"}`}
                         {item.error_message ? ` · ${item.error_message}` : ""}
                       </Text>
                     </div>

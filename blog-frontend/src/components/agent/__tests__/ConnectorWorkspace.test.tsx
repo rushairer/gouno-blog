@@ -104,6 +104,13 @@ describe("ConnectorWorkspace", () => {
     expect(
       (await screen.findAllByText("Newsletter sandbox")).length,
     ).toBeGreaterThan(0);
+    const outboxRow = screen
+      .getByText("#9 · run-1", { selector: "strong" })
+      .closest('div[class*="sm:flex-row"]');
+    expect(outboxRow).not.toBeNull();
+    expect(
+      within(outboxRow as HTMLElement).getByText(/0 attempts/),
+    ).toBeInTheDocument();
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Start mock OAuth" }));
@@ -164,15 +171,25 @@ describe("ConnectorWorkspace", () => {
     const connectorDrawer = screen.getByRole("dialog", {
       name: "Add Connector Profile",
     });
+    expect(
+      within(connectorDrawer).getByRole("switch", {
+        name: "Enable Connector",
+      }),
+    ).toBeChecked();
+    expect(
+      within(connectorDrawer).getByText(
+        "Newsletter, Social, and Webhook currently allow Sandbox Mock only and never perform real external writes.",
+      ),
+    ).toBeInTheDocument();
     await user.click(
       within(connectorDrawer).getByRole("combobox", { name: "Kind" }),
     );
     await user.click(screen.getByRole("option", { name: "Search Console" }));
     expect(
-      within(connectorDrawer).getByText(
-        "Sandbox (uncheck for read-only Google OAuth)",
-      ),
-    ).toBeInTheDocument();
+      within(connectorDrawer).getByRole("switch", {
+        name: "Sandbox (turn off for read-only Google OAuth)",
+      }),
+    ).toBeChecked();
     await user.click(
       within(connectorDrawer).getByRole("button", { name: "Cancel" }),
     );

@@ -123,6 +123,26 @@ async function pairScreenshot(showcase, product, label, testInfo) {
   }
 }
 
+async function pairLocatorScreenshot(
+  showcaseLocator,
+  productLocator,
+  label,
+  testInfo,
+) {
+  for (const [kind, locator] of [
+    ["showcase", showcaseLocator],
+    ["product", productLocator],
+  ]) {
+    await expect(locator).toBeVisible();
+    const path = testInfo.outputPath(`${label}-${kind}.png`);
+    await locator.screenshot({ path });
+    await testInfo.attach(`${label}-${kind}`, {
+      path,
+      contentType: "image/png",
+    });
+  }
+}
+
 async function openPair(
   browser,
   fixtureId,
@@ -654,6 +674,57 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
       `ai-settings-${tab.replaceAll(" ", "-")}`,
       testInfo,
     );
+  }
+
+  await showcase
+    .getByRole("tab", { name: "Sandbox 连接器", exact: true })
+    .click();
+  await product
+    .getByRole("tab", { name: "Sandbox 连接器", exact: true })
+    .click();
+
+  for (const page of [showcase, product]) {
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Outbox 沙箱" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Profile" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("幂等键")).toBeVisible();
+    await expect(page.getByLabel("Payload JSON")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "加入 Outbox", exact: true }),
+    ).toBeVisible();
+  }
+
+  const showcaseOutbox = showcase
+    .locator('[data-slot="card"]')
+    .filter({
+      has: showcase.getByRole("heading", { level: 2, name: "Outbox 沙箱" }),
+    })
+    .first();
+  const productOutbox = product
+    .locator('[data-slot="card"]')
+    .filter({
+      has: product.getByRole("heading", { level: 2, name: "Outbox 沙箱" }),
+    })
+    .first();
+  expect(await styleFingerprint(productOutbox)).toEqual(
+    await styleFingerprint(showcaseOutbox),
+  );
+  await pairLocatorScreenshot(
+    showcaseOutbox,
+    productOutbox,
+    "ai-settings-Sandbox-连接器-outbox",
+    testInfo,
+  );
+
+  for (const page of [showcase, product]) {
+    await page
+      .getByRole("heading", { level: 1, name: "AI 设置" })
+      .evaluate((element) =>
+        element.scrollIntoView({ block: "start", inline: "nearest" }),
+      );
   }
 
   for (const { tab, createLabel, backLabel } of [
