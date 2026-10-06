@@ -1,6 +1,6 @@
 # 代码质量与安全评估：2026-10-06
 
-本次评估基于 `9a0925b4`（`chore(deps): finalize dependency and deployment baseline`）以及当前工作树中的依赖、安全和 CI 改动。评估覆盖后端、Seed、前端、Playwright、Docker Compose、GitHub Actions、模块完整性和敏感配置边界。
+本次评估从 `9a0925b4`（`chore(deps): finalize dependency and deployment baseline`）起持续复核，并以 2026-10-06 收口 PR #332 的最新验证 HEAD 为最终事实源。评估覆盖后端、Seed、前端、Playwright、Docker Compose、GitHub Actions、镜像供应链、模块完整性和敏感配置边界。
 
 ## 已完成的更新
 
@@ -112,3 +112,36 @@ PR #332 首次对 frontend runtime 镜像执行 Trivy 后，旧 `nginx:stable-al
 - Vite 主入口 chunk 仍约 **856.37 kB**（gzip 约 **268.34 kB**），超过 500 kB warning line；后续应按路由/功能域分阶段 code-splitting，并对涉及的认证 Product path 重新走 Showcase parity。
 - 控制器错误映射仍存在若干直接向 4xx 响应透出 `err.Error()` 的历史实现；已有 `controllerutil.WriteDomainError` 中央映射，但要按 domain 逐组迁移并补 API 契约测试，不能在安全收口中批量替换。Connector controller 不得因该项破坏 Module Hold。
 - `GO-2026-5932` 仍只存在于 required module 的不可达 `golang.org/x/crypto/openpgp` 路径；govulncheck 仍为 0 个可达漏洞，且当前无可用上游修复版本。
+
+
+### PR #332 最新 HEAD 最终复核
+
+在最新验证 HEAD `b4b59d43ef14018491bc0f285533024fad5f00a7` 上再次执行完整相关门禁，结果如下：
+
+- **CI `37483970444`：SUCCESS**
+  - Backend 使用 **Go 1.27.1**；`go mod verify`、tests/coverage、`go test -race ./...`、`go vet ./...`、govulncheck 全部通过。
+  - govulncheck：**0 个代码可达漏洞、0 个 imported-package 漏洞、1 个 required-module 不可达提示**；该模块级提示继续对应既有 `GO-2026-5932` 跟踪项。
+  - Seed quality、Isolated database integration、Dependency review、Compose config、Image publish contract 全部通过。
+  - Frontend runner 为 **Node v24.21.0**，满足 `>=24.15 <25`；`npm ci`、`npm audit --audit-level=moderate`、`npm run quality` 全部通过，59/59 test files、243/243 tests 成功。
+- **Images `37483970606`：SUCCESS**
+  - backend / frontend / seed 三张镜像均完成 amd64/arm64 build；
+  - 三张镜像的本地扫描镜像均同时通过 **Trivy + Grype** fixable HIGH/CRITICAL 阻断门禁；
+  - frontend 旧 runtime 曾暴露的 9 个 fixable HIGH 已通过已记录的 Nginx immutable digest 更新和显式 `libexpat=2.8.5-r0` / `pcre2=10.49-r0` 修复消除，没有增加 CVE ignore，也没有降低 severity threshold。
+- **Gosso Release BFF Compatibility `37483970743`：SUCCESS**，Confidential BFF / OIDC 发布兼容边界保持成立。
+- **Blog Showcase Parity `37483970528`：SUCCESS**
+  - paired evidence artifact `11423365528`
+  - SHA-256 `ed93416c243e9730c32c3220b72f3bdd105cca75f7a07fa08cabfe5a8f779a6e`
+  - manual-first certification ledger、AI Settings / AI Operations source parity、canonical rendered comparison 全部通过。
+- **UI Browser Acceptance `37483970621`：SUCCESS**
+  - full rendered Playwright acceptance 通过；
+  - artifact `11422713571`
+  - SHA-256 `3ac57a8feda654e6e19084f0bb16df4b6ea734a6980cff70d9a6d1b734853693`。
+
+最终确认的非阻断剩余风险没有被本轮伪装成“已解决”：
+
+- Frontend oxlint 仍为 **74 warnings / 0 errors**；其中包含 effect 同步 setState、Hook dependency、render purity/ref、Fast Refresh、unused/escape 等类型。应按页面/功能域分批修复并重新走对应 parity，Connector Workspace 继续受 Connector Module Hold 保护。
+- Vite 主入口仍为 **856.37 kB**（gzip **268.34 kB**），超过 500 kB warning line；应后续按依赖/路由边界做受控 code-splitting，不在本次安全收口中盲目拆包。
+- 控制器仍有若干历史 4xx 路径直接使用 `err.Error()`；应围绕 `controllerutil.WriteDomainError` 分 domain 收敛并补 API 契约测试，禁止借此修改 Connector 产品行为。
+- `GO-2026-5932` 当前仍无可用修复版本且调用不可达，继续跟踪上游依赖移除路径。
+
+边界复核：本轮没有修改 Connector 产品行为，没有放松 Confidential BFF / HttpOnly Secure SameSite session / OIDC identity 校验，没有改变 canonical `@gouno/ui` registry 依赖；生产 Compose 继续对一方镜像要求显式 immutable digest，本地入口仍只使用标准 443/80，没有引入 8443。
