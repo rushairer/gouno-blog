@@ -107,7 +107,8 @@ This document defines the **immutable architectural rules, security baselines, a
 
 ## Dependency Baseline Invariants
 
-- `blog-frontend` production and CI runtime is Node 24 LTS. Keep `@types/node` on the same major. A future Node major migration must update Docker builders, CI setup, `package.json` engine metadata, lockfile metadata, and Node type declarations as one reviewed change.
+- `blog-frontend` production and CI runtime is Node 24 LTS, with a project engine floor of Node 24.15 to satisfy the supported jsdom 30 toolchain. Keep `@types/node` on the same major. A future Node major migration must update Docker builders, CI setup, `package.json` engine metadata, lockfile metadata, and Node type declarations as one reviewed change.
+- TypeScript 7.0 is the CLI compiler baseline but does not expose the legacy JavaScript Compiler API. Keep `@typescript/native` aliased to TypeScript 7 for `tsc`, while the `typescript` package key is aliased to `@typescript/typescript6` for repository AST/governance scripts. Do not collapse these into a single TypeScript 7 dependency until an explicit API migration is reviewed.
 - Prettier `3.8.5` is an intentional governance pin while certified Product paths are frozen. Patch updates may be evaluated normally; formatter minor/major changes that rewrite certified Product source require an explicit certification-impact review before adoption rather than automatic dependency churn.
-- Dependency freshness does not mean choosing the numerically highest major. Runtime, type declarations, production compatibility, immutable deployment inputs, and manual-first Showcase certification must remain aligned.
+- Dependency freshness does not mean choosing the numerically highest major. Runtime, type declarations, compiler CLI, programmatic API consumers, production compatibility, immutable deployment inputs, and manual-first Showcase certification must remain aligned.
 
