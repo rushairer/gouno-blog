@@ -9,6 +9,14 @@ updates:
       time: "04:00"
       timezone: Asia/Shanghai
     open-pull-requests-limit: 10
+    # Keep compile-time/runtime and frozen-certification policy aligned.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "prettier"
+        versions:
+          - ">=3.9.0 <4.0.0"
     groups:
       npm-minor-patch:
         patterns:
@@ -89,6 +97,11 @@ updates:
       time: "05:15"
       timezone: Asia/Shanghai
     open-pull-requests-limit: 5
+    # Node 24 is the supported LTS runtime; keep digest/patch updates within it.
+    ignore:
+      - dependency-name: "node"
+        update-types:
+          - "version-update:semver-major"
     groups:
       frontend-docker-minor-patch:
         patterns:
