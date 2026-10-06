@@ -18,7 +18,8 @@ RUN npm run build
 # Runtime stage
 FROM nginx:stable-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
 
-RUN mkdir -p /etc/nginx/snippets \
+RUN apk add --no-cache libexpat=2.8.5-r0 pcre2=10.49-r0 \
+    && mkdir -p /etc/nginx/snippets \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
     && touch /var/run/nginx.pid \
     && chown nginx:nginx /var/run/nginx.pid
