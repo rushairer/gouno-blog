@@ -5,7 +5,7 @@
   already-published downstream application image; Blog's own target rows remain
   blocked until the tag workflow publishes and attaches their digest files.
 - [ ] Backend, seed, frontend, dependency, and vulnerability gates pass.
-- [ ] Production Compose defaults first-party application images to `main`, keeps third-party images digest-pinned, and rejects missing secrets.
+- [ ] Production Compose fails closed unless every first-party application image is supplied as an immutable `version@sha256:digest` reference; third-party images remain digest-pinned and missing secrets are rejected.
 - [ ] Cookie, CSRF, CORS, callback, authorization, and security-header tests pass.
 - [ ] Authentication deployment contract passes: GOSSO uses
   `/login` on the SSO origin, and Blog does not reintroduce a `/login` route,
