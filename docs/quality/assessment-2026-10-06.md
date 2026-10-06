@@ -64,3 +64,14 @@ govulncheck 仍报告 `GO-2026-5932`：`golang.org/x/crypto/openpgp` 未维护�
 - 这些问题已确认存在，但修复会触及多个已认证 Product owned paths，必须按页面/功能成组处理并重新走 Showcase parity，而不是在安全收口 PR 中批量重写。
 
 govulncheck 复核仍为 **0 个可达漏洞**；`GO-2026-5932` 只存在于 required module 的不可达 `golang.org/x/crypto/openpgp` 路径，当前无上游修复版本，继续作为依赖移除风险跟踪项。
+
+
+### 镜像扫描首次落地发现与处置
+
+PR #332 首次对 frontend runtime 镜像执行 Trivy 后，旧 `nginx:stable-alpine@sha256:dc5069ad...` 被阻断，发现 **9 个可修复 HIGH / 0 CRITICAL**：
+
+- `libexpat`：`2.8.4-r0`，CVE-2026-93990，修复版本 `2.8.5-r0`；
+- `libuuid/util-linux`：`2.42.1-r0`，包含 CVE-2026-53612/53613/53614/76642/78408/78409/78410，修复线为 `2.42.3-r0/r1`；
+- `pcre2`：`10.48-r0`，CVE-2026-103111，修复版本 `10.49-r0`。
+
+本轮没有降低扫描阈值或增加忽略项，而是仅将 frontend runtime 的 Nginx immutable digest 更新为当前 `stable-alpine` index digest `sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94`。最终是否清除上述风险，以随后在 Docker daemon 中重新执行的 Trivy + Grype 结果为准。
