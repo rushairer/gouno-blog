@@ -145,3 +145,19 @@ PR #332 首次对 frontend runtime 镜像执行 Trivy 后，旧 `nginx:stable-al
 - `GO-2026-5932` 当前仍无可用修复版本且调用不可达，继续跟踪上游依赖移除路径。
 
 边界复核：本轮没有修改 Connector 产品行为，没有放松 Confidential BFF / HttpOnly Secure SameSite session / OIDC identity 校验，没有改变 canonical `@gouno/ui` registry 依赖；生产 Compose 继续对一方镜像要求显式 immutable digest，本地入口仍只使用标准 443/80，没有引入 8443。
+
+
+### 2026-10-06 OpenAI required-stream 回归修复
+
+Agent Run #62 暴露了 OpenAI-compatible Responses API 的 streaming fallback 覆盖缺口。上游返回：
+
+`{"error":{"message":"Stream must be set to true","type":"bad_response_status_code","param":"","code":"bad_response_status_code"}}`
+
+此前 PR #294 已实现 `stream_mode=auto` 下的安全 fallback：仅当 400/422 明确表达“必须 streaming”时，才以 `stream:true` 重试；但错误分类器只覆盖 `stream must be true`、`streaming is required` 等措辞，没有覆盖 `stream must be set to true`，因此该响应没有进入 fallback。这不是 fallback 被后续代码删除，而是原修复的错误文案枚举不完整。
+
+本轮修复：
+
+- 补充 `stream must be set to true`、`stream must be enabled`、`stream is required`、`requires streaming`、`set stream to true` 等明确 required-stream 变体；仍只对 HTTP 400/422 生效，避免对普通上游错误误切流式模式。
+- 新增 Responses API 回归测试，直接使用 Run #62 的原始错误 JSON，验证首请求保持 auto 非流式、第二请求自动携带 `stream:true`，并正确解析 SSE 输出。
+- 修正 `generateWithRetry` 的错误计数：不可重试的 400 第一轮即停止时，现在报告 `after 1 attempt`，不再固定显示 `after 3 attempts`；对应测试同时断言实际 Provider 调用次数。
+- `stream_mode=never` 仍保持强制关闭语义；显式选择 never 的 Provider 不会被自动 fallback 覆盖。
