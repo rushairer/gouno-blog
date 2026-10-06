@@ -157,7 +157,9 @@ describe("ConnectorWorkspace", () => {
     );
 
     await screen.findAllByText("Primary newsletter");
-    expect(screen.getByText("Primary newsletter · 0 attempts")).toBeInTheDocument();
+    expect(
+      screen.getByText("Primary newsletter · 0 attempts"),
+    ).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Add Connector Profile" }),
