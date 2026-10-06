@@ -42,8 +42,13 @@ func requiresStreamingFallback(err error) bool {
 	message := strings.ToLower(upstreamErr.Body)
 	for _, hint := range []string{
 		"stream must be true",
+		"stream must be set to true",
+		"stream must be enabled",
+		"stream is required",
 		"streaming is required",
 		"streaming required",
+		"requires streaming",
+		"set stream to true",
 		"only support stream",
 		"only supports stream",
 		"only support streaming",
