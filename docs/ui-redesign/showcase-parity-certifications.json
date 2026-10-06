@@ -122,13 +122,13 @@
     {
       "id": "blog-public-account",
       "scope": "Public Blog + Blog Account",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-22",
+      "reviewDate": "2026-10-06",
       "manualReview": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md",
       "reviewedRefs": {
-        "blog": "bea9ea122c5e82877149ac0983f639660f27ae42",
-        "gounoUi": "4495147ae0b9807d2e5c9137187cfdc3e906cceb"
+        "blog": "01278d5046dfd74bcf78d9c35832141beb010675",
+        "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
       },
       "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
@@ -175,35 +175,40 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 35721612018,
+            "id": 37481262324,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35721612060,
+            "id": 37481262325,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 35721612086,
+            "id": 37481262300,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 35721611974,
+            "id": 37481262167,
+            "result": "success"
+          },
+          {
+            "name": "Gosso Release BFF Compatibility",
+            "id": 37481262153,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10692410965,
-            "name": "blog-showcase-parity-35721612018",
-            "sha256": "ee2e73a1df99eb70eaa98a994d237961a14040c846787d20969b95f02413d012"
+            "id": 11422440290,
+            "name": "blog-showcase-parity-37481262324",
+            "sha256": "3b1f85efa588f36b32758bce8937e13b3471411bf5b804b01c7db87feb4bf900"
           },
           {
-            "id": 10691856972,
-            "name": "blog-browser-acceptance-35721612060",
-            "sha256": "d6296f9eb13d3092c8d93d9d873ef3b0e1bbc0715dfeb9afb73da2a028f2ba71"
+            "id": 11422060992,
+            "name": "blog-browser-acceptance-37481262325",
+            "sha256": "5b62655704fbea7d6dcb5cc643f7ae8c7a03b1bb33e6b3edb755344770081a60"
           }
         ]
       },
@@ -228,7 +233,7 @@
         "blog-not-found"
       ],
       "previousManualReview": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md",
-      "recertificationReason": "MarkdownRenderer URL-scheme hardening changed a certified Product-owned path at 8a2310add7e69b108b68f823145fbafd942b4c37; manual-first visual/browser recertification is in progress."
+      "recertificationReason": "MarkdownRenderer URL-scheme hardening was manually source-reviewed and re-certified against current Gouno UI main with fresh successful Showcase rendered parity and full Blog product browser acceptance; canonical presentation remains unchanged and the security boundary is retained."
     },
     {
       "id": "blog-admin-core-wave1",
@@ -409,13 +414,13 @@
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-09-24",
+      "reviewDate": "2026-10-06",
       "manualReview": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md",
       "reviewedRefs": {
-        "blog": "57c3249d14e15e8eb71a3dbc18bced516cda1e14",
-        "gounoUi": "69019c4175bde817d56c5037f95fbc382b122c98"
+        "blog": "01278d5046dfd74bcf78d9c35832141beb010675",
+        "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
       },
       "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
@@ -465,35 +470,40 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 35939650752,
+            "id": 37481262324,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 35939650710,
+            "id": 37481262325,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 35939650761,
+            "id": 37481262300,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 35939650750,
+            "id": 37481262167,
+            "result": "success"
+          },
+          {
+            "name": "Gosso Release BFF Compatibility",
+            "id": 37481262153,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 10784805484,
-            "name": "blog-showcase-parity-35939650752",
-            "sha256": "ef4eea6cb521da4731c9ffff092426d9e741cd6d213c91d408263192a58c3194"
+            "id": 11422440290,
+            "name": "blog-showcase-parity-37481262324",
+            "sha256": "3b1f85efa588f36b32758bce8937e13b3471411bf5b804b01c7db87feb4bf900"
           },
           {
-            "id": 10784860914,
-            "name": "blog-browser-acceptance-35939650710",
-            "sha256": "d2099536df24779c92c1942b7e57955bde588fc99df959b85cca6c4f9fceed62"
+            "id": 11422060992,
+            "name": "blog-browser-acceptance-37481262325",
+            "sha256": "5b62655704fbea7d6dcb5cc643f7ae8c7a03b1bb33e6b3edb755344770081a60"
           }
         ]
       },
@@ -513,7 +523,7 @@
         "blog-admin-site-settings"
       ],
       "previousManualReview": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md",
-      "recertificationReason": "MarkdownRenderer URL-scheme hardening changed a certified Product-owned path at 8a2310add7e69b108b68f823145fbafd942b4c37; manual-first visual/browser recertification is in progress."
+      "recertificationReason": "MarkdownRenderer URL-scheme hardening was manually source-reviewed and re-certified against current Gouno UI main with fresh successful Showcase rendered parity and full Blog product browser acceptance; canonical presentation remains unchanged and the security boundary is retained."
     }
   ]
 }
