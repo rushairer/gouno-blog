@@ -13,13 +13,30 @@ Affected certification owners:
 - `blog-public-account`
 - `blog-admin-core-wave3`
 
-## Manual-first review plan
+## Manual source review
 
-The certification remains intentionally non-verified until all of the following are captured on the recertification PR:
+The previously certified Public Blog source (`bea9ea122c5e82877149ac0983f639660f27ae42`) and Blog Admin Wave 3 source (`57c3249d14e15e8eb71a3dbc18bced516cda1e14`) have been compared with `8a2310add7e69b108b68f823145fbafd942b4c37`.
 
-1. current Blog Product browser acceptance on the exact hardened Product source;
-2. current Gouno UI Showcase parity rendered comparison;
-3. source review confirming the Markdown security transform does not alter canonical composition;
-4. fresh workflow and artifact identifiers recorded in the certification ledger.
+The Markdown renderer's canonical presentation is unchanged:
 
-The current exact Product HEAD `8a2310add7e69b108b68f823145fbafd942b4c37` already has successful full Blog rendered browser acceptance; the fresh cross-Showcase evidence will be collected from this recertification PR before the status is returned to `verified`.
+- heading levels, semantic Gouno UI variants and spacing are unchanged;
+- paragraph, list, blockquote, table, code-block and image classes are unchanged;
+- external-link target/rel behavior is unchanged;
+- the only Product rendering change is an explicit `react-markdown` `urlTransform` safety boundary that removes unsafe URL schemes.
+
+This review therefore finds no intentional Showcase composition or visual-language change.
+
+## Exact Product browser evidence
+
+The exact hardened Product HEAD `8a2310add7e69b108b68f823145fbafd942b4c37` completed **UI Browser Acceptance** successfully:
+
+- workflow run: `37471084862`
+- artifact: `blog-browser-acceptance-37471084862`
+- artifact id: `11416809057`
+- artifact SHA-256: `081dc94dc13f560fe9e7a12d4273e3289ca5c1a941e69c12fc228705d64426f8`
+
+## Remaining recertification evidence
+
+The certification intentionally remains non-verified until the recertification PR captures fresh current-Gouno-UI Showcase parity rendered comparison. Once that run passes, its workflow/artifact identifiers must be recorded in the certification ledger and this document can move to **verified**.
+
+No certification status is being bypassed merely to make CI green.
