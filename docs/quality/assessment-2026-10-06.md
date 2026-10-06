@@ -52,7 +52,7 @@ govulncheck 仍报告 `GO-2026-5932`：`golang.org/x/crypto/openpgp` 未维护�
 
 本轮确认并处理的镜像供应链问题：
 
-- backend / seed Dockerfile 的 Alpine `apk add` 改为显式版本：`ca-certificates=20260909-r0`、`tzdata=2026d-r0`；
+- backend / seed Dockerfile 的 Alpine `apk add` 改为显式版本：`ca-certificates=20260909-r0`、`tzdata=2026e-r0`。首次 PR Docker 验证发现 Alpine 在线仓库已从网页缓存记录的 `2026d-r0` 更新为 `2026e-r0`，最终锁定值以实际 Docker daemon 的仓库解析结果为准；
 - PR 镜像新增 SHA 固定的 Trivy `v0.36.0` 与 Grype/Anchore Scan `v7.4.2` 双扫描，fixable HIGH/CRITICAL 漏洞阻断合并；
 - 发布镜像在 GHCR push 后按 `image@sha256:...` 精确 digest 再扫描，随后才进入签名与 SBOM 交付；
 - 新增 `.github/scripts/test_image_security_contract.py`，防止 scanner、digest 扫描或 Alpine package pin 被后续改动静默移除。
