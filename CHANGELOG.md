@@ -8,7 +8,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 ### Security
 
 - Gate container images with SHA-pinned Trivy and Grype scans for fixable HIGH/CRITICAL vulnerabilities, both on pull-request local images and on published immutable GHCR digests.
-- Refresh the frontend Nginx runtime image to the current immutable `stable-alpine` digest after the new scanner gate identified nine fixable HIGH vulnerabilities in the previous runtime image.
+- Refresh the frontend Nginx runtime image to the current immutable `stable-alpine` digest and explicitly pin patched `libexpat=2.8.5-r0` / `pcre2=10.49-r0` after the new scanner gate identified fixable HIGH vulnerabilities in the previous runtime layers.
 - Pin Alpine `ca-certificates` and `tzdata` package revisions used by backend/seed Dockerfiles so image package installation is reproducible.
 
 
