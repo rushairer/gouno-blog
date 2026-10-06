@@ -12,10 +12,10 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-10-05",
-      "manualReview": "docs/ui-redesign/blog-admin-csa-a006-recertification.md",
+      "reviewDate": "2026-10-06",
+      "manualReview": "docs/ui-redesign/blog-admin-csa-a007-pending-recertification.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
         "blog": "0a74d106bb60cc21b15acba76437d9f4dacdaa8f",
@@ -109,8 +109,10 @@
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a006-pending-recertification.md",
-      "recertificationReason": "CSA-A006 API Access propagation is merged, manually reviewed, covered by fresh Blog exact-head evidence, and reciprocally accepted by Gouno UI Blog Consumer Parity. Gouno UI main now records the Blog consumer impact as recertified."
+      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a006-recertification.md",
+      "recertificationReason": "Gouno UI PR #156 changes the owned blog-admin-ai-settings Canonical Connector path to remove synthetic Connector state and align it with the current Blog Product contract. Manual-first governance requires reopening before reciprocal parity can accept the candidate.",
+      "reopenedBy": "CSA-A007 Connector Product Fidelity Correction",
+      "reopenedDate": "2026-10-06"
     },
     {
       "id": "blog-admin-core-support",
