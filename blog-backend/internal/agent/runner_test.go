@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -66,5 +68,35 @@ func TestAppendRSSSourceLinksDoesNotAppendWhenContentAlreadyHasInlineLinks(t *te
 	}
 	if strings.Contains(payload.Content, "## 原文链接") {
 		t.Fatalf("should not append source links when content already has inline links: %s", payload.Content)
+	}
+}
+
+
+type retryTestProvider struct {
+	calls int
+	err   error
+}
+
+func (p *retryTestProvider) Name() string  { return "retry-test" }
+func (p *retryTestProvider) Model() string { return "test-model" }
+
+func (p *retryTestProvider) Generate(context.Context, provider.Request) (provider.Result, error) {
+	p.calls++
+	return provider.Result{}, p.err
+}
+
+func TestGenerateWithRetryReportsActualAttemptsForNonRetryableError(t *testing.T) {
+	client := &retryTestProvider{
+		err: errors.New(`upstream openai returned 400: {"error":{"message":"Stream must be set to true"}}`),
+	}
+	_, attempts, err := generateWithRetry(context.Background(), client, provider.Request{})
+	if err == nil {
+		t.Fatal("expected provider error")
+	}
+	if attempts != 1 || client.calls != 1 {
+		t.Fatalf("attempts=%d calls=%d, want 1/1", attempts, client.calls)
+	}
+	if !strings.Contains(err.Error(), "provider request failed after 1 attempt:") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

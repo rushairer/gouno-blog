@@ -190,8 +190,12 @@ func (r *Runner) notifyRunFailure(ctx context.Context, runID int64, message stri
 const providerAttempts = 3
 
 func generateWithRetry(ctx context.Context, client provider.Provider, request provider.Request) (provider.Result, int, error) {
-	var lastErr error
+	var (
+		lastErr  error
+		attempts int
+	)
 	for attempt := 1; attempt <= providerAttempts; attempt++ {
+		attempts = attempt
 		result, err := client.Generate(ctx, request)
 		if err == nil {
 			return result, attempt, nil
@@ -207,7 +211,11 @@ func generateWithRetry(ctx context.Context, client provider.Provider, request pr
 		case <-time.After(delay):
 		}
 	}
-	return provider.Result{}, providerAttempts, fmt.Errorf("provider request failed after %d attempts: %w", providerAttempts, lastErr)
+	attemptWord := "attempts"
+	if attempts == 1 {
+		attemptWord = "attempt"
+	}
+	return provider.Result{}, attempts, fmt.Errorf("provider request failed after %d %s: %w", attempts, attemptWord, lastErr)
 }
 
 func retryableProviderError(err error) bool {
