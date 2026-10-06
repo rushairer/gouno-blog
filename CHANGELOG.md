@@ -5,6 +5,12 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Security
+
+- Gate container images with SHA-pinned Trivy and Grype scans for fixable HIGH/CRITICAL vulnerabilities, both on pull-request local images and on published immutable GHCR digests.
+- Pin Alpine `ca-certificates` and `tzdata` package revisions used by backend/seed Dockerfiles so image package installation is reproducible.
+
+
 ### Changed
 
 - Pin the isolated Playwright browser-acceptance dependency at 1.63.0 with a committed lockfile, run it through `npm ci`, and audit its complete dependency graph in CI.
