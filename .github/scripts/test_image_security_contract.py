@@ -18,7 +18,7 @@ class ImageSecurityContractTest(unittest.TestCase):
         seed = (REPO_ROOT / "seed" / "Dockerfile").read_text(encoding="utf-8")
 
         self.assertIn("ca-certificates=20260909-r0", backend)
-        self.assertIn("tzdata=2026d-r0", backend)
+        self.assertIn("tzdata=2026e-r0", backend)
         self.assertIn("ca-certificates=20260909-r0", seed)
         self.assertNotIn("apk add --no-cache ca-certificates tzdata", backend)
         self.assertNotIn("apk --no-cache add ca-certificates \\\\", seed)
@@ -44,8 +44,9 @@ class ImageSecurityContractTest(unittest.TestCase):
             "gouno-blog-seed",
         ):
             digest_ref = (
-                f"${{ env.REGISTRY }}/${{ github.repository_owner }}/{image}"
-                "@${{ steps.build.outputs.digest }}"
+                "${{ env.REGISTRY }}/${{ github.repository_owner }}/"
+                + image
+                + "@${{ steps.build.outputs.digest }}"
             )
             self.assertGreaterEqual(workflow.count(digest_ref), 2)
 
