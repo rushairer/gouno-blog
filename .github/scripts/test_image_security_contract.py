@@ -16,10 +16,13 @@ class ImageSecurityContractTest(unittest.TestCase):
     def test_alpine_packages_are_version_pinned(self) -> None:
         backend = (REPO_ROOT / "blog-backend" / "Dockerfile").read_text(encoding="utf-8")
         seed = (REPO_ROOT / "seed" / "Dockerfile").read_text(encoding="utf-8")
+        frontend = (REPO_ROOT / "blog-frontend" / "Dockerfile").read_text(encoding="utf-8")
 
         self.assertIn("ca-certificates=20260909-r0", backend)
         self.assertIn("tzdata=2026e-r0", backend)
         self.assertIn("ca-certificates=20260909-r0", seed)
+        self.assertIn("libexpat=2.8.5-r0", frontend)
+        self.assertIn("pcre2=10.49-r0", frontend)
         self.assertNotIn("apk add --no-cache ca-certificates tzdata", backend)
         self.assertNotIn("apk --no-cache add ca-certificates \\\\", seed)
 
