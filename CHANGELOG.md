@@ -7,6 +7,10 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Pin the isolated Playwright browser-acceptance dependency at 1.63.0 with a committed lockfile, run it through `npm ci`, and audit its complete dependency graph in CI.
+- Verify Go module contents during backend and seed CI and pin the govulncheck tool to its v1.6.0 commit for reproducible supply-chain checks.
+- Resolve token revocation through the OIDC discovery `revocation_endpoint` and require the endpoint to share the configured issuer HTTPS origin.
+
 - Make first-party production application images follow the floating `main` channel with always-pull semantics by default; fixed release tags or digests remain explicit deployment overrides, while third-party infrastructure images stay digest-pinned.
 - Upgrade the frontend's confidential-BFF client dependency from `@gosso/client` 0.9.2 to the registry-published 0.9.3 release.
 - Align the bundled Gosso deployment contract with the final 1.6 security baseline: keep only the explicit Docker private back-channel subnet, advance the production Gosso image example to v1.6.1, and gate confidential-BFF RFC 7009 revocation against the published v1.6.1 artifact.
@@ -21,6 +25,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Reject unsafe Markdown URL schemes, including `javascript:`, `data:`, and `blob:`, for rendered links and images.
 - Keep the router PostVersion restore test adapter aligned with the canonical four-argument restore contract.
 
 - Fix `.panel-header` margin/padding inside `.workspace-panel` to eliminate double horizontal inset and align perfectly with table and form content.

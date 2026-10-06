@@ -54,6 +54,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             blog-frontend/package-lock.json
+            blog-frontend/e2e/package-lock.json
             upstream-gouno-ui/package-lock.json
 
       - name: Install Blog dependencies
@@ -65,11 +66,16 @@ jobs:
         run: npm ci
 
       - name: Install isolated Playwright runtime
-        working-directory: blog-frontend
-        run: |
-          PLAYWRIGHT_VERSION=1.55.0
-          npm install --no-save --ignore-scripts @playwright/test@${PLAYWRIGHT_VERSION}
-          npx playwright install --with-deps chromium
+        working-directory: blog-frontend/e2e
+        run: npm ci
+
+      - name: Audit isolated Playwright dependencies
+        working-directory: blog-frontend/e2e
+        run: npm audit --audit-level=moderate
+
+      - name: Install Chromium
+        working-directory: blog-frontend/e2e
+        run: npx playwright install --with-deps chromium
 
       - name: Verify manual-first certification ledger
         working-directory: blog-frontend
@@ -92,8 +98,8 @@ jobs:
         run: node scripts/check-ai-ops-showcase-parity.mjs
 
       - name: Compare canonical rendered styles
-        working-directory: blog-frontend
-        run: npx playwright test --config=e2e/showcase-parity.config.mjs
+        working-directory: blog-frontend/e2e
+        run: npx playwright test --config=showcase-parity.config.mjs
 
       - name: Upload paired parity evidence
         if: always()

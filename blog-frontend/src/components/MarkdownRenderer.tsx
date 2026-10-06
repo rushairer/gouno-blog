@@ -1,12 +1,33 @@
 import { isValidElement, useMemo } from "react";
 import type { ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
+import type { Components, UrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { CodeBlock, Heading } from "@gouno/ui/core";
 import { useI18n } from "../i18n";
 import { markdownHeadingID } from "../utils/markdown";
+
+const MARKDOWN_BASE_ORIGIN = "https://blog.invalid";
+
+// Keep URL handling explicit because Markdown content can come from public
+// posts, imported pages, and AI output. react-markdown's default transform is
+// a useful baseline, but this renderer also owns a raw <img src> boundary.
+const safeMarkdownUrl: UrlTransform = (url, _key, _node) => {
+  const transformed = defaultUrlTransform(url);
+  if (!transformed) return "";
+
+  try {
+    const parsed = new URL(transformed, MARKDOWN_BASE_ORIGIN);
+    if (parsed.origin === MARKDOWN_BASE_ORIGIN) return transformed;
+    if (["http:", "https:", "mailto:", "tel:"].includes(parsed.protocol)) {
+      return transformed;
+    }
+  } catch {
+    // Invalid URLs are removed from the rendered attribute.
+  }
+  return "";
+};
 
 function textContent(value: ReactNode): string {
   if (typeof value === "string" || typeof value === "number") {
@@ -185,6 +206,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         skipHtml
+        urlTransform={safeMarkdownUrl}
         components={components}
       >
         {content}

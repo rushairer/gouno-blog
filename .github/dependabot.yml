@@ -2,6 +2,22 @@ version: 2
 
 updates:
   - package-ecosystem: npm
+    directory: /blog-frontend/e2e
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:30"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    groups:
+      e2e-npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
     directory: /blog-frontend
     schedule:
       interval: weekly

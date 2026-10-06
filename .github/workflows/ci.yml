@@ -42,6 +42,9 @@ jobs:
           go-version-file: blog-backend/go.mod
           cache-dependency-path: blog-backend/go.sum
 
+      - name: Verify Go modules
+        run: go mod verify
+
       - name: Test with coverage
         run: go test -coverprofile=coverage.out ./...
 
@@ -85,7 +88,7 @@ jobs:
         run: go vet ./...
 
       - name: Check known Go vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@19b0bb6a272792b9afa8a6983c3e9b9a1816947f ./... # v1.6.0
 
   database-integration:
     name: Isolated database integration
@@ -137,6 +140,9 @@ jobs:
           go-version-file: seed/go.mod
           cache-dependency-path: seed/go.sum
 
+      - name: Verify Go modules
+        run: go mod verify
+
       - name: Test
         run: go test ./...
 
@@ -144,7 +150,7 @@ jobs:
         run: go vet ./...
 
       - name: Check known Go vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@19b0bb6a272792b9afa8a6983c3e9b9a1816947f ./... # v1.6.0
 
   frontend:
     name: Frontend quality
@@ -167,8 +173,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit production npm dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Audit all npm dependencies
+        run: npm audit --audit-level=moderate
 
       - name: Verify Gouno UI registry release
         run: |

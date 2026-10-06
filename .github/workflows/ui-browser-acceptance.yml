@@ -40,13 +40,18 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: blog-frontend/package-lock.json
+          cache-dependency-path: |
+            blog-frontend/package-lock.json
+            blog-frontend/e2e/package-lock.json
 
       - name: Install product dependencies
         run: npm ci
 
       - name: Install isolated Playwright runner
-        run: cd e2e && npm install --package-lock=false
+        run: cd e2e && npm ci
+
+      - name: Audit isolated Playwright dependencies
+        run: cd e2e && npm audit --audit-level=moderate
 
       - name: Install Chromium
         run: cd e2e && npx playwright install --with-deps chromium

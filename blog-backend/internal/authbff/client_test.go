@@ -1,10 +1,14 @@
 package authbff
 
 import (
-	"github.com/golang-jwt/jwt/v5"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func TestSafeReturnToRejectsOpenRedirects(t *testing.T) {
@@ -53,5 +57,36 @@ func TestAuthorizationResponseRequiresExactIssuerAndState(t *testing.T) {
 	}
 	if constantTimeEqual(query.Get("iss"), "https://io84.com") || constantTimeEqual("", "") {
 		t.Fatal("issuer mismatch or empty value must not compare equal")
+	}
+}
+
+func TestRevokeTokenUsesDiscoveredEndpoint(t *testing.T) {
+	var gotPath string
+	var gotBody string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		body, _ := io.ReadAll(r.Body)
+		gotBody = string(body)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	client := &Client{
+		revokeEndpoint: server.URL + "/oidc/revoke",
+		httpClient:     server.Client(),
+		config:         Config{ClientID: "blog-bff", ClientSecret: "secret"},
+	}
+	if err := client.RevokeToken(t.Context(), "refresh-token", "refresh_token"); err != nil {
+		t.Fatalf("RevokeToken returned error: %v", err)
+	}
+	if gotPath != "/oidc/revoke" || gotBody != "token=refresh-token&token_type_hint=refresh_token" {
+		t.Fatalf("unexpected revocation request: path=%q body=%q", gotPath, gotBody)
+	}
+}
+
+func TestRevokeTokenRequiresDiscoveredEndpoint(t *testing.T) {
+	client := &Client{}
+	if err := client.RevokeToken(t.Context(), "access-token", "access_token"); err == nil {
+		t.Fatal("RevokeToken succeeded without a discovery revocation endpoint")
 	}
 }

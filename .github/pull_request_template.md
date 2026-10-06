@@ -26,7 +26,7 @@ Describe what changes and why. Keep the scope focused.
 - [ ] Backend: `go test ./...`
 - [ ] Backend: `go test -race ./...`
 - [ ] Backend: `go vet ./...`
-- [ ] Backend: `go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...`
+- [ ] Backend: `go run golang.org/x/vuln/cmd/govulncheck@19b0bb6a272792b9afa8a6983c3e9b9a1816947f ./...` (v1.6.0)
 - [ ] Database integration (isolated Docker): `python3 scripts/check-db-integration.py` from repository root; required tests executed, with no missing or skipped cases.
 - [ ] Frontend: `npm run quality` (includes UI and CSS contracts).
 - [ ] Compose / authentication deployment contract checked when deployment or auth config changes.

@@ -18,19 +18,21 @@ import (
 
 type providerMetadata struct {
 	EndSessionEndpoint                        string `json:"end_session_endpoint"`
+	RevocationEndpoint                        string `json:"revocation_endpoint"`
 	JWKSURI                                   string `json:"jwks_uri"`
 	AuthorizationResponseIssuerParamSupported bool   `json:"authorization_response_iss_parameter_supported"`
 }
 
 type Client struct {
-	config       Config
-	store        *Store
-	oauth        oauth2.Config
-	verifier     *oidc.IDTokenVerifier
-	endSession   string
-	httpClient   *http.Client
-	flowNow      func() time.Time
-	refreshGroup singleflight.Group
+	config         Config
+	store          *Store
+	oauth          oauth2.Config
+	verifier       *oidc.IDTokenVerifier
+	endSession     string
+	revokeEndpoint string
+	httpClient     *http.Client
+	flowNow        func() time.Time
+	refreshGroup   singleflight.Group
 }
 
 var ErrSessionExpired = errors.New("BFF session has reached its absolute lifetime")
@@ -94,6 +96,12 @@ func NewClient(ctx context.Context, config Config, store *Store, httpClient *htt
 			return nil, fmt.Errorf("OIDC %s must use the configured issuer HTTPS origin", label)
 		}
 	}
+	if metadata.RevocationEndpoint != "" {
+		parsed, endpointErr := absoluteHTTPSURL(metadata.RevocationEndpoint)
+		if endpointErr != nil || !sameOrigin(issuerURL, parsed) {
+			return nil, errors.New("OIDC revocation endpoint must use the configured issuer HTTPS origin")
+		}
+	}
 	endpoint.AuthStyle = oauth2.AuthStyleInHeader
 	return &Client{
 		config: config,
@@ -102,10 +110,11 @@ func NewClient(ctx context.Context, config Config, store *Store, httpClient *htt
 			ClientID: config.ClientID, ClientSecret: config.ClientSecret,
 			RedirectURL: config.RedirectURL, Scopes: append([]string(nil), config.Scopes...), Endpoint: endpoint,
 		},
-		verifier:   provider.Verifier(&oidc.Config{ClientID: config.ClientID}),
-		endSession: metadata.EndSessionEndpoint,
-		httpClient: httpClient,
-		flowNow:    time.Now,
+		verifier:       provider.Verifier(&oidc.Config{ClientID: config.ClientID}),
+		endSession:     metadata.EndSessionEndpoint,
+		revokeEndpoint: metadata.RevocationEndpoint,
+		httpClient:     httpClient,
+		flowNow:        time.Now,
 	}, nil
 }
 
@@ -563,7 +572,9 @@ func (c *Client) RevokeToken(ctx context.Context, token string, tokenTypeHint st
 		return nil
 	}
 	ctx = c.withHTTPClient(ctx)
-	revokeEndpoint := strings.TrimRight(c.config.Issuer, "/") + "/oauth2/revoke"
+	if c.revokeEndpoint == "" {
+		return errors.New("OIDC provider does not advertise a token revocation endpoint")
+	}
 	form := url.Values{
 		"token": {token},
 	}
@@ -571,7 +582,7 @@ func (c *Client) RevokeToken(ctx context.Context, token string, tokenTypeHint st
 		form.Set("token_type_hint", tokenTypeHint)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, revokeEndpoint, strings.NewReader(form.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.revokeEndpoint, strings.NewReader(form.Encode()))
 	if err != nil {
 		return fmt.Errorf("create revoke request: %w", err)
 	}
