@@ -37,7 +37,7 @@ for (const file of COMPOSE_FILES) {
   }
 
   for (const variable of FIRST_PARTY_VARS) {
-    const marker = `image: ${${variable}:?`;
+    const marker = "image: ${" + variable + ":?";
     if (!content.includes(marker)) {
       failures.push(
         `${file}: first-party image ${variable} must be required with a fail-closed ${variable}:? expression`,
@@ -51,6 +51,17 @@ for (const file of COMPOSE_FILES) {
     checked.push(`${file}: ${imageRef}`);
 
     if (imageRef.startsWith("${")) {
+      const requiredFirstParty = FIRST_PARTY_VARS.some((variable) =>
+        imageRef.startsWith("${" + variable + ":?"),
+      );
+      if (requiredFirstParty) {
+        continue;
+      }
+      if (!imageRef.includes("@sha256:")) {
+        failures.push(
+          `${file}: variable image "${imageRef}" must either be a required first-party input or carry a digest-pinned default`,
+        );
+      }
       continue;
     }
 
