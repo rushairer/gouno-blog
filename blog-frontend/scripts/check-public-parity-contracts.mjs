@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import * as ts from "typescript";
+import * as TypeScriptModule from "typescript";
+const ts = TypeScriptModule.default ?? TypeScriptModule;
 
 const root = fileURLToPath(new URL("../src/", import.meta.url));
 const failures = [];
