@@ -2,8 +2,6 @@ module github.com/rushairer/blog-backend
 
 go 1.27.1
 
-toolchain go1.27.1
-
 require (
 	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/aws/aws-sdk-go-v2 v1.41.5
