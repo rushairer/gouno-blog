@@ -75,3 +75,6 @@ PR #332 首次对 frontend runtime 镜像执行 Trivy 后，旧 `nginx:stable-al
 - `pcre2`：`10.48-r0`，CVE-2026-103111，修复版本 `10.49-r0`。
 
 本轮没有降低扫描阈值或增加忽略项，而是仅将 frontend runtime 的 Nginx immutable digest 更新为当前 `stable-alpine` index digest `sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94`。最终是否清除上述风险，以随后在 Docker daemon 中重新执行的 Trivy + Grype 结果为准。
+
+
+第二次扫描验证显示，更新到当前 Nginx immutable digest 后，原来的 9 个 HIGH 已降至 **2 个可修复 HIGH / 0 CRITICAL**：仅剩 `libexpat 2.8.4-r0 -> 2.8.5-r0` 与 `pcre2 10.48-r0 -> 10.49-r0`。因此继续在 frontend runtime 层显式安装并锁定 `libexpat=2.8.5-r0`、`pcre2=10.49-r0`；仍不降低扫描阈值，等待 Trivy 与 Grype 的下一轮真实镜像复扫确认。
