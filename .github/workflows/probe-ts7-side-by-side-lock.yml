@@ -1,0 +1,36 @@
+name: TS7 Side-by-Side Lock Generator
+
+on:
+  push:
+    branches:
+      - probe/ts7-side-by-side-lock
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: probe/ts7-side-by-side-lock
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - name: Regenerate npm lockfile
+        working-directory: blog-frontend
+        run: npm install --package-lock-only
+      - name: Commit generated lockfile
+        run: |
+          git diff --check
+          if git diff --quiet -- blog-frontend/package-lock.json; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/package-lock.json
+          git commit -m "chore(deps): regenerate TypeScript side-by-side lockfile [skip ci]"
+          git push origin HEAD:probe/ts7-side-by-side-lock
