@@ -12,14 +12,14 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-06",
       "manualReview": "docs/ui-redesign/blog-admin-csa-a007-recertification.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
         "blog": "547e514e6c26f5799e264b53bc0f65c5f4ccf837",
-        "gounoUi": "6bc3d7dae217b9e398c9f0cd6c46375ae737e778"
+        "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
       },
       "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
@@ -70,7 +70,7 @@
           },
           {
             "name": "Gouno UI Blog Consumer Parity",
-            "id": 37440976238,
+            "id": 37441697599,
             "result": "success"
           }
         ],
@@ -86,9 +86,9 @@
             "sha256": "a8dcae5ecb8083984066336fef380d50c814d11837401e0ecdb382d645e36874"
           },
           {
-            "id": 11401013734,
-            "name": "gouno-ui-blog-consumer-parity-37440976238",
-            "sha256": "5ecc4f5bc5d8777ad23855143e404a161cab1220dbe195255f37429c377ca02c"
+            "id": 11402376851,
+            "name": "gouno-ui-blog-consumer-parity-37441697599",
+            "sha256": "f360c72a2210080616cc7039b21f6a88ac82dc33a7cd11bf90174b6021edbc3a"
           }
         ]
       },
@@ -110,9 +110,7 @@
         "blog-admin-ai-settings"
       ],
       "previousManualReview": "docs/ui-redesign/blog-admin-csa-a007-pending-recertification.md",
-      "recertificationReason": "CSA-A007 Connector Product fidelity correction is merged on both Canonical and Blog Product sides with fresh manual-first paired evidence. Local status intentionally remains pending until Gouno UI merges the upstream recertified consumer state and reciprocal Blog Consumer Parity succeeds against current Blog main.",
-      "reopenedBy": "CSA-A007 Connector Product Fidelity Correction",
-      "reopenedDate": "2026-10-06"
+      "recertificationReason": "CSA-A007 Connector Product fidelity correction is merged, manually reviewed, covered by fresh Blog exact-head evidence, and reciprocally accepted by Gouno UI Blog Consumer Parity. Gouno UI main now records the Blog consumer impact as recertified."
     },
     {
       "id": "blog-admin-core-support",
