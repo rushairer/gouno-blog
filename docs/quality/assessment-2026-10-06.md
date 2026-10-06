@@ -74,7 +74,41 @@ PR #332 首次对 frontend runtime 镜像执行 Trivy 后，旧 `nginx:stable-al
 - `libuuid/util-linux`：`2.42.1-r0`，包含 CVE-2026-53612/53613/53614/76642/78408/78409/78410，修复线为 `2.42.3-r0/r1`；
 - `pcre2`：`10.48-r0`，CVE-2026-103111，修复版本 `10.49-r0`。
 
-本轮没有降低扫描阈值或增加忽略项，而是仅将 frontend runtime 的 Nginx immutable digest 更新为当前 `stable-alpine` index digest `sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94`。最终是否清除上述风险，以随后在 Docker daemon 中重新执行的 Trivy + Grype 结果为准。
+本轮没有降低扫描阈值或增加忽略项，而是将 frontend runtime 的 Nginx immutable digest 更新为当前 `stable-alpine` index digest `sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94`，并继续针对剩余可修复包做显式版本修复。
 
 
-第二次扫描验证显示，更新到当前 Nginx immutable digest 后，原来的 9 个 HIGH 已降至 **2 个可修复 HIGH / 0 CRITICAL**：仅剩 `libexpat 2.8.4-r0 -> 2.8.5-r0` 与 `pcre2 10.48-r0 -> 10.49-r0`。因此继续在 frontend runtime 层显式安装并锁定 `libexpat=2.8.5-r0`、`pcre2=10.49-r0`；仍不降低扫描阈值，等待 Trivy 与 Grype 的下一轮真实镜像复扫确认。
+第二次扫描验证显示，更新到当前 Nginx immutable digest 后，原来的 9 个 HIGH 已降至 **2 个可修复 HIGH / 0 CRITICAL**：仅剩 `libexpat 2.8.4-r0 -> 2.8.5-r0` 与 `pcre2 10.48-r0 -> 10.49-r0`。因此在 frontend runtime 层显式安装并锁定 `libexpat=2.8.5-r0`、`pcre2=10.49-r0`。随后 PR Images run `37481262167` 中 backend / frontend / seed 三张镜像全部同时通过 Trivy 与 Grype，未降低 HIGH/CRITICAL 阻断阈值。
+
+
+### 最终技术门禁证据
+
+在技术变更 HEAD `01278d5046dfd74bcf78d9c35832141beb010675` 上完成以下正式验证：
+
+- **CI `37481262300`：SUCCESS**
+  - Backend quality：Go 1.27.1，module verify、tests/coverage、race、vet、govulncheck 全部成功；
+  - Seed quality：tests、vet、module verify、govulncheck 成功；
+  - Frontend quality：Node 24.x 环境下 `npm ci`、`npm audit`、`npm run quality` 成功；
+  - Isolated database integration、Dependency review、Compose config、Image publish contract 全部成功。
+- **Images `37481262167`：SUCCESS**
+  - backend / frontend / seed 均完成多架构 Docker build；
+  - 三张镜像均通过 Trivy 和 Grype 的 fixable HIGH/CRITICAL 阻断式扫描。
+- **Gosso Release BFF Compatibility `37481262153`：SUCCESS**。
+- **Blog Showcase Parity `37481262324`：SUCCESS**
+  - fresh paired evidence artifact `11422440290`；
+  - SHA-256 `3b1f85efa588f36b32758bce8937e13b3471411bf5b804b01c7db87feb4bf900`；
+  - current Gouno UI main ref `2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9`。
+- **UI Browser Acceptance `37481262325`：SUCCESS**
+  - full rendered Playwright acceptance；
+  - artifact `11422060992`；
+  - SHA-256 `5b62655704fbea7d6dcb5cc643f7ae8c7a03b1bb33e6b3edb755344770081a60`。
+
+基于 fresh source review + rendered parity + full browser evidence，`blog-public-account` 与 `blog-admin-core-wave3` 的 MarkdownRenderer 安全变更已恢复为 `verified`，没有通过放宽视觉、认证或安全规则来“做绿”。
+
+### 保留风险 / 后续质量债
+
+本轮没有把以下已确认但不构成当前 release gate failure 的事项与镜像安全收口混在一起重写：
+
+- Frontend oxlint 当前仍约 **74 warnings / 0 errors**，主要集中在 effect 内同步 setState、Hook 依赖数组、render purity/ref、Fast Refresh 混合导出，以及少量 unused/escape；其中 Connector Workspace 受 Connector Module Hold 保护，不在本轮修改。
+- Vite 主入口 chunk 仍约 **856.37 kB**（gzip 约 **268.34 kB**），超过 500 kB warning line；后续应按路由/功能域分阶段 code-splitting，并对涉及的认证 Product path 重新走 Showcase parity。
+- 控制器错误映射仍存在若干直接向 4xx 响应透出 `err.Error()` 的历史实现；已有 `controllerutil.WriteDomainError` 中央映射，但要按 domain 逐组迁移并补 API 契约测试，不能在安全收口中批量替换。Connector controller 不得因该项破坏 Module Hold。
+- `GO-2026-5932` 仍只存在于 required module 的不可达 `golang.org/x/crypto/openpgp` 路径；govulncheck 仍为 0 个可达漏洞，且当前无可用上游修复版本。
