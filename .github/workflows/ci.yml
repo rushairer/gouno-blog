@@ -25,6 +25,9 @@ jobs:
       - name: Verify change-aware image selection
         run: python3 .github/scripts/test_image_build_plan.py
 
+      - name: Verify image security contract
+        run: python3 .github/scripts/test_image_security_contract.py
+
   backend:
     name: Backend quality
     runs-on: ubuntu-latest
