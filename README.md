@@ -113,7 +113,7 @@ docker compose up -d
 
 自建服务镜像（`ghcr.io/rushairer/*`）默认使用浮动的 `main` 标签，并设置了 `pull_policy: always`：各仓库推送到 `main` 后，镜像会以 `main`、`sha-<commit>` 标签发布，发布 `v*` 时再追加版本标签。本地开发只需 `docker compose up -d` 即会拉取最新 `main` 镜像，无需手改摘要或额外 `pull`。第三方基础镜像（PostgreSQL、Redis、Mailpit、Caddy）仍固定不可变摘要以保证可复现。
 
-生产编排中的自建服务镜像也默认使用 `main`，并设置 `pull_policy: always`，部署时会主动拉取最新镜像。只有明确需要固定版本时，才以 release tag 或 `vX.Y.Z@sha256:<digest>` 覆盖对应变量：
+生产编排与本地开发不同：`docker-compose.production.yml` **不提供任何 first-party `:main` fallback**。六个一方应用镜像变量都必须由运维显式提供 `vX.Y.Z@sha256:<digest>` 形式的 immutable reference；缺失或不是 digest 引用时生产部署必须 fail closed：
 
 ```bash
 export GOUNO_BLOG_BACKEND_IMAGE=ghcr.io/rushairer/gouno-blog-backend:vX.Y.Z@sha256:...
