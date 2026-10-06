@@ -39,3 +39,28 @@ govulncheck 仍报告 `GO-2026-5932`：`golang.org/x/crypto/openpgp` 未维护�
 - 当前环境重新执行 `npm outdated --all` 时网络查询未返回结果；依赖版本以已锁定的清单和 CI 在线审计为准，后续应在联网 CI 中继续检查新的上游版本。
 
 本次改动没有修改 Connector 产品行为，认证仍由 Blog BFF 的 HttpOnly Secure SameSite 会话和 Redis 生命周期负责。
+
+
+## 2026-10-06 收口复核补充
+
+以远端 `main` 精确提交 `8a2310add7e69b108b68f823145fbafd942b4c37` 为基线重新核验 GitHub Actions 证据：
+
+- **CI** `37471084889` 成功：GitHub runner 使用 Node `24.21.0`，满足项目 `>=24.15 <25` 引擎约束；后端/Seed 的测试、race、vet、`go mod verify`、govulncheck，数据库集成、前端 `npm ci` / `npm audit` / `npm run quality`、Compose 与部署契约均通过。
+- **UI Browser Acceptance** `37471084862` 成功，完整 Playwright 浏览器验收已在可用浏览器环境中执行；证据 artifact `11416809057`，SHA-256 `081dc94dc13f560fe9e7a12d4273e3289ca5c1a941e69c12fc228705d64426f8`。
+- **Publish Images** `37471084903` 成功：backend/frontend/seed 均完成 amd64/arm64 构建、推送、digest 记录、签名和 SBOM。该基线工作流仍缺少漏洞扫描，因此本轮新增 Trivy + Grype 双扫描门禁。
+- **Blog Showcase Parity** `37471084845` 失败，原因不是渲染测试失败，而是 `MarkdownRenderer.tsx` 安全修复使 `blog-public-account` 与 `blog-admin-core-wave3` 的 manual-first certification 按治理规则变为 stale。已在 PR #332 中显式降级为 `needs-manual-recertification`，并补充安全差异人工复核；待 fresh Showcase parity 证据后才能恢复 `verified`。
+
+本轮确认并处理的镜像供应链问题：
+
+- backend / seed Dockerfile 的 Alpine `apk add` 改为显式版本：`ca-certificates=20260909-r0`、`tzdata=2026d-r0`；
+- PR 镜像新增 SHA 固定的 Trivy `v0.36.0` 与 Grype/Anchore Scan `v7.4.2` 双扫描，fixable HIGH/CRITICAL 漏洞阻断合并；
+- 发布镜像在 GHCR push 后按 `image@sha256:...` 精确 digest 再扫描，随后才进入签名与 SBOM 交付；
+- 新增 `.github/scripts/test_image_security_contract.py`，防止 scanner、digest 扫描或 Alpine package pin 被后续改动静默移除。
+
+仍需继续收敛但不在本次供应链修复中盲目改动的前端质量债：
+
+- 当前 `npm run quality` 为 **0 errors / 74 warnings**，主要是 React effect 同步 setState、依赖数组、render purity/ref、Fast Refresh 与少量 unused/escape 警告；
+- 当前主入口 chunk 为 `856.37 kB`（gzip `268.34 kB`），Vite 仍提示超过 500 kB；
+- 这些问题已确认存在，但修复会触及多个已认证 Product owned paths，必须按页面/功能成组处理并重新走 Showcase parity，而不是在安全收口 PR 中批量重写。
+
+govulncheck 复核仍为 **0 个可达漏洞**；`GO-2026-5932` 只存在于 required module 的不可达 `golang.org/x/crypto/openpgp` 路径，当前无上游修复版本，继续作为依赖移除风险跟踪项。
