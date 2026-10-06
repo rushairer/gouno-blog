@@ -123,6 +123,26 @@ async function pairScreenshot(showcase, product, label, testInfo) {
   }
 }
 
+async function pairLocatorScreenshot(
+  showcaseLocator,
+  productLocator,
+  label,
+  testInfo,
+) {
+  for (const [kind, locator] of [
+    ["showcase", showcaseLocator],
+    ["product", productLocator],
+  ]) {
+    await expect(locator).toBeVisible();
+    const path = testInfo.outputPath(`${label}-${kind}.png`);
+    await locator.screenshot({ path });
+    await testInfo.attach(`${label}-${kind}`, {
+      path,
+      contentType: "image/png",
+    });
+  }
+}
+
 async function openPair(
   browser,
   fixtureId,
@@ -677,19 +697,24 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
     ).toBeVisible();
   }
 
-  await showcase
-    .getByRole("heading", { level: 2, name: "Outbox 沙箱" })
-    .evaluate((element) =>
-      element.scrollIntoView({ block: "start", inline: "nearest" }),
-    );
-  await product
-    .getByRole("heading", { level: 2, name: "Outbox 沙箱" })
-    .evaluate((element) =>
-      element.scrollIntoView({ block: "start", inline: "nearest" }),
-    );
-  await pairScreenshot(
-    showcase,
-    product,
+  const showcaseOutbox = showcase
+    .locator('[data-slot="card"]')
+    .filter({
+      has: showcase.getByRole("heading", { level: 2, name: "Outbox 沙箱" }),
+    })
+    .first();
+  const productOutbox = product
+    .locator('[data-slot="card"]')
+    .filter({
+      has: product.getByRole("heading", { level: 2, name: "Outbox 沙箱" }),
+    })
+    .first();
+  expect(await styleFingerprint(productOutbox)).toEqual(
+    await styleFingerprint(showcaseOutbox),
+  );
+  await pairLocatorScreenshot(
+    showcaseOutbox,
+    productOutbox,
     "ai-settings-Sandbox-连接器-outbox",
     testInfo,
   );
