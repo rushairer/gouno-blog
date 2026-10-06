@@ -715,6 +715,48 @@ func TestOpenAIAutoStreamFallbackOnlyForExplicitRequirement(t *testing.T) {
 	}
 }
 
+func TestOpenAIResponsesAutoStreamFallbackHandlesSetToTrueRequirement(t *testing.T) {
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if requests == 1 {
+			if _, ok := body["stream"]; ok {
+				t.Fatalf("initial auto request must remain non-streaming, got %#v", body)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = io.WriteString(w, `{"error":{"message":"Stream must be set to true","type":"bad_response_status_code","param":"","code":"bad_response_status_code"}}`)
+			return
+		}
+		if body["stream"] != true {
+			t.Fatalf("expected stream=true on Responses API fallback, got %#v", body)
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w,
+			"data: {\"type\":\"response.output_text.delta\",\"delta\":\"OK\"}\n\n"+
+				"data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":4,\"output_tokens\":1}}}\n\n"+
+				"data: [DONE]\n\n",
+		)
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProviderWithConfig("openai", server.URL, "secret", "gpt-6-luna", "responses", "auto", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{Messages: []Message{{Role: "user", Content: "x"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requests != 2 || result.Text != "OK" || result.InputTokens != 4 || result.OutputTokens != 1 || result.StopReason != "completed" {
+		t.Fatalf("result=%#v requests=%d", result, requests)
+	}
+}
+
 func TestOpenAIAutoStreamFallbackDoesNotRetryUnrelatedErrors(t *testing.T) {
 	var requests int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
