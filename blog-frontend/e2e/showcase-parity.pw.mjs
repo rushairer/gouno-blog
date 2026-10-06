@@ -719,6 +719,14 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
     testInfo,
   );
 
+  for (const page of [showcase, product]) {
+    await page
+      .getByRole("heading", { level: 1, name: "AI 设置" })
+      .evaluate((element) =>
+        element.scrollIntoView({ block: "start", inline: "nearest" }),
+      );
+  }
+
   for (const { tab, createLabel, backLabel } of [
     {
       tab: "Agents",
