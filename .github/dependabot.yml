@@ -17,6 +17,7 @@ updates:
       - dependency-name: "prettier"
         update-types:
           - "version-update:semver-minor"
+          - "version-update:semver-major"
     groups:
       npm-minor-patch:
         patterns:
