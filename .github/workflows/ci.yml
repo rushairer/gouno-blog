@@ -167,6 +167,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit production npm dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Verify Gouno UI registry release
         run: |
           node --input-type=module <<'EOF'
