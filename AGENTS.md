@@ -102,3 +102,12 @@ This document defines the **immutable architectural rules, security baselines, a
 - Any Codegen policy change must update the manifest, referenced templates, architecture documentation, and CI smoke verification together.
 - Every backend architecture/Codegen batch must pass the repository's full backend, database-integration, dependency-review, compose, and unaffected frontend/seed gates before merge to `main`.
 - Architecture and Codegen work never override Sections 1-5: the confidential BFF, identity/session rules, deployment contracts, and Connector Module Hold remain immutable unless the user explicitly changes them.
+
+---
+
+## Dependency Baseline Invariants
+
+- `blog-frontend` production and CI runtime is Node 24 LTS. Keep `@types/node` on the same major. A future Node major migration must update Docker builders, CI setup, `package.json` engine metadata, lockfile metadata, and Node type declarations as one reviewed change.
+- Prettier `3.8.5` is an intentional governance pin while certified Product paths are frozen. Patch updates may be evaluated normally; formatter minor/major changes that rewrite certified Product source require an explicit certification-impact review before adoption rather than automatic dependency churn.
+- Dependency freshness does not mean choosing the numerically highest major. Runtime, type declarations, production compatibility, immutable deployment inputs, and manual-first Showcase certification must remain aligned.
+
