@@ -15,11 +15,11 @@
       "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-06",
-      "manualReview": "docs/ui-redesign/blog-admin-csa-a007-pending-recertification.md",
+      "manualReview": "docs/ui-redesign/blog-admin-csa-a007-recertification.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
-        "blog": "0a74d106bb60cc21b15acba76437d9f4dacdaa8f",
-        "gounoUi": "2871993d1d10adce8b26d8d0d75fdc1c519e88bb"
+        "blog": "547e514e6c26f5799e264b53bc0f65c5f4ccf837",
+        "gounoUi": "6bc3d7dae217b9e398c9f0cd6c46375ae737e778"
       },
       "gounoUiPackageVersion": "0.4.9",
       "stateCoverage": [
@@ -50,45 +50,45 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 37304332103,
+            "id": 37438125889,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 37304332030,
+            "id": 37438126076,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 37304332154,
+            "id": 37438126060,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 37304331937,
+            "id": 37438126077,
             "result": "success"
           },
           {
             "name": "Gouno UI Blog Consumer Parity",
-            "id": 37321144321,
+            "id": 37440976238,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 11342544288,
-            "name": "blog-showcase-parity-37304332103",
-            "sha256": "91a105717f396f6bb4c189a0469ac84859e9fdc9d443226fac4e1abfdeb1b398"
+            "id": 11399943359,
+            "name": "blog-showcase-parity-37438125889",
+            "sha256": "51d2d4355081b7e76438c064d9348f4cf65a9c6c0fdf6c9c3452c3aed8e24d13"
           },
           {
-            "id": 11342698521,
-            "name": "blog-browser-acceptance-37304332030",
-            "sha256": "80bb808584a917244fce1408af0439c6b6b30b602fdc79dc2c4742b4d305880d"
+            "id": 11400641062,
+            "name": "blog-browser-acceptance-37438126076",
+            "sha256": "a8dcae5ecb8083984066336fef380d50c814d11837401e0ecdb382d645e36874"
           },
           {
-            "id": 11350421876,
-            "name": "gouno-ui-blog-consumer-parity-37321144321",
-            "sha256": "b9b0054447c0fc25d3c3c9f83f288485db675e7e1f595beb9a59ab6cb07e1a03"
+            "id": 11401013734,
+            "name": "gouno-ui-blog-consumer-parity-37440976238",
+            "sha256": "5ecc4f5bc5d8777ad23855143e404a161cab1220dbe195255f37429c377ca02c"
           }
         ]
       },
@@ -109,8 +109,8 @@
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a006-recertification.md",
-      "recertificationReason": "Gouno UI PR #156 changes the owned blog-admin-ai-settings Canonical Connector path to remove synthetic Connector state and align it with the current Blog Product contract. Manual-first governance requires reopening before reciprocal parity can accept the candidate.",
+      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a007-pending-recertification.md",
+      "recertificationReason": "CSA-A007 Connector Product fidelity correction is merged on both Canonical and Blog Product sides with fresh manual-first paired evidence. Local status intentionally remains pending until Gouno UI merges the upstream recertified consumer state and reciprocal Blog Consumer Parity succeeds against current Blog main.",
       "reopenedBy": "CSA-A007 Connector Product Fidelity Correction",
       "reopenedDate": "2026-10-06"
     },
