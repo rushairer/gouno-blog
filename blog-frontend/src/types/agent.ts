@@ -26,12 +26,7 @@ export type RunStatus =
   | "failed"
   | "cancelled";
 export type ApprovalStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "expired"
-  | "executed"
-  | "failed";
+  "pending" | "approved" | "rejected" | "expired" | "executed" | "failed";
 
 export interface ProviderProfile {
   id: number;
@@ -497,10 +492,7 @@ export interface ToolDefinition {
 }
 
 export type ConnectorKind =
-  | "search_console"
-  | "newsletter"
-  | "social"
-  | "webhook";
+  "search_console" | "newsletter" | "social" | "webhook";
 
 export interface ConnectorProfile {
   id: number;

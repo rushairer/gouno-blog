@@ -43,9 +43,7 @@ import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteTarget =
-  | { kind: "page"; page: CustomPage }
-  | { kind: "batch" }
-  | null;
+  { kind: "page"; page: CustomPage } | { kind: "batch" } | null;
 
 const pageSize = 20;
 

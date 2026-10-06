@@ -24,9 +24,7 @@ import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type TagEdit = { tag: TagSummary; mode: "rename" | "merge" } | null;
 type DeleteTarget =
-  | { kind: "tag"; item: TagSummary }
-  | { kind: "batch" }
-  | null;
+  { kind: "tag"; item: TagSummary } | { kind: "batch" } | null;
 
 function TagGridSkeleton() {
   return (

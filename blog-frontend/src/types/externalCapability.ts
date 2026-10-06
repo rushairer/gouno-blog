@@ -43,10 +43,7 @@ export interface ExternalAPICreatedClient {
 }
 
 export type ExternalInvocationResult =
-  | "success"
-  | "denied"
-  | "failed"
-  | "rate_limited";
+  "success" | "denied" | "failed" | "rate_limited";
 
 export interface ExternalInvocationAudit {
   id: number;

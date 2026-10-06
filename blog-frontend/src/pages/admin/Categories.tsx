@@ -34,9 +34,7 @@ import type { Category } from "../../types/blog";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteTarget =
-  | { kind: "category"; item: Category }
-  | { kind: "batch" }
-  | null;
+  { kind: "category"; item: Category } | { kind: "batch" } | null;
 
 type EditorState = { mode: "create" } | { mode: "edit"; item: Category } | null;
 
