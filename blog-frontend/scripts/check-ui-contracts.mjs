@@ -1,8 +1,7 @@
 import { access, readdir, readFile } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import * as TypeScriptModule from "typescript";
-const ts = TypeScriptModule.default ?? TypeScriptModule;
+import ts from "typescript";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const root = fileURLToPath(new URL("../src/", import.meta.url));
