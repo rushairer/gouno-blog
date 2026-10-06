@@ -32,6 +32,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Restore OpenAI-compatible automatic streaming fallback for upstreams that return `Stream must be set to true` (and equivalent explicit required-stream variants), including Responses API requests; Agent run failures now report the actual provider attempt count instead of always saying three attempts.
+
 - Reject unsafe Markdown URL schemes, including `javascript:`, `data:`, and `blob:`, for rendered links and images.
 - Keep the router PostVersion restore test adapter aligned with the canonical four-argument restore contract.
 
