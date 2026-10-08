@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Pin Alpine frontend runtime `tiff=4.7.2-r0` to remediate fixable HIGH `CVE-2026-4775` reported by the image scan; retain Trivy/Grype fail-on-fixable-HIGH gates.
 - Extend Agent approval atomic completion to content candidate sets (including child rows), media candidates and image-brief distribution proposals using existing approval-scoped uniqueness and post-revision guards; verify rollback, commit-ACK loss and concurrency in isolated PostgreSQL tests.
 - Commit Agent approval finalization atomically with Operations-owned editorial-task and comment-reply-draft writes; retain per-approval uniqueness and failure quarantine, with isolated PostgreSQL rollback/commit-ack-loss/concurrency regressions.
 - Fail closed on uncertain Agent approval effects: prevent replay of legacy failed rows, guard approval state transitions and preserve claimed effects during concurrent run reconciliation; add PostgreSQL fault-injection tests and a recovery runbook.
