@@ -28,12 +28,26 @@ services:
     # can drop to the postgres user.
     cap_drop: []
 
-  redis:
+  # One-shot volume owner migration; no long-running root Redis daemon.
+  redis-data-init:
     image: ${REDIS_IMAGE:-redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2}
-    restart: unless-stopped
-    # Podman bind-mounted persistent data can retain host ownership from a
-    # previous deployment; run the service entrypoint as root.
     user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    command: ["chown -R redis:redis /data"]
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    restart: "no"
+    volumes:
+      - redis_data:/data
+
+  redis:
+    <<: *hardened
+    image: ${REDIS_IMAGE:-redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2}
+    # The redis account owns /data after redis-data-init exits.
+    user: "redis"
+    tmpfs: [/tmp]
     command: ["sh", "-ec", "redis_password=$$(cat /run/secrets/redis_password); blog_redis_password=$$(cat /run/secrets/blog_redis_password); exec redis-server --appendonly yes --requirepass \"$$redis_password\" --user blog on \">$$blog_redis_password\" ~blog:* +@all -@dangerous"]
     secrets: [redis_password, blog_redis_password]
     volumes:
@@ -43,9 +57,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    security_opt: [no-new-privileges:true]
-    # Redis writes AOF rewrite files into a legacy bind-mounted data tree.
-    cap_drop: []
+    depends_on:
+      redis-data-init: {condition: service_completed_successfully}
 
   # Internal SMTP capture preserves the existing deployment behavior. Set
   # SMTP_HOST/SMTP_PORT to an external provider to override it.
