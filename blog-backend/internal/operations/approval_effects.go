@@ -14,7 +14,19 @@ import (
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 )
 
+// CreateContentCandidateSet preserves the standalone Operations contract but
+// delegates the SQL to a Tx-aware writer. ApprovalService can join the same
+// transaction as its final Agent approval status without nested commits.
 func (s *Service) CreateContentCandidateSet(ctx context.Context, approval *domain.AgentApproval) error {
+	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
+		return s.CreateContentCandidateSetTx(ctx, tx, approval)
+	})
+}
+
+func (s *Service) CreateContentCandidateSetTx(ctx context.Context, tx *sql.Tx, approval *domain.AgentApproval) error {
+	if tx == nil || approval == nil {
+		return errors.New("content candidate transaction and approval are required")
+	}
 	var payload struct {
 		PostID     int64                        `json:"post_id"`
 		FieldType  string                       `json:"field_type"`
@@ -44,41 +56,21 @@ func (s *Service) CreateContentCandidateSet(ctx context.Context, approval *domai
 	default:
 		return errors.New("unsupported candidate field")
 	}
-	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
-		var setID int64
-		if err := tx.QueryRowContext(ctx, `INSERT INTO ai_content_candidate_sets
-			(post_id,source_run_id,source_approval_id,field_type,before_value)
-			VALUES($1,$2,$3,$4,$5) RETURNING id`, payload.PostID, approval.RunID, approval.ID, payload.FieldType, beforeValue).Scan(&setID); err != nil {
+	var setID int64
+	if err := tx.QueryRowContext(ctx, `INSERT INTO ai_content_candidate_sets
+		(post_id,source_run_id,source_approval_id,field_type,before_value)
+		VALUES($1,$2,$3,$4,$5) RETURNING id`,
+		payload.PostID, approval.RunID, approval.ID, payload.FieldType, beforeValue).Scan(&setID); err != nil {
+		return err
+	}
+	for _, item := range payload.Candidates {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO ai_content_candidates
+			(candidate_set_id,value,rationale)VALUES($1,$2,$3)`,
+			setID, item.Value, item.Rationale); err != nil {
 			return err
 		}
-		for _, item := range payload.Candidates {
-			if _, err := tx.ExecContext(ctx, `INSERT INTO ai_content_candidates
-				(candidate_set_id,value,rationale)VALUES($1,$2,$3)`, setID, item.Value, item.Rationale); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-// approvalEffectExecutor lets the exact same Operations-owned insert execute
-// on a standalone DB handle or the Agent-coordinated approval transaction.
-type approvalEffectExecutor interface {
-	ExecContext(context.Context, string, ...any) (sql.Result, error)
-}
-
-func createEditorialTaskOn(ctx context.Context, writer approvalEffectExecutor, approvalID int64, title, description, priority string) error {
-	_, err := writer.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
-		(title, description, priority, source_approval_id) VALUES ($1,$2,$3,$4)`,
-		title, description, priority, approvalID)
-	return err
-}
-
-func createReplyDraftOn(ctx context.Context, writer approvalEffectExecutor, approvalID, commentID int64, content string) error {
-	_, err := writer.ExecContext(ctx, `INSERT INTO ai_comment_reply_drafts
-		(comment_id, content, source_approval_id) VALUES ($1,$2,$3)`,
-		commentID, content, approvalID)
-	return err
+	}
+	return nil
 }
 
 func (s *Service) CreateEditorialTask(ctx context.Context, approvalID int64, title, description, priority string) error {
