@@ -45,6 +45,7 @@ type ApprovalService struct {
 	workflowInteractions WorkflowInteractionStore
 	workflowEvents       WorkflowEventPort
 	effects              ApprovalEffectWriter
+	transactor           ApprovalTransactionRunner
 	posts                *postservice.PostService
 	pages                *pageservice.PageService
 	postVersions         postVersionReader
@@ -551,6 +552,15 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincip
 	// its commit outcome may be unknown (e.g. a lost database response). Keep
 	// status=approved on *any* error, including completion errors, so neither a
 	// retry nor a competing reviewer can duplicate or overwrite the effect.
+	// These Operations-owned effects and their final Agent approval status now
+	// commit in one PostgreSQL transaction. The rest remain fail-closed until
+	// their own action-specific transactional boundaries have been proved.
+	if isAtomicOperationsApproval(approval.ActionType) && s.transactor != nil {
+		if err := s.executeAtomicOperationsApproval(ctx, approval); err != nil {
+			return fmt.Errorf("%w (approval_id=%d): %v", ErrApprovalOutcomeUncertain, id, err)
+		}
+		return nil
+	}
 	if err := s.execute(ctx, approval); err != nil {
 		return fmt.Errorf("%w (approval_id=%d): %v", ErrApprovalOutcomeUncertain, id, err)
 	}
@@ -783,28 +793,15 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		}
 		return s.pages.UpdatePage(ctx, current)
 	case "reply_comment":
-		var payload struct {
-			CommentID int64  `json:"comment_id"`
-			Content   string `json:"content"`
-		}
-		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		payload, err := decodeReplyDraftApproval(approval)
+		if err != nil {
 			return err
-		}
-		if payload.CommentID <= 0 || strings.TrimSpace(payload.Content) == "" {
-			return errors.New("invalid reply draft")
 		}
 		return s.effects.CreateReplyDraft(ctx, approval.ID, payload.CommentID, payload.Content)
 	case "create_editorial_task":
-		var payload struct {
-			Title       string `json:"title"`
-			Description string `json:"description"`
-			Priority    string `json:"priority"`
-		}
-		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		payload, err := decodeEditorialTaskApproval(approval)
+		if err != nil {
 			return err
-		}
-		if payload.Priority == "" {
-			payload.Priority = "medium"
 		}
 		return s.effects.CreateEditorialTask(ctx, approval.ID, payload.Title, payload.Description, payload.Priority)
 	case "create_operational_suggestion":
