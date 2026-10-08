@@ -37,6 +37,12 @@ type Client struct {
 
 var ErrSessionExpired = errors.New("BFF session has reached its absolute lifetime")
 
+// Keep validation errors distinct from post-verification storage failures.
+// Back-channel logout must preserve the OIDC HTTP 400 contract while never
+// returning Redis/internal error details to the identity provider.
+var ErrBackchannelStoreFailure = errors.New("back-channel logout persistence failure")
+var ErrBackchannelInProgress = errors.New("logout token is already being processed")
+
 // sessionRemainingTTL enforces SessionTTL as an absolute lifetime from the
 // original authorization callback. Redis persistence must never turn the
 // browser's fixed-lifetime session cookie into a renewable bearer credential.
@@ -512,13 +518,13 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 	}
 	claimOwner, acquired, processed, err := c.store.ClaimLogoutToken(ctx, claims.JWTID, time.Minute)
 	if err != nil {
-		return fmt.Errorf("claim logout token: %w", err)
+		return fmt.Errorf("%w: claim logout token: %w", ErrBackchannelStoreFailure, err)
 	}
 	if processed {
 		return nil
 	}
 	if !acquired {
-		return errors.New("logout token is already being processed")
+		return ErrBackchannelInProgress
 	}
 	completed := false
 	defer func() {
@@ -535,10 +541,10 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 		err = c.store.DeleteByIdentity(ctx, claims.Issuer, claims.Subject)
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: revoke sessions: %w", ErrBackchannelStoreFailure, err)
 	}
 	if err := c.store.FinishLogoutToken(ctx, claims.JWTID, claimOwner, replayTTL); err != nil {
-		return fmt.Errorf("mark logout token processed: %w", err)
+		return fmt.Errorf("%w: mark logout token processed: %w", ErrBackchannelStoreFailure, err)
 	}
 	completed = true
 	return nil
