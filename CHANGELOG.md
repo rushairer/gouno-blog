@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Commit Agent approval finalization atomically with Operations-owned editorial-task and comment-reply-draft writes; retain per-approval uniqueness and failure quarantine, with isolated PostgreSQL rollback/commit-ack-loss/concurrency regressions.
 - Fail closed on uncertain Agent approval effects: prevent replay of legacy failed rows, guard approval state transitions and preserve claimed effects during concurrent run reconciliation; add PostgreSQL fault-injection tests and a recovery runbook.
 - Hide wrapped domain and request-binding error internals from public API responses while preserving HTTP status and post revision conflict codes; add regression coverage.
 - Refresh the frontend Nginx runtime packages to patched zlib `1.3.2-r1`, nghttp2-libs `1.70.0-r0` and libpng `1.6.59-r0` after Grype detected fixable findings in the pinned image layers.

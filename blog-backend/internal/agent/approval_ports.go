@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"database/sql"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
@@ -14,9 +15,23 @@ type ApprovalStore interface {
 	GetApproval(context.Context, int64) (*domain.AgentApproval, error)
 	ClaimApproval(context.Context, int64, int64, string) error
 	CompleteApproval(context.Context, int64, domain.ApprovalStatus, string) error
+	CompleteApprovalTx(context.Context, *sql.Tx, int64, domain.ApprovalStatus, string) error
 	SetApprovalTarget(context.Context, int64, int64) error
 	RejectApproval(context.Context, int64, int64, string) error
 	ReconcileApprovalRun(context.Context, int64) (*domain.AgentRun, error)
+}
+
+// ApprovalTransactionRunner coordinates one database commit across Agent's
+// approval state and Operations-owned business persistence.
+type ApprovalTransactionRunner interface {
+	Run(context.Context, func(*sql.Tx) error) error
+}
+
+// ApprovalEffectTransactionWriter owns the Operations SQL; Agent only
+// orchestrates it alongside its own guarded approval status update.
+type ApprovalEffectTransactionWriter interface {
+	CreateEditorialTaskTx(context.Context, *sql.Tx, int64, string, string, string) error
+	CreateReplyDraftTx(context.Context, *sql.Tx, int64, int64, string) error
 }
 
 type MediaCandidateStore interface {

@@ -20,6 +20,7 @@ This document defines the **immutable architectural rules, security baselines, a
    - Once an approval has been durably claimed as `approved`, errors may occur after business effects commit. Never auto-retry that approval ID or mark an uncertain execution `failed` to enable replay.
    - Historical `failed` approvals are not eligible for automatic reviewer retry. Reconciliation must never overwrite in-flight `approved` rows.
    - Follow [the incident recovery runbook](docs/quality/agent-approval-in-doubt-recovery.md); use fresh proposals after manual state verification, not direct SQL state resets.
+   - Editorial-task and reply-draft approval effects must commit together with `approved -> executed` using the shared `dbtx.Transactor`, while Operations retains ownership of its business SQL. Never move the business write outside the transaction or relax the database `source_approval_id` uniqueness constraints.
 
 ---
 

@@ -366,7 +366,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		generation := agentservice.NewGenerationService(generationAuditRepo, management, mediaSvc, mediaStore)
 		approvals := agentservice.NewApprovalService(agentservice.ApprovalServiceDependencies{
 			Approvals: agentApprovalRepo, MediaCandidates: agentMediaCandidateRepo, MediaGeneration: agentMediaCandidateRepo,
-			WorkflowInteractions: workflowInteractionRepo, WorkflowEvents: workflowInteractionRepo, Effects: operationsSvc,
+			WorkflowInteractions: workflowInteractionRepo, WorkflowEvents: workflowInteractionRepo, Effects: operationsSvc, Transactor: transactor,
 			Posts: postSvc, Pages: pageSvc, PostVersions: postVersionSvc, MediaAssets: mediaSvc, MediaStore: mediaStore, Generation: generation,
 		})
 		workflowLifecycleRepo := workflowrepository.NewRunLifecycleRepository()
