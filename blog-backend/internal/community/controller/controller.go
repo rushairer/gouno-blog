@@ -99,6 +99,16 @@ type createCommunityCommentRequest struct {
 	Content  string `json:"content" binding:"required"`
 }
 
+func bindCreateCommunityComment(c *gin.Context) (createCommunityCommentRequest, bool) {
+	var req createCommunityCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// JSON decoder and validator details are internal diagnostics, not API text.
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid comment request"))
+		return req, false
+	}
+	return req, true
+}
+
 func (ctrl *CommunityController) CreateComment(c *gin.Context) {
 	actor := ctrl.actor(c)
 	if !ctrl.allow(c, "comment", actor, 5, 5*time.Minute) {
@@ -109,9 +119,8 @@ func (ctrl *CommunityController) CreateComment(c *gin.Context) {
 		controllerutil.WriteDomainError(c, err)
 		return
 	}
-	var req createCommunityCommentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+	req, ok := bindCreateCommunityComment(c)
+	if !ok {
 		return
 	}
 	comment, err := ctrl.svc.CreateComment(c.Request.Context(), post.ID, req.ParentID, actor, req.Author, req.Content)
