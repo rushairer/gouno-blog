@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Pin patched Alpine runtime zlib `1.3.2-r1` for backend and seed after the image scanner identified fixable `CVE-2026-85091` in the previously pinned base.
 - Run the production Redis daemon as an unprivileged account after a one-shot, CHOWN-only persistent-volume ownership migration; guard the Compose privilege and dependency contract in CI.
 - Correct stale README production image guidance to require immutable digest-pinned first-party images and Docker Secrets.
 - Gate container images with SHA-pinned Trivy and Grype scans for fixable HIGH/CRITICAL vulnerabilities, both on pull-request local images and on published immutable GHCR digests.
