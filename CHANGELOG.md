@@ -7,6 +7,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Sanitize OIDC back-channel logout errors without changing the spec-required HTTP 400 response, and distinguish Redis persistence failures from invalid tokens for server-side diagnostics.
+- Return stable public comment validation errors instead of reflecting raw Gin/JSON decoder and validator internals to anonymous users.
 - Refresh the frontend Nginx runtime packages to patched zlib `1.3.2-r1`, nghttp2-libs `1.70.0-r0` and libpng `1.6.59-r0` after Grype detected fixable findings in the pinned image layers.
 - Pin patched Alpine runtime zlib `1.3.2-r1` for backend and seed after the image scanner identified fixable `CVE-2026-85091` in the previously pinned base.
 - Run the production Redis daemon as an unprivileged account after a one-shot, CHOWN-only persistent-volume ownership migration; guard the Compose privilege and dependency contract in CI.
