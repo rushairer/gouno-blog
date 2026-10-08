@@ -73,6 +73,26 @@ func (s *Service) CreateContentCandidateSetTx(ctx context.Context, tx *sql.Tx, a
 	return nil
 }
 
+// approvalEffectExecutor lets the exact same Operations-owned insert execute
+// on a standalone DB handle or the Agent-coordinated approval transaction.
+type approvalEffectExecutor interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
+func createEditorialTaskOn(ctx context.Context, writer approvalEffectExecutor, approvalID int64, title, description, priority string) error {
+	_, err := writer.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
+		(title, description, priority, source_approval_id) VALUES ($1,$2,$3,$4)`,
+		title, description, priority, approvalID)
+	return err
+}
+
+func createReplyDraftOn(ctx context.Context, writer approvalEffectExecutor, approvalID, commentID int64, content string) error {
+	_, err := writer.ExecContext(ctx, `INSERT INTO ai_comment_reply_drafts
+		(comment_id, content, source_approval_id) VALUES ($1,$2,$3)`,
+		commentID, content, approvalID)
+	return err
+}
+
 func (s *Service) CreateEditorialTask(ctx context.Context, approvalID int64, title, description, priority string) error {
 	return createEditorialTaskOn(ctx, s.db, approvalID, title, description, priority)
 }
