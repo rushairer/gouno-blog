@@ -2,8 +2,8 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"database/sql"
+	"encoding/json"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
