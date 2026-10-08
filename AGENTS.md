@@ -16,6 +16,10 @@ This document defines the **immutable architectural rules, security baselines, a
 3. **Session & Logout Lifecycle**:
    - Supports local logout, global RP-Initiated logout, and atomic back-channel logout claim handling.
    - Redis session state must strictly prevent resurrection on concurrent refresh/logout.
+4. **Agent Approval Commit Uncertainty**:
+   - Once an approval has been durably claimed as `approved`, errors may occur after business effects commit. Never auto-retry that approval ID or mark an uncertain execution `failed` to enable replay.
+   - Historical `failed` approvals are not eligible for automatic reviewer retry. Reconciliation must never overwrite in-flight `approved` rows.
+   - Follow [the incident recovery runbook](docs/quality/agent-approval-in-doubt-recovery.md); use fresh proposals after manual state verification, not direct SQL state resets.
 
 ---
 
