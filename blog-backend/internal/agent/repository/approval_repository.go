@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
@@ -71,8 +72,8 @@ func (r *ApprovalRepository) ListApprovals(ctx context.Context, status string, l
 	countArgs := []any{}
 	if status != "" && status != "all" {
 		if status == string(domain.ApprovalPending) {
-			where = " WHERE ap.status IN ('pending','failed')"
-			countQuery += " WHERE ap.status IN ('pending','failed')"
+			where = " WHERE ap.status='pending'"
+			countQuery += " WHERE ap.status='pending'"
 		} else {
 			where = " WHERE ap.status=$3"
 			args = append(args, status)
@@ -104,7 +105,7 @@ func (r *ApprovalRepository) ListApprovals(ctx context.Context, status string, l
 func (r *ApprovalRepository) ClaimApproval(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET
 		status='approved', reviewed_by_principal_id=$2, review_note=$3, reviewed_at=NOW()
-		WHERE id=$1 AND status IN ('pending','failed') AND expires_at > NOW()`, id, reviewerPrincipalID, note)
+		WHERE id=$1 AND status='pending' AND expires_at > NOW()`, id, reviewerPrincipalID, note)
 	if err != nil {
 		return err
 	}
@@ -115,13 +116,31 @@ func (r *ApprovalRepository) ClaimApproval(ctx context.Context, id int64, review
 }
 
 func (r *ApprovalRepository) CompleteApproval(ctx context.Context, id int64, status domain.ApprovalStatus, note string) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET status=$2,
-		review_note=CASE WHEN $3='' THEN review_note ELSE $3 END WHERE id=$1`, id, status, note)
-	return err
+	// Only a pending proposal may expire; only the claimed reviewer may finish
+	// execution. No transition back to failed/retryable is safe after effects.
+	var expected domain.ApprovalStatus
+	switch status {
+	case domain.ApprovalExpired:
+		expected = domain.ApprovalPending
+	case domain.ApprovalExecuted:
+		expected = domain.ApprovalApproved
+	default:
+		return fmt.Errorf("unsupported approval completion status %q", status)
+	}
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET status=$2,
+		review_note=CASE WHEN $3='' THEN review_note ELSE $3 END
+		WHERE id=$1 AND status=$4`, id, status, note, expected)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *ApprovalRepository) SetApprovalTarget(ctx context.Context, id, targetID int64) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET target_id=$2 WHERE id=$1 AND target_id IS NULL`, id, targetID)
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET target_id=$2 WHERE id=$1 AND status='approved' AND target_id IS NULL`, id, targetID)
 	if err != nil {
 		return err
 	}
@@ -134,7 +153,7 @@ func (r *ApprovalRepository) SetApprovalTarget(ctx context.Context, id, targetID
 func (r *ApprovalRepository) RejectApproval(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET
 		status='rejected', reviewed_by_principal_id=$2, review_note=$3, reviewed_at=NOW()
-		WHERE id=$1 AND status IN ('pending','failed')`, id, reviewerPrincipalID, note)
+		WHERE id=$1 AND status='pending'`, id, reviewerPrincipalID, note)
 	if err != nil {
 		return err
 	}
