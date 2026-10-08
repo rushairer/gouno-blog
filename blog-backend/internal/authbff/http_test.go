@@ -360,3 +360,56 @@ func TestStepUpMfaHandler(t *testing.T) {
 		t.Fatalf("expected a temporary BFF flow cookie, got %#v", w.Result().Cookies())
 	}
 }
+
+func TestBackchannelLogoutFailureRedactsValidationAndStoreErrors(t *testing.T) {
+	const marker = "sensitive-internal-diagnostic"
+	cases := []struct {
+		name string
+		err error
+		wantDescription string
+	}{
+		{"untrusted-logout-token", errors.New("verify logout token: " + marker), "invalid logout token"},
+		{"redis-persistence-failure", errors.Join(ErrBackchannelStoreFailure, errors.New(marker)), "logout request could not be completed"},
+		{"concurrent-logout", errors.Join(ErrBackchannelInProgress, errors.New(marker)), "logout request could not be completed"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(w)
+			writeBackchannelLogoutFailure(ctx, test.err)
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, expected OIDC HTTP 400", w.Code)
+			}
+			var body map[string]string
+			if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if body["error"] != "invalid_request" || body["error_description"] != test.wantDescription {
+				t.Fatalf("unexpected sanitized response: %v", body)
+			}
+			if strings.Contains(w.Body.String(), marker) {
+				t.Fatal("back-channel response reflected an internal error")
+			}
+		})
+	}
+}
+
+func TestBackchannelLogoutRequiresTokenWithoutDisclosure(t *testing.T) {
+	client, _ := testBFFClientWithStore(t)
+	router := gin.New()
+	client.RegisterRoutes(router)
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/backchannel-logout", strings.NewReader(""))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest || w.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("invalid back-channel request: status %d, cache control %q", w.Code, w.Header().Get("Cache-Control"))
+	}
+	var body map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["error"] != "invalid_request" || body["error_description"] != "logout_token is required" {
+		t.Fatalf("unexpected missing-token error contract: %v", body)
+	}
+}
