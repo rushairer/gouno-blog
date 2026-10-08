@@ -14,16 +14,17 @@ func (r *ApprovalRepository) ReconcileApprovalRun(ctx context.Context, approvalI
 		return nil, err
 	}
 
-	var pending, unsuccessful int
+	var pending, executing, unsuccessful int
 	if err := r.db.QueryRowContext(ctx, `SELECT
-		COUNT(*) FILTER (WHERE status IN ('pending','approved')),
+		COUNT(*) FILTER (WHERE status='pending'),
+		COUNT(*) FILTER (WHERE status='approved'),
 		COUNT(*) FILTER (WHERE status IN ('rejected','expired','failed'))
-		FROM ai_approvals WHERE run_id=$1`, runID).Scan(&pending, &unsuccessful); err != nil {
+		FROM ai_approvals WHERE run_id=$1`, runID).Scan(&pending, &executing, &unsuccessful); err != nil {
 		return nil, err
 	}
 
 	runs := NewRunRepository(r.db)
-	if pending == 0 {
+	if pending == 0 && executing == 0 {
 		status := domain.AgentRunSucceeded
 		if unsuccessful > 0 {
 			status = domain.AgentRunCancelled
@@ -32,12 +33,23 @@ func (r *ApprovalRepository) ReconcileApprovalRun(ctx context.Context, approvalI
 			return nil, err
 		}
 	} else if unsuccessful > 0 {
+		// Reject only unclaimed proposals. An approved proposal may already be
+		// committing its business effect; overwriting it would destroy the
+		// audit trail and could allow a second application of that effect.
 		if _, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET status='rejected',review_note='cancelled because another proposal in this run was rejected',reviewed_at=NOW()
-			WHERE run_id=$1 AND status IN ('pending','approved')`, runID); err != nil {
+			WHERE run_id=$1 AND status='pending'`, runID); err != nil {
 			return nil, err
 		}
-		if err := runs.CompleteAwaitingApproval(ctx, runID, domain.AgentRunCancelled); err != nil {
+		// Recheck after the update: a concurrent claimant could have moved a
+		// formerly pending row to approved while we cancelled the others.
+		if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_approvals
+			WHERE run_id=$1 AND status='approved'`, runID).Scan(&executing); err != nil {
 			return nil, err
+		}
+		if executing == 0 {
+			if err := runs.CompleteAwaitingApproval(ctx, runID, domain.AgentRunCancelled); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return runs.GetRun(ctx, runID)
