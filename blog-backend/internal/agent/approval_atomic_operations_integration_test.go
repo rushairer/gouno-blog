@@ -179,7 +179,7 @@ func (f *atomicApprovalFixture) contentCandidateCount(t *testing.T) int {
 	return n
 }
 
-func TestAtomicOperationsApprovalCommitsEffectAndStatus(t *testing.T) {
+func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
 			f := newAtomicApprovalFixture(t, action)
@@ -189,6 +189,9 @@ func TestAtomicOperationsApprovalCommitsEffectAndStatus(t *testing.T) {
 			}
 			if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 1 {
 				t.Fatalf("committed approval status=%s effect count=%d", f.status(t), f.effectCount(t))
+			}
+			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
+				t.Fatalf("candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("duplicate approval error=%v, want conflict", err)
@@ -208,7 +211,7 @@ func (s *rollbackApprovalStatusStore) CompleteApprovalTx(context.Context, *sql.T
 	return errors.New("injected: completion failed after Operations insert")
 }
 
-func TestAtomicOperationsApprovalRollsBackSideEffectIfStatusFails(t *testing.T) {
+func TestAtomicApprovalRollsBackSideEffectIfStatusFails(t *testing.T) {
 	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
 			f := newAtomicApprovalFixture(t, action)
@@ -219,6 +222,9 @@ func TestAtomicOperationsApprovalRollsBackSideEffectIfStatusFails(t *testing.T) 
 			}
 			if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 0 {
 				t.Fatalf("rollback was partial: status=%s rows=%d", f.status(t), f.effectCount(t))
+			}
+			if action == "create_content_candidates" && f.contentCandidateCount(t) != 0 {
+				t.Fatalf("rollback left %d candidate children", f.contentCandidateCount(t))
 			}
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe retry after rollback: %v", err)
@@ -238,7 +244,7 @@ func (t lostCommitReplyTransactor) Run(ctx context.Context, callback func(*sql.T
 	return errors.New("injected: commit succeeded but acknowledgement lost")
 }
 
-func TestAtomicOperationsApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t *testing.T) {
+func TestAtomicApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t *testing.T) {
 	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
 			f := newAtomicApprovalFixture(t, action)
@@ -249,6 +255,9 @@ func TestAtomicOperationsApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t 
 			if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 1 {
 				t.Fatalf("post-commit state= %s / %d effects", f.status(t), f.effectCount(t))
 			}
+			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
+				t.Fatalf("committed candidate children=%d, want 2", f.contentCandidateCount(t))
+			}
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe replay after committed acknowledgement loss: %v", err)
 			}
@@ -256,7 +265,7 @@ func TestAtomicOperationsApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t 
 	}
 }
 
-func TestAtomicOperationsApprovalConcurrentReviewers(t *testing.T) {
+func TestAtomicApprovalConcurrentReviewers(t *testing.T) {
 	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
 			f := newAtomicApprovalFixture(t, action)
@@ -284,6 +293,47 @@ func TestAtomicOperationsApprovalConcurrentReviewers(t *testing.T) {
 			if committed != 1 || f.effectCount(t) != 1 || f.status(t) != domain.ApprovalExecuted {
 				t.Fatalf("committed=%d effects=%d approval=%s", committed, f.effectCount(t), f.status(t))
 			}
+			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
+				t.Fatalf("concurrent candidate children=%d, want 2", f.contentCandidateCount(t))
+			}
 		})
+	}
+}
+
+func TestAtomicMediaCandidateRejectsStalePostRevision(t *testing.T) {
+	for _, action := range []string{"create_media_candidate", "create_distribution_draft"} {
+		t.Run(action, func(t *testing.T) {
+			f := newAtomicApprovalFixture(t, action)
+			if _, err := f.db.ExecContext(context.Background(), `UPDATE posts
+				SET revision=revision+1 WHERE id=$1`, f.postID); err != nil {
+				t.Fatal(err)
+			}
+			svc := f.service(f.repo, f.transactor)
+			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "stale"); !errors.Is(err, ErrApprovalOutcomeUncertain) {
+				t.Fatalf("stale revision error=%v, want quarantined failure", err)
+			}
+			if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 0 {
+				t.Fatalf("stale media incorrectly persisted: status=%s rows=%d", f.status(t), f.effectCount(t))
+			}
+			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "replay"); !errors.Is(err, ErrApprovalConflict) {
+				t.Fatalf("stale approval replayed: %v", err)
+			}
+		})
+	}
+}
+
+func TestAtomicDistributionNonImageIsNoEffect(t *testing.T) {
+	f := newAtomicApprovalFixture(t, "create_distribution_draft")
+	payload := fmt.Sprintf(`{"post_id":%d,"format":"social","body":"A draft for later review"}`, f.postID)
+	if _, err := f.db.ExecContext(context.Background(), `UPDATE ai_approvals SET proposed_payload=$2::jsonb WHERE id=$1`,
+		f.approvalID, payload); err != nil {
+		t.Fatal(err)
+	}
+	svc := f.service(f.repo, f.transactor)
+	if err := svc.Approve(context.Background(), f.approvalID, f.principal, "social draft"); err != nil {
+		t.Fatal(err)
+	}
+	if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 0 {
+		t.Fatalf("non-image distribution produced media: status=%s rows=%d", f.status(t), f.effectCount(t))
 	}
 }
