@@ -104,12 +104,37 @@ The isolated PostgreSQL regressions for this phase are in
 rollback after insert, committed-but-lost-ACK, and 16 concurrent reviewers for
 both supported action types.
 
+## Atomic local PostgreSQL effects (phase 2)
+
+`create_content_candidates`, `create_media_candidate` and
+`create_distribution_draft` with `format=image_brief` now use the same
+approval-completion transaction. For content candidate sets, **all child
+`ai_content_candidates` rows and their parent
+`ai_content_candidate_sets` row** roll back together if the approval status
+cannot be persisted. For media, the existing captured post-revision check
+is executed as part of the same transaction as
+`ai_media_candidates` insertion and approval completion.
+Both parent business tables retain `UNIQUE(source_approval_id)`.
+
+A non-image `create_distribution_draft` (social/newsletter/FAQ) still has
+no immediate media side effect. It only finalizes the approved proposal.
+Subsequent image generation, asset publication, and article application
+are **not** part of the approval transaction and require their own
+independent recovery rules.
+
+`internal/agent/approval_atomic_operations_integration_test.go` includes
+a real migrated PostgreSQL matrix for both earlier Operations actions
+and these new candidate actions: normal commit, an injected status
+write failure after effects are staged, lost COMMIT acknowledgement,
+concurrent reviewers, nested content children rollback, stale media
+revision, and non-image distribution behavior.
+
 ## Remaining architectural work
 
-The phase-1 atomic Operations path eliminates the split commit for editorial
-and reply-draft approvals only. The remaining guards prevent unsafe
-**automatic replay** elsewhere but do not provide a universal cross-capability
-atomic commit. A later phase should add durable per-effect
+The phased atomic paths eliminate the split commit for editorial tasks,
+reply drafts, content candidate sets and approved media candidate briefs only.
+The remaining guards prevent unsafe **automatic replay** elsewhere but do not
+provide a universal cross-capability atomic commit. A later phase should add durable per-effect
 idempotency keys and transactional completion (or a transactional outbox)
 where feasible. Only then should selective, provably safe retries be
 reintroduced, with database fault-injection tests for each action type.
