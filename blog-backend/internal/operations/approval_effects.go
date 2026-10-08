@@ -61,18 +61,46 @@ func (s *Service) CreateContentCandidateSet(ctx context.Context, approval *domai
 	})
 }
 
-func (s *Service) CreateEditorialTask(ctx context.Context, approvalID int64, title, description, priority string) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
+// approvalEffectExecutor lets the exact same Operations-owned insert execute
+// on a standalone DB handle or the Agent-coordinated approval transaction.
+type approvalEffectExecutor interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
+func createEditorialTaskOn(ctx context.Context, writer approvalEffectExecutor, approvalID int64, title, description, priority string) error {
+	_, err := writer.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
 		(title, description, priority, source_approval_id) VALUES ($1,$2,$3,$4)`,
 		title, description, priority, approvalID)
 	return err
 }
 
-func (s *Service) CreateReplyDraft(ctx context.Context, approvalID, commentID int64, content string) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO ai_comment_reply_drafts
+func createReplyDraftOn(ctx context.Context, writer approvalEffectExecutor, approvalID, commentID int64, content string) error {
+	_, err := writer.ExecContext(ctx, `INSERT INTO ai_comment_reply_drafts
 		(comment_id, content, source_approval_id) VALUES ($1,$2,$3)`,
 		commentID, content, approvalID)
 	return err
+}
+
+func (s *Service) CreateEditorialTask(ctx context.Context, approvalID int64, title, description, priority string) error {
+	return createEditorialTaskOn(ctx, s.db, approvalID, title, description, priority)
+}
+
+func (s *Service) CreateEditorialTaskTx(ctx context.Context, tx *sql.Tx, approvalID int64, title, description, priority string) error {
+	if tx == nil {
+		return errors.New("editorial task transaction is required")
+	}
+	return createEditorialTaskOn(ctx, tx, approvalID, title, description, priority)
+}
+
+func (s *Service) CreateReplyDraft(ctx context.Context, approvalID, commentID int64, content string) error {
+	return createReplyDraftOn(ctx, s.db, approvalID, commentID, content)
+}
+
+func (s *Service) CreateReplyDraftTx(ctx context.Context, tx *sql.Tx, approvalID, commentID int64, content string) error {
+	if tx == nil {
+		return errors.New("reply draft transaction is required")
+	}
+	return createReplyDraftOn(ctx, tx, approvalID, commentID, content)
 }
 
 func (s *Service) CreateOperationalSuggestion(ctx context.Context, value *opsdomain.OperationalSuggestion) error {
