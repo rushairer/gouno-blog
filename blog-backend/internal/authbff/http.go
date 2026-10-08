@@ -234,10 +234,27 @@ func (c *Client) backchannelLogoutHandler(ctx *gin.Context) {
 		return
 	}
 	if err := c.BackChannelLogout(ctx.Request.Context(), logoutToken); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "error_description": err.Error()})
+		writeBackchannelLogoutFailure(ctx, err)
 		return
 	}
 	ctx.Status(http.StatusOK)
+}
+
+// The final OpenID Connect Back-Channel Logout 1.0 specification requires
+// HTTP 400 for an invalid request *or* a failed logout. Keep that status
+// contract, but never reflect JWT verifier, Redis, or session error text.
+func writeBackchannelLogoutFailure(ctx *gin.Context, err error) {
+	description := "invalid logout token"
+	if errors.Is(err, ErrBackchannelStoreFailure) || errors.Is(err, ErrBackchannelInProgress) {
+		description = "logout request could not be completed"
+		if errors.Is(err, ErrBackchannelStoreFailure) {
+			log.Printf("[authbff] back-channel logout persistence error: %v", err)
+		}
+	}
+	ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+		"error":             "invalid_request",
+		"error_description": description,
+	})
 }
 
 func (c *Client) stepUpMfaHandler(ctx *gin.Context) {
