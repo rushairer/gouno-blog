@@ -109,7 +109,7 @@ func WriteDomainError(c *gin.Context, err error) {
 			status = http.StatusBadRequest
 			code = "POST_EXPECTED_REVISION_REQUIRED"
 		}
-		c.JSON(status, gin.H{"code": status, "message": err.Error(), "error_code": code})
+		c.JSON(status, gin.H{"code": status, "message": publicDomainErrorMessage(status), "error_code": code})
 		c.Abort()
 		return
 	}
@@ -193,7 +193,7 @@ func WriteDomainError(c *gin.Context, err error) {
 		reqIDStr = s
 	}
 
-	message := err.Error()
+	message := publicDomainErrorMessage(status)
 	if status >= http.StatusInternalServerError {
 		if logger != nil {
 			logger.Error("unhandled internal server error",
@@ -219,6 +219,22 @@ func WriteDomainError(c *gin.Context, err error) {
 	}
 	c.JSON(status, resp)
 	c.Abort()
+}
+
+// publicDomainErrorMessage exposes only stable, transport-safe descriptions.
+// Wrapped domain errors may contain database details, identifiers or secret values;
+// those remain in structured server logs rather than HTTP responses.
+func publicDomainErrorMessage(status int) string {
+	switch status {
+	case http.StatusBadRequest:
+		return "invalid request"
+	case http.StatusNotFound:
+		return "resource not found"
+	case http.StatusConflict:
+		return "request conflict"
+	default:
+		return "internal server error"
+	}
 }
 
 // WriteServiceError is an alias for WriteDomainError for consistent service error dispatch.

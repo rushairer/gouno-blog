@@ -111,7 +111,7 @@ func (ctrl *CommunityController) CreateComment(c *gin.Context) {
 	}
 	var req createCommunityCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteValidationError(c, err)
 		return
 	}
 	comment, err := ctrl.svc.CreateComment(c.Request.Context(), post.ID, req.ParentID, actor, req.Author, req.Content)
