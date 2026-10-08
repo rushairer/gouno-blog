@@ -23,8 +23,9 @@ import (
 )
 
 var (
-	ErrApprovalConflict = errors.New("approval target changed or is no longer pending")
-	ErrApprovalExpired  = errors.New("approval has expired")
+	ErrApprovalConflict         = errors.New("approval target changed or is no longer pending")
+	ErrApprovalExpired          = errors.New("approval has expired")
+	ErrApprovalOutcomeUncertain = errors.New("approval execution outcome uncertain; manual reconciliation required")
 )
 
 type mediaAssetGateway interface {
@@ -523,24 +524,40 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincip
 	if err != nil {
 		return translateError(err)
 	}
-	if approval.Status != domain.ApprovalPending && approval.Status != domain.ApprovalFailed {
+	// Failed records from older deployments may already have persisted a side
+	// effect before reporting failure. Never replay them without reconciliation.
+	if approval.Status != domain.ApprovalPending {
 		return ErrApprovalConflict
 	}
 	if time.Now().After(approval.ExpiresAt) {
-		_ = s.approvals.CompleteApproval(ctx, id, domain.ApprovalExpired, "approval expired")
+		if err := s.approvals.CompleteApproval(ctx, id, domain.ApprovalExpired, "approval expired"); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrApprovalConflict
+			}
+			return err
+		}
 		return ErrApprovalExpired
 	}
 	if err := s.validateConflict(ctx, approval); err != nil {
 		return err
 	}
 	if err := s.approvals.ClaimApproval(ctx, id, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
-		return ErrApprovalConflict
-	}
-	if err := s.execute(ctx, approval); err != nil {
-		_ = s.approvals.CompleteApproval(ctx, id, domain.ApprovalFailed, safeError(err))
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrApprovalConflict
+		}
 		return err
 	}
-	return s.approvals.CompleteApproval(ctx, id, domain.ApprovalExecuted, "")
+	// Claim is durable before execution. Once any business effect is attempted,
+	// its commit outcome may be unknown (e.g. a lost database response). Keep
+	// status=approved on *any* error, including completion errors, so neither a
+	// retry nor a competing reviewer can duplicate or overwrite the effect.
+	if err := s.execute(ctx, approval); err != nil {
+		return fmt.Errorf("%w (approval_id=%d): %v", ErrApprovalOutcomeUncertain, id, err)
+	}
+	if err := s.approvals.CompleteApproval(ctx, id, domain.ApprovalExecuted, ""); err != nil {
+		return fmt.Errorf("%w (approval_id=%d): %v", ErrApprovalOutcomeUncertain, id, err)
+	}
+	return nil
 }
 
 func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Context, approvalID int64, creatorPrincipalID int64) error {
