@@ -115,9 +115,16 @@ func (r *ApprovalRepository) ClaimApproval(ctx context.Context, id int64, review
 	return nil
 }
 
-func (r *ApprovalRepository) CompleteApproval(ctx context.Context, id int64, status domain.ApprovalStatus, note string) error {
-	// Only a pending proposal may expire; only the claimed reviewer may finish
-	// execution. No transition back to failed/retryable is safe after effects.
+// approvalStatusWriter is implemented by both *sql.DB and *sql.Tx.
+// Keeping completion SQL in one helper prevents the atomic and legacy paths
+// from drifting apart in their compare-and-swap state conditions.
+type approvalStatusWriter interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
+func completeApprovalOn(ctx context.Context, writer approvalStatusWriter, id int64, status domain.ApprovalStatus, note string) error {
+	// Only a pending proposal may expire; only a claimed approval may be
+	// executed. In-doubt executions must never become retryable failures.
 	var expected domain.ApprovalStatus
 	switch status {
 	case domain.ApprovalExpired:
@@ -127,7 +134,7 @@ func (r *ApprovalRepository) CompleteApproval(ctx context.Context, id int64, sta
 	default:
 		return fmt.Errorf("unsupported approval completion status %q", status)
 	}
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET status=$2,
+	result, err := writer.ExecContext(ctx, `UPDATE ai_approvals SET status=$2,
 		review_note=CASE WHEN $3='' THEN review_note ELSE $3 END
 		WHERE id=$1 AND status=$4`, id, status, note, expected)
 	if err != nil {
@@ -137,6 +144,19 @@ func (r *ApprovalRepository) CompleteApproval(ctx context.Context, id int64, sta
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (r *ApprovalRepository) CompleteApproval(ctx context.Context, id int64, status domain.ApprovalStatus, note string) error {
+	return completeApprovalOn(ctx, r.db, id, status, note)
+}
+
+// CompleteApprovalTx must share the business effect's database transaction.
+// A rollback then removes both the side effect and the executed status.
+func (r *ApprovalRepository) CompleteApprovalTx(ctx context.Context, tx *sql.Tx, id int64, status domain.ApprovalStatus, note string) error {
+	if tx == nil {
+		return fmt.Errorf("approval completion transaction is required")
+	}
+	return completeApprovalOn(ctx, tx, id, status, note)
 }
 
 func (r *ApprovalRepository) SetApprovalTarget(ctx context.Context, id, targetID int64) error {
