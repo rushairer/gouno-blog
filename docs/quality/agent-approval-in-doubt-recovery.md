@@ -75,10 +75,41 @@ source-approval or deduplication linkage and any downstream records.
    or release cutover. Retain all evidence; do not delete them for cosmetic
    status cleanup.
 
+## Atomic local PostgreSQL effects (phase 1)
+
+Agent approval now executes `create_editorial_task` and `reply_comment`
+inside one `dbtx.Transactor` transaction that spans the Operations-owned insert
+and the Agent-owned `approved -> executed` update. Both target tables already
+enforce `UNIQUE(source_approval_id)`, so duplicate writes fail at the durable
+business boundary. The initial `pending -> approved` claim remains a separate
+transaction and retains the fail-closed policy.
+
+For these two actions:
+
+- **Before final COMMIT:** failure rolls back the business row **and** the
+  `executed` transition; approval remains `approved` and must not auto-retry.
+- **After COMMIT, ACK lost:** the business row and `executed` approval are
+  committed together. The caller may still see an uncertain outcome; inspect
+  the database rather than replaying the approval.
+- **Concurrent reviewers:** only the conditional initial claim wins; the
+  losing requests must not execute any effect.
+
+Other action types still use the older separated-effect/finalization path and
+remain quarantined on ambiguous outcomes. This phase **does not** implement
+transactional recovery or externally observable exactly-once semantics for
+posts, pages, media, or workflows.
+
+The isolated PostgreSQL regressions for this phase are in
+`internal/agent/approval_atomic_operations_integration_test.go`: commit,
+rollback after insert, committed-but-lost-ACK, and 16 concurrent reviewers for
+both supported action types.
+
 ## Remaining architectural work
 
-This guard eliminates unsafe **automatic replay** but does not provide an
-atomic cross-capability commit. A later phase should add durable per-effect
+The phase-1 atomic Operations path eliminates the split commit for editorial
+and reply-draft approvals only. The remaining guards prevent unsafe
+**automatic replay** elsewhere but do not provide a universal cross-capability
+atomic commit. A later phase should add durable per-effect
 idempotency keys and transactional completion (or a transactional outbox)
 where feasible. Only then should selective, provably safe retries be
 reintroduced, with database fault-injection tests for each action type.
