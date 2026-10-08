@@ -8,7 +8,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-w -s" -o seed main.go
 
 FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
-RUN apk --no-cache add ca-certificates=20260909-r0 \
+RUN apk --no-cache add ca-certificates=20260909-r0 zlib=1.3.2-r1 \
     && addgroup -S seed \
     && adduser -S -G seed -h /app seed
 WORKDIR /app

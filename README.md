@@ -242,10 +242,7 @@ BLOG_AGENT_MASTER_KEY_VERSION=2
 ## 开发与生产部署边界
 
 根目录 `docker-compose.yml` 仅用于本地开发，其中的固定凭据不得用于生产。
-生产部署使用 `docker-compose.production.yml`；自建应用镜像默认跟随 `main`，
-除非部署时明确通过镜像变量固定 release tag 或 digest。第三方基础镜像继续
-使用 `version@sha256:digest`，所有密码、签名密钥、TOTP key、pepper、
-数据库 DSN 和 Agent key 都必须显式设置。
+生产部署使用 `docker-compose.production.yml`；所有第一方应用镜像必须由运维显式指定不可变的 `version@sha256:digest` 引用，未提供时部署拒绝启动，不允许浮动的 `main` 标签。第三方基础镜像同样以不可变 digest 固定；密码、签名密钥、TOTP key、pepper、数据库 DSN 和 Agent key 均通过 Docker Secrets 提供。生产 Redis 在一次性数据卷属主修复任务完成后，以非 root 身份常驻运行。
 
 生产身份链路有两个不可省略的部署契约：GOSSO 的
 `GOUNO_AUTH_LOGIN_URL` 固定为 `/login`。Blog 不提供 `/login`

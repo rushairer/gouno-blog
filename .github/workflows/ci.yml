@@ -240,6 +240,9 @@ jobs:
       - name: Production Compose config validation
         run: docker compose --env-file .env.production.example -f docker-compose.production.yml config
 
+      - name: Production Redis least-privilege contract
+        run: python3 .github/scripts/check_production_redis_security.py
+
       - name: Authentication deployment contract
         run: node scripts/check-auth-deployment-contract.mjs
 
