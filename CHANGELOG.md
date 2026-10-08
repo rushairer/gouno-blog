@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Extend Agent approval atomic completion to content candidate sets (including child rows), media candidates and image-brief distribution proposals using existing approval-scoped uniqueness and post-revision guards; verify rollback, commit-ACK loss and concurrency in isolated PostgreSQL tests.
 - Commit Agent approval finalization atomically with Operations-owned editorial-task and comment-reply-draft writes; retain per-approval uniqueness and failure quarantine, with isolated PostgreSQL rollback/commit-ack-loss/concurrency regressions.
 - Fail closed on uncertain Agent approval effects: prevent replay of legacy failed rows, guard approval state transitions and preserve claimed effects during concurrent run reconciliation; add PostgreSQL fault-injection tests and a recovery runbook.
 - Hide wrapped domain and request-binding error internals from public API responses while preserving HTTP status and post revision conflict codes; add regression coverage.
