@@ -19,7 +19,27 @@ func NewMediaCandidateRepository(db *sql.DB) *MediaCandidateRepository {
 	return &MediaCandidateRepository{db: db}
 }
 
+type mediaCandidateEffectWriter interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
 func (r *MediaCandidateRepository) CreateMediaCandidate(ctx context.Context, approval *domain.AgentApproval) error {
+	return createMediaCandidateOn(ctx, r.db, approval)
+}
+
+// CreateMediaCandidateTx performs the existing revision-guarded insert on the
+// transaction that will also mark the approval executed. No nested commits.
+func (r *MediaCandidateRepository) CreateMediaCandidateTx(ctx context.Context, tx *sql.Tx, approval *domain.AgentApproval) error {
+	if tx == nil {
+		return errors.New("media candidate transaction is required")
+	}
+	return createMediaCandidateOn(ctx, tx, approval)
+}
+
+func createMediaCandidateOn(ctx context.Context, writer mediaCandidateEffectWriter, approval *domain.AgentApproval) error {
+	if approval == nil {
+		return errors.New("media candidate approval is required")
+	}
 	var payload struct {
 		PostID   int64  `json:"post_id"`
 		Format   string `json:"format"`
@@ -38,7 +58,7 @@ func (r *MediaCandidateRepository) CreateMediaCandidate(ctx context.Context, app
 	if json.Unmarshal(approval.BeforeSnapshot, &before) != nil || before.Revision <= 0 {
 		return postdomain.ErrRevisionConflict
 	}
-	result, err := r.db.ExecContext(ctx, `INSERT INTO ai_media_candidates
+	result, err := writer.ExecContext(ctx, `INSERT INTO ai_media_candidates
 		(post_id,source_run_id,source_approval_id,workflow_run_id,headline,brief,platform,alt_text,provider,model,input_tokens,output_tokens,post_version_token)
 		SELECT $1,$2,$3,ar.workflow_run_id,$4,$5,$6,$7,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,'revision:' || p.revision::text
 		FROM ai_agent_runs ar JOIN posts p ON p.id=$1 WHERE ar.id=$2 AND p.revision=$8`,
