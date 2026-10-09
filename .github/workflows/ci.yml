@@ -221,6 +221,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Patched Go toolchain and immutable builder contract
+        run: python3 .github/scripts/check_go_toolchain_security.py
+
       - name: Docker Compose config validation
         run: docker compose config
 

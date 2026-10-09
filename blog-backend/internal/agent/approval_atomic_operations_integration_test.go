@@ -14,6 +14,7 @@ import (
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/operations"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
@@ -30,7 +31,7 @@ type atomicApprovalFixture struct {
 
 var atomicApprovalTestActions = []string{
 	"create_editorial_task", "reply_comment", "create_content_candidates",
-	"create_media_candidate", "create_distribution_draft",
+	"create_media_candidate", "create_distribution_draft", "create_operational_suggestion",
 }
 
 func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixture {
@@ -55,6 +56,7 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_comment_reply_drafts WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_content_candidate_sets WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_media_candidates WHERE source_approval_id=$1`, fixture.approvalID)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_operational_suggestions WHERE source_type=$1 AND source_run_id=$2`, "approval_atomic_fixture", runID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_agent_runs WHERE id=$1`, runID)
 		if postID != 0 {
 			_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE id=$1`, postID)
@@ -86,6 +88,9 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		}
 		payload = json.RawMessage(fmt.Sprintf(`{"comment_id":%d,"content":"Atomic reply"}`, commentID))
 		targetType = "comment"
+	case "create_operational_suggestion":
+		targetType = "suggestion"
+		payload = json.RawMessage(fmt.Sprintf(`{"source_type":"approval_atomic_fixture","source_key":"suggestion-%d","source_run_id":999999,"title":"Atomic improvement","description":"Proposed improvement","priority":"high","evidence":{"source":"approved"}}`, runID))
 	case "create_content_candidates", "create_media_candidate", "create_distribution_draft":
 		suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 		if err := db.QueryRowContext(ctx, `INSERT INTO posts(title,slug,summary,content,status)
@@ -157,6 +162,8 @@ func (f *atomicApprovalFixture) effectCount(t *testing.T) int {
 		query = `SELECT COUNT(*) FROM ai_content_candidate_sets WHERE source_approval_id=$1`
 	case "create_media_candidate", "create_distribution_draft":
 		query = `SELECT COUNT(*) FROM ai_media_candidates WHERE source_approval_id=$1`
+	case "create_operational_suggestion":
+		query = `SELECT COUNT(*) FROM ai_operational_suggestions WHERE source_type='approval_atomic_fixture' AND source_run_id=(SELECT run_id FROM ai_approvals WHERE id=$1)`
 	default:
 		t.Fatalf("unsupported effect count for %q", f.action)
 	}
@@ -335,5 +342,104 @@ func TestAtomicDistributionNonImageIsNoEffect(t *testing.T) {
 	}
 	if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 0 {
 		t.Fatalf("non-image distribution produced media: status=%s rows=%d", f.status(t), f.effectCount(t))
+	}
+}
+
+func TestAtomicOperationalSuggestionPreservesDedupeAndTerminalState(t *testing.T) {
+	cases := []struct {
+		name, initialStatus, expectedEvidence string
+	}{
+		{"new suggestion refreshes evidence", "new", "approved"},
+		{"resolved suggestion stays resolved", "resolved", "existing"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newAtomicApprovalFixture(t, "create_operational_suggestion")
+			ctx := context.Background()
+			approval, err := f.repo.GetApproval(ctx, f.approvalID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var prior opsdomain.OperationalSuggestion
+			if err := json.Unmarshal(approval.ProposedPayload, &prior); err != nil {
+				t.Fatal(err)
+			}
+			prior.SourceRunID = &approval.RunID
+			prior.Evidence = json.RawMessage(`{"source":"existing"}`)
+			if err := f.effects.CreateOperationalSuggestion(ctx, &prior); err != nil {
+				t.Fatal(err)
+			}
+			if tc.initialStatus != "new" {
+				if _, err := f.db.ExecContext(ctx,
+					`UPDATE ai_operational_suggestions SET status=$2 WHERE source_type=$1 AND source_run_id=$3`,
+					prior.SourceType, tc.initialStatus, approval.RunID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := f.service(f.repo, f.transactor).Approve(ctx, f.approvalID, f.principal, "review"); err != nil {
+				t.Fatal(err)
+			}
+			if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 1 {
+				t.Fatalf("duplicate or incomplete suggestion: approval=%s count=%d", f.status(t), f.effectCount(t))
+			}
+			var status string
+			var evidence []byte
+			var sourceRunID int64
+			if err := f.db.QueryRowContext(ctx,
+				`SELECT status,evidence,source_run_id FROM ai_operational_suggestions
+				 WHERE source_type=$1 AND source_key=$2`, prior.SourceType, prior.SourceKey).
+				Scan(&status, &evidence, &sourceRunID); err != nil {
+				t.Fatal(err)
+			}
+			var value struct { Source string `json:"source"` }
+			if err := json.Unmarshal(evidence, &value); err != nil {
+				t.Fatal(err)
+			}
+			if status != tc.initialStatus || value.Source != tc.expectedEvidence || sourceRunID != approval.RunID {
+				t.Fatalf("dedupe regression: status=%q source=%q runID=%d, expected status=%q source=%q runID=%d",
+					status, value.Source, sourceRunID, tc.initialStatus, tc.expectedEvidence, approval.RunID)
+			}
+		})
+	}
+}
+
+func TestAtomicOperationalSuggestionDedupeUpdateRollsBackWithApproval(t *testing.T) {
+	f := newAtomicApprovalFixture(t, "create_operational_suggestion")
+	ctx := context.Background()
+	approval, err := f.repo.GetApproval(ctx, f.approvalID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var prior opsdomain.OperationalSuggestion
+	if err := json.Unmarshal(approval.ProposedPayload, &prior); err != nil {
+		t.Fatal(err)
+	}
+	prior.SourceRunID = &approval.RunID
+	prior.Evidence = json.RawMessage(`{"source":"existing"}`)
+	if err := f.effects.CreateOperationalSuggestion(ctx, &prior); err != nil {
+		t.Fatal(err)
+	}
+	svc := f.service(&rollbackApprovalStatusStore{ApprovalRepository: f.repo}, f.transactor)
+	if err := svc.Approve(ctx, f.approvalID, f.principal, "review"); !errors.Is(err, ErrApprovalOutcomeUncertain) {
+		t.Fatalf("error=%v, want quarantined outcome", err)
+	}
+	if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 1 {
+		t.Fatalf("uncommitted approval or suggestion: status=%s count=%d", f.status(t), f.effectCount(t))
+	}
+	var evidence []byte
+	if err := f.db.QueryRowContext(ctx,
+		`SELECT evidence FROM ai_operational_suggestions WHERE source_type=$1 AND source_key=$2`,
+		prior.SourceType, prior.SourceKey).Scan(&evidence); err != nil {
+		t.Fatal(err)
+	}
+	var value struct { Source string `json:"source"` }
+	if err := json.Unmarshal(evidence, &value); err != nil {
+		t.Fatal(err)
+	}
+	if value.Source != "existing" {
+		t.Fatalf("rollback leaked suggestion update, source=%q", value.Source)
+	}
+	if err := svc.Approve(ctx, f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
+		t.Fatalf("quarantined approval replayed: %v", err)
 	}
 }

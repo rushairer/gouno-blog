@@ -115,13 +115,33 @@ func (s *Service) CreateReplyDraftTx(ctx context.Context, tx *sql.Tx, approvalID
 	return createReplyDraftOn(ctx, tx, approvalID, commentID, content)
 }
 
-func (s *Service) CreateOperationalSuggestion(ctx context.Context, value *opsdomain.OperationalSuggestion) error {
+// createOperationalSuggestionOn preserves the existing natural-key dedupe and
+// its terminal-status protection while allowing a reviewer approval and the
+// business upsert to commit together under one PostgreSQL transaction.
+func createOperationalSuggestionOn(ctx context.Context, writer approvalEffectExecutor, value *opsdomain.OperationalSuggestion) error {
+	if value == nil {
+		return errors.New("operational suggestion is required")
+	}
 	sum := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join([]string{value.SourceType, value.SourceKey, value.Title}, ":"))))
-	_, err := s.db.ExecContext(ctx, `INSERT INTO ai_operational_suggestions
+	_, err := writer.ExecContext(ctx, `INSERT INTO ai_operational_suggestions
 		(source_type,source_key,source_run_id,workflow_run_id,title,description,priority,evidence,
 		 window_start,window_end,dedupe_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		ON CONFLICT(dedupe_key) DO UPDATE SET evidence=EXCLUDED.evidence,updated_at=NOW()
 		WHERE ai_operational_suggestions.status='new'`, value.SourceType, value.SourceKey, value.SourceRunID,
 		value.WorkflowRunID, value.Title, value.Description, value.Priority, value.Evidence, value.WindowStart, value.WindowEnd, sum)
 	return err
+}
+
+func (s *Service) CreateOperationalSuggestion(ctx context.Context, value *opsdomain.OperationalSuggestion) error {
+	return createOperationalSuggestionOn(ctx, s.db, value)
+}
+
+// CreateOperationalSuggestionTx only owns the Operations upsert; the caller
+// completes the Agent approval inside this same transaction. It intentionally
+// does not introduce an Operations-owned transaction or alter dedupe behavior.
+func (s *Service) CreateOperationalSuggestionTx(ctx context.Context, tx *sql.Tx, value *opsdomain.OperationalSuggestion) error {
+	if tx == nil {
+		return errors.New("operational suggestion transaction is required")
+	}
+	return createOperationalSuggestionOn(ctx, tx, value)
 }

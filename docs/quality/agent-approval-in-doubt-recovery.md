@@ -129,10 +129,32 @@ write failure after effects are staged, lost COMMIT acknowledgement,
 concurrent reviewers, nested content children rollback, stale media
 revision, and non-image distribution behavior.
 
+## Atomic operational suggestions (phase 3)
+
+`create_operational_suggestion` now commits the Operations-owned
+`ai_operational_suggestions` natural-key upsert together with the Agent
+`approved -> executed` status update in one PostgreSQL transaction.
+
+The existing SHA256 fingerprint of `source_type:source_key:title` is the
+**suggestion dedupe identity**, not a per-approval external idempotency key.
+If a matching suggestion is still `new`, only its evidence and
+`updated_at` may refresh. If the existing row is already ignored,
+converted, selected or resolved, the approval is recorded as executed but
+the suggestion remains untouched and is not reactivated. The trusted
+`source_run_id` is always taken from the approved Run instead of user-supplied
+proposal JSON.
+
+The isolated PostgreSQL integration suite verifies insert+status rollback,
+dedupe evidence-update rollback, commit-ACK loss, 16 concurrent reviewers,
+source run provenance and terminal-status protection. These tests do **not**
+claim delivery of downstream workflow events or exactly-once behavior across
+external systems.
+
 ## Remaining architectural work
 
 The phased atomic paths eliminate the split commit for editorial tasks,
-reply drafts, content candidate sets and approved media candidate briefs only.
+reply drafts, content candidate sets, approved media candidate briefs and
+operational suggestion upserts.
 The remaining guards prevent unsafe **automatic replay** elsewhere but do not
 provide a universal cross-capability atomic commit. A later phase should add durable per-effect
 idempotency keys and transactional completion (or a transactional outbox)
