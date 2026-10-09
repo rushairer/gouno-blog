@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Upgrade backend and Seed to Go 1.27.2 to fix reachable standard-library crypto/tls vulnerability `GO-2026-6607` (`CVE-2026-97031`), pin the official Linux multiarchitecture builder index to immutable digest `sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673`, and add a CI regression guard against Go version/digest drift.
 - Atomically commit approved operational-suggestion upserts with Agent approval completion while retaining natural-key evidence refresh, terminal suggestion status protection and trusted run provenance; add real PostgreSQL fault/concurrency/duplicate-dedupe regressions.
 - Pin Alpine frontend runtime `tiff=4.7.2-r0` to remediate fixable HIGH `CVE-2026-4775` reported by the image scan; retain Trivy/Grype fail-on-fixable-HIGH gates.
 - Extend Agent approval atomic completion to content candidate sets (including child rows), media candidates and image-brief distribution proposals using existing approval-scoped uniqueness and post-revision guards; verify rollback, commit-ACK loss and concurrency in isolated PostgreSQL tests.
