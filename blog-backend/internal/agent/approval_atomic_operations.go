@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 )
 
 type replyDraftApprovalPayload struct {
@@ -78,7 +79,7 @@ func decodeDistributionDraftApproval(approval *domain.AgentApproval) (distributi
 func isAtomicApprovalAction(actionType string) bool {
 	switch actionType {
 	case "create_editorial_task", "reply_comment", "create_content_candidates",
-		"create_media_candidate", "create_distribution_draft":
+		"create_media_candidate", "create_distribution_draft", "create_operational_suggestion":
 		return true
 	default:
 		return false
@@ -142,6 +143,21 @@ func (s *ApprovalService) executeAtomicApproval(ctx context.Context, approval *d
 				return fmt.Errorf("%w: %v", ErrInvalid, err)
 			}
 			return nil
+		})
+	case "create_operational_suggestion":
+		writer, ok := s.effects.(ApprovalEffectTransactionWriter)
+		if !ok {
+			return errors.New("approval transactional effect writer is unavailable")
+		}
+		var payload opsdomain.OperationalSuggestion
+		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+			return err
+		}
+		// SourceRunID must come from the approved Agent Run, not from caller-
+		// supplied JSON; retain the original trusted provenance invariant.
+		payload.SourceRunID = &approval.RunID
+		return s.commitApprovalEffect(ctx, approval.ID, func(tx *sql.Tx) error {
+			return writer.CreateOperationalSuggestionTx(ctx, tx, &payload)
 		})
 	case "create_media_candidate":
 		return s.commitApprovalMediaCandidate(ctx, approval)
