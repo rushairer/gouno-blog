@@ -33,11 +33,16 @@ type ApprovalEffectTransactionWriter interface {
 	CreateEditorialTaskTx(context.Context, *sql.Tx, int64, string, string, string) error
 	CreateReplyDraftTx(context.Context, *sql.Tx, int64, int64, string) error
 	CreateContentCandidateSetTx(context.Context, *sql.Tx, *domain.AgentApproval) error
-	CreateOperationalSuggestionTx(context.Context, *sql.Tx, *opsdomain.OperationalSuggestion) error
 }
 
 // ApprovalMediaCandidateTransactionWriter keeps media persistence owned by the
 // Agent repository while the approval coordinator supplies the shared Tx.
+// ApprovalSuggestionTransactionWriter keeps Operations suggestion upserts
+// independent of the other already-certified transactional effects.
+type ApprovalSuggestionTransactionWriter interface {
+	CreateOperationalSuggestionTx(context.Context, *sql.Tx, *opsdomain.OperationalSuggestion) error
+}
+
 type ApprovalMediaCandidateTransactionWriter interface {
 	CreateMediaCandidateTx(context.Context, *sql.Tx, *domain.AgentApproval) error
 }
