@@ -33,6 +33,7 @@ type ApprovalEffectTransactionWriter interface {
 	CreateEditorialTaskTx(context.Context, *sql.Tx, int64, string, string, string) error
 	CreateReplyDraftTx(context.Context, *sql.Tx, int64, int64, string) error
 	CreateContentCandidateSetTx(context.Context, *sql.Tx, *domain.AgentApproval) error
+	CreateOperationalSuggestionTx(context.Context, *sql.Tx, *opsdomain.OperationalSuggestion) error
 }
 
 // ApprovalMediaCandidateTransactionWriter keeps media persistence owned by the
