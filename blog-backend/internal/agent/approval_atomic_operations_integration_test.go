@@ -25,6 +25,12 @@ type atomicApprovalFixture struct {
 	approvalID int64
 	principal  int64
 	action     string
+	postID     int64
+}
+
+var atomicApprovalTestActions = []string{
+	"create_editorial_task", "reply_comment", "create_content_candidates",
+	"create_media_candidate", "create_distribution_draft",
 }
 
 func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixture {
@@ -47,6 +53,8 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_editorial_tasks WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_comment_reply_drafts WHERE source_approval_id=$1`, fixture.approvalID)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_content_candidate_sets WHERE source_approval_id=$1`, fixture.approvalID)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_media_candidates WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_agent_runs WHERE id=$1`, runID)
 		if postID != 0 {
 			_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE id=$1`, postID)
@@ -60,6 +68,8 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 	}
 
 	var payload json.RawMessage
+	var beforeSnapshot any
+	var targetID any
 	targetType := "task"
 	switch action {
 	case "create_editorial_task":
@@ -76,13 +86,42 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		}
 		payload = json.RawMessage(fmt.Sprintf(`{"comment_id":%d,"content":"Atomic reply"}`, commentID))
 		targetType = "comment"
+	case "create_content_candidates", "create_media_candidate", "create_distribution_draft":
+		suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+		if err := db.QueryRowContext(ctx, `INSERT INTO posts(title,slug,summary,content,status)
+			VALUES($1,$2,'before summary','body','draft') RETURNING id`,
+			"Candidate approval "+suffix, "atomic-candidate-"+suffix).Scan(&postID); err != nil {
+			t.Fatal(err)
+		}
+		var revision int64
+		if err := db.QueryRowContext(ctx, `SELECT revision FROM posts WHERE id=$1`, postID).Scan(&revision); err != nil {
+			t.Fatal(err)
+		}
+		if revision <= 0 {
+			t.Fatal("persisted post must have a positive revision for guarded media approval")
+		}
+		before, err := json.Marshal(map[string]any{
+			"id": postID, "revision": revision, "title": "Before title", "summary": "before summary",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		beforeSnapshot = string(before)
+		targetID = postID
+		targetType = "post"
+		if action == "create_content_candidates" {
+			payload = json.RawMessage(fmt.Sprintf(`{"post_id":%d,"field_type":"title","candidates":[{"value":"A","rationale":"a"},{"value":"B","rationale":"b"}]}`, postID))
+		} else {
+			payload = json.RawMessage(fmt.Sprintf(`{"post_id":%d,"format":"image_brief","headline":"Candidate","body":"An image brief","platform":"blog","alt_text":"Proposed"}`, postID))
+		}
 	default:
 		t.Fatalf("unsupported test approval action %q", action)
 	}
+	fixture.postID = postID
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_approvals
-		(run_id,tool_call_id,action_type,target_type,proposed_payload,status)
-		VALUES($1,$2,$3,$4,$5::jsonb,'pending') RETURNING id`,
-		runID, toolCallID, action, targetType, string(payload)).Scan(&fixture.approvalID); err != nil {
+		(run_id,tool_call_id,action_type,target_type,target_id,proposed_payload,before_snapshot,status)
+		VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,'pending') RETURNING id`,
+		runID, toolCallID, action, targetType, targetID, string(payload), beforeSnapshot).Scan(&fixture.approvalID); err != nil {
 		t.Fatal(err)
 	}
 	fixture.principal = testsupport.Principal(t, db)
@@ -90,7 +129,10 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 }
 
 func (f *atomicApprovalFixture) service(store ApprovalStore, runner ApprovalTransactionRunner) *ApprovalService {
-	return &ApprovalService{approvals: store, effects: f.effects, transactor: runner}
+	return &ApprovalService{
+		approvals: store, effects: f.effects, transactor: runner,
+		mediaCandidates: agentrepository.NewMediaCandidateRepository(f.db),
+	}
 }
 
 func (f *atomicApprovalFixture) status(t *testing.T) domain.ApprovalStatus {
@@ -105,9 +147,18 @@ func (f *atomicApprovalFixture) status(t *testing.T) domain.ApprovalStatus {
 func (f *atomicApprovalFixture) effectCount(t *testing.T) int {
 	t.Helper()
 	var count int
-	query := `SELECT COUNT(*) FROM ai_editorial_tasks WHERE source_approval_id=$1`
-	if f.action == "reply_comment" {
+	var query string
+	switch f.action {
+	case "create_editorial_task":
+		query = `SELECT COUNT(*) FROM ai_editorial_tasks WHERE source_approval_id=$1`
+	case "reply_comment":
 		query = `SELECT COUNT(*) FROM ai_comment_reply_drafts WHERE source_approval_id=$1`
+	case "create_content_candidates":
+		query = `SELECT COUNT(*) FROM ai_content_candidate_sets WHERE source_approval_id=$1`
+	case "create_media_candidate", "create_distribution_draft":
+		query = `SELECT COUNT(*) FROM ai_media_candidates WHERE source_approval_id=$1`
+	default:
+		t.Fatalf("unsupported effect count for %q", f.action)
 	}
 	if err := f.db.QueryRowContext(context.Background(), query, f.approvalID).Scan(&count); err != nil {
 		t.Fatal(err)
@@ -115,8 +166,21 @@ func (f *atomicApprovalFixture) effectCount(t *testing.T) int {
 	return count
 }
 
-func TestAtomicOperationsApprovalCommitsEffectAndStatus(t *testing.T) {
-	for _, action := range []string{"create_editorial_task", "reply_comment"} {
+// contentCandidateCount also proves the child rows are in the same
+// transaction as the candidate-set header and the approval transition.
+func (f *atomicApprovalFixture) contentCandidateCount(t *testing.T) int {
+	t.Helper()
+	var n int
+	err := f.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM ai_content_candidates
+		WHERE candidate_set_id IN (SELECT id FROM ai_content_candidate_sets WHERE source_approval_id=$1)`, f.approvalID).Scan(&n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
+	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
 			f := newAtomicApprovalFixture(t, action)
 			svc := f.service(f.repo, f.transactor)
@@ -125,6 +189,9 @@ func TestAtomicOperationsApprovalCommitsEffectAndStatus(t *testing.T) {
 			}
 			if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 1 {
 				t.Fatalf("committed approval status=%s effect count=%d", f.status(t), f.effectCount(t))
+			}
+			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
+				t.Fatalf("candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("duplicate approval error=%v, want conflict", err)
@@ -144,8 +211,8 @@ func (s *rollbackApprovalStatusStore) CompleteApprovalTx(context.Context, *sql.T
 	return errors.New("injected: completion failed after Operations insert")
 }
 
-func TestAtomicOperationsApprovalRollsBackSideEffectIfStatusFails(t *testing.T) {
-	for _, action := range []string{"create_editorial_task", "reply_comment"} {
+func TestAtomicApprovalRollsBackSideEffectIfStatusFails(t *testing.T) {
+	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
 			f := newAtomicApprovalFixture(t, action)
 			svc := f.service(&rollbackApprovalStatusStore{ApprovalRepository: f.repo}, f.transactor)
@@ -155,6 +222,9 @@ func TestAtomicOperationsApprovalRollsBackSideEffectIfStatusFails(t *testing.T) 
 			}
 			if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 0 {
 				t.Fatalf("rollback was partial: status=%s rows=%d", f.status(t), f.effectCount(t))
+			}
+			if action == "create_content_candidates" && f.contentCandidateCount(t) != 0 {
+				t.Fatalf("rollback left %d candidate children", f.contentCandidateCount(t))
 			}
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe retry after rollback: %v", err)
@@ -174,8 +244,8 @@ func (t lostCommitReplyTransactor) Run(ctx context.Context, callback func(*sql.T
 	return errors.New("injected: commit succeeded but acknowledgement lost")
 }
 
-func TestAtomicOperationsApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t *testing.T) {
-	for _, action := range []string{"create_editorial_task", "reply_comment"} {
+func TestAtomicApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t *testing.T) {
+	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
 			f := newAtomicApprovalFixture(t, action)
 			svc := f.service(f.repo, lostCommitReplyTransactor{real: f.transactor})
@@ -185,6 +255,9 @@ func TestAtomicOperationsApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t 
 			if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 1 {
 				t.Fatalf("post-commit state= %s / %d effects", f.status(t), f.effectCount(t))
 			}
+			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
+				t.Fatalf("committed candidate children=%d, want 2", f.contentCandidateCount(t))
+			}
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe replay after committed acknowledgement loss: %v", err)
 			}
@@ -192,8 +265,8 @@ func TestAtomicOperationsApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t 
 	}
 }
 
-func TestAtomicOperationsApprovalConcurrentReviewers(t *testing.T) {
-	for _, action := range []string{"create_editorial_task", "reply_comment"} {
+func TestAtomicApprovalConcurrentReviewers(t *testing.T) {
+	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
 			f := newAtomicApprovalFixture(t, action)
 			svc := f.service(f.repo, f.transactor)
@@ -220,6 +293,47 @@ func TestAtomicOperationsApprovalConcurrentReviewers(t *testing.T) {
 			if committed != 1 || f.effectCount(t) != 1 || f.status(t) != domain.ApprovalExecuted {
 				t.Fatalf("committed=%d effects=%d approval=%s", committed, f.effectCount(t), f.status(t))
 			}
+			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
+				t.Fatalf("concurrent candidate children=%d, want 2", f.contentCandidateCount(t))
+			}
 		})
+	}
+}
+
+func TestAtomicMediaCandidateRejectsStalePostRevision(t *testing.T) {
+	for _, action := range []string{"create_media_candidate", "create_distribution_draft"} {
+		t.Run(action, func(t *testing.T) {
+			f := newAtomicApprovalFixture(t, action)
+			if _, err := f.db.ExecContext(context.Background(), `UPDATE posts
+				SET revision=revision+1 WHERE id=$1`, f.postID); err != nil {
+				t.Fatal(err)
+			}
+			svc := f.service(f.repo, f.transactor)
+			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "stale"); !errors.Is(err, ErrApprovalOutcomeUncertain) {
+				t.Fatalf("stale revision error=%v, want quarantined failure", err)
+			}
+			if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 0 {
+				t.Fatalf("stale media incorrectly persisted: status=%s rows=%d", f.status(t), f.effectCount(t))
+			}
+			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "replay"); !errors.Is(err, ErrApprovalConflict) {
+				t.Fatalf("stale approval replayed: %v", err)
+			}
+		})
+	}
+}
+
+func TestAtomicDistributionNonImageIsNoEffect(t *testing.T) {
+	f := newAtomicApprovalFixture(t, "create_distribution_draft")
+	payload := fmt.Sprintf(`{"post_id":%d,"format":"social","body":"A draft for later review"}`, f.postID)
+	if _, err := f.db.ExecContext(context.Background(), `UPDATE ai_approvals SET proposed_payload=$2::jsonb WHERE id=$1`,
+		f.approvalID, payload); err != nil {
+		t.Fatal(err)
+	}
+	svc := f.service(f.repo, f.transactor)
+	if err := svc.Approve(context.Background(), f.approvalID, f.principal, "social draft"); err != nil {
+		t.Fatal(err)
+	}
+	if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 0 {
+		t.Fatalf("non-image distribution produced media: status=%s rows=%d", f.status(t), f.effectCount(t))
 	}
 }

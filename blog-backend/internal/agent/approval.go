@@ -555,8 +555,8 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincip
 	// These Operations-owned effects and their final Agent approval status now
 	// commit in one PostgreSQL transaction. The rest remain fail-closed until
 	// their own action-specific transactional boundaries have been proved.
-	if isAtomicOperationsApproval(approval.ActionType) && s.transactor != nil {
-		if err := s.executeAtomicOperationsApproval(ctx, approval); err != nil {
+	if isAtomicApprovalAction(approval.ActionType) && s.transactor != nil {
+		if err := s.executeAtomicApproval(ctx, approval); err != nil {
 			return fmt.Errorf("%w (approval_id=%d): %v", ErrApprovalOutcomeUncertain, id, err)
 		}
 		return nil
@@ -822,29 +822,16 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		}
 		return nil
 	case "create_distribution_draft":
-		var payload struct {
-			PostID int64  `json:"post_id"`
-			Format string `json:"format"`
-			Body   string `json:"body"`
-		}
-		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		payload, err := decodeDistributionDraftApproval(approval)
+		if err != nil {
 			return err
 		}
-		if payload.PostID <= 0 || strings.TrimSpace(payload.Body) == "" {
-			return errors.New("invalid distribution draft")
-		}
-		switch payload.Format {
-		case "social", "newsletter", "faq", "image_brief":
-			if payload.Format == "image_brief" {
-				if err := s.mediaCandidates.CreateMediaCandidate(ctx, approval); err != nil {
-					return fmt.Errorf("%w: %v", ErrInvalid, err)
-				}
-				return nil
+		if payload.Format == "image_brief" {
+			if err := s.mediaCandidates.CreateMediaCandidate(ctx, approval); err != nil {
+				return fmt.Errorf("%w: %v", ErrInvalid, err)
 			}
-			return nil
-		default:
-			return errors.New("invalid distribution draft format")
 		}
+		return nil
 	default:
 		return fmt.Errorf("unsupported approval action %q", approval.ActionType)
 	}

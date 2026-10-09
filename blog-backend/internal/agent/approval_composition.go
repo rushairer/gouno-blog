@@ -29,6 +29,9 @@ func NewApprovalService(deps ApprovalServiceDependencies) *ApprovalService {
 	if _, ok := deps.Effects.(ApprovalEffectTransactionWriter); !ok {
 		panic("agent.NewApprovalService: atomic Operations writer is required")
 	}
+	if _, ok := deps.MediaCandidates.(ApprovalMediaCandidateTransactionWriter); !ok {
+		panic("agent.NewApprovalService: transactional media candidate writer is required")
+	}
 	return &ApprovalService{
 		approvals: deps.Approvals, mediaCandidates: deps.MediaCandidates, mediaGeneration: deps.MediaGeneration,
 		workflowInteractions: deps.WorkflowInteractions, workflowEvents: deps.WorkflowEvents, effects: deps.Effects,
