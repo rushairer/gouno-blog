@@ -22,6 +22,7 @@ This document defines the **immutable architectural rules, security baselines, a
    - Follow [the incident recovery runbook](docs/quality/agent-approval-in-doubt-recovery.md); use fresh proposals after manual state verification, not direct SQL state resets.
    - Editorial-task and reply-draft approval effects must commit together with `approved -> executed` using the shared `dbtx.Transactor`, while Operations retains ownership of its business SQL. Never move the business write outside the transaction or relax the database `source_approval_id` uniqueness constraints.
    - Content candidate sets (including all child candidates) and media candidates (including image-brief distribution proposals) must also commit together with the approval's `approved -> executed` transition. Preserve the existing media post-revision guard and unique `source_approval_id`; never introduce a nested Operations transaction into this boundary. Downstream image generation remains a separate, guarded operation.
+   - Approved operational suggestions must persist their Operations-owned natural-key upsert together with the Agent `approved -> executed` state transition. The existing SHA256 dedupe key and terminal-state protection (`status='new'` only updates evidence) are immutable unless deliberately redesigned and regression-tested; do not allow review JSON to override trusted `SourceRunID`.
 
 ---
 
