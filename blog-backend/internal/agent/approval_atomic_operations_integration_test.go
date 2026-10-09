@@ -344,3 +344,102 @@ func TestAtomicDistributionNonImageIsNoEffect(t *testing.T) {
 		t.Fatalf("non-image distribution produced media: status=%s rows=%d", f.status(t), f.effectCount(t))
 	}
 }
+
+func TestAtomicOperationalSuggestionPreservesDedupeAndTerminalState(t *testing.T) {
+	cases := []struct {
+		name, initialStatus, expectedEvidence string
+	}{
+		{"new suggestion refreshes evidence", "new", "approved"},
+		{"resolved suggestion stays resolved", "resolved", "existing"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newAtomicApprovalFixture(t, "create_operational_suggestion")
+			ctx := context.Background()
+			approval, err := f.repo.GetApproval(ctx, f.approvalID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var prior opsdomain.OperationalSuggestion
+			if err := json.Unmarshal(approval.ProposedPayload, &prior); err != nil {
+				t.Fatal(err)
+			}
+			prior.SourceRunID = &approval.RunID
+			prior.Evidence = json.RawMessage(`{"source":"existing"}`)
+			if err := f.effects.CreateOperationalSuggestion(ctx, &prior); err != nil {
+				t.Fatal(err)
+			}
+			if tc.initialStatus != "new" {
+				if _, err := f.db.ExecContext(ctx,
+					`UPDATE ai_operational_suggestions SET status=$2 WHERE source_type=$1 AND source_run_id=$3`,
+					prior.SourceType, tc.initialStatus, approval.RunID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := f.service(f.repo, f.transactor).Approve(ctx, f.approvalID, f.principal, "review"); err != nil {
+				t.Fatal(err)
+			}
+			if f.status(t) != domain.ApprovalExecuted || f.effectCount(t) != 1 {
+				t.Fatalf("duplicate or incomplete suggestion: approval=%s count=%d", f.status(t), f.effectCount(t))
+			}
+			var status string
+			var evidence []byte
+			var sourceRunID int64
+			if err := f.db.QueryRowContext(ctx,
+				`SELECT status,evidence,source_run_id FROM ai_operational_suggestions
+				 WHERE source_type=$1 AND source_key=$2`, prior.SourceType, prior.SourceKey).
+				Scan(&status, &evidence, &sourceRunID); err != nil {
+				t.Fatal(err)
+			}
+			var value struct { Source string `json:"source"` }
+			if err := json.Unmarshal(evidence, &value); err != nil {
+				t.Fatal(err)
+			}
+			if status != tc.initialStatus || value.Source != tc.expectedEvidence || sourceRunID != approval.RunID {
+				t.Fatalf("dedupe regression: status=%q source=%q runID=%d, expected status=%q source=%q runID=%d",
+					status, value.Source, sourceRunID, tc.initialStatus, tc.expectedEvidence, approval.RunID)
+			}
+		})
+	}
+}
+
+func TestAtomicOperationalSuggestionDedupeUpdateRollsBackWithApproval(t *testing.T) {
+	f := newAtomicApprovalFixture(t, "create_operational_suggestion")
+	ctx := context.Background()
+	approval, err := f.repo.GetApproval(ctx, f.approvalID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var prior opsdomain.OperationalSuggestion
+	if err := json.Unmarshal(approval.ProposedPayload, &prior); err != nil {
+		t.Fatal(err)
+	}
+	prior.SourceRunID = &approval.RunID
+	prior.Evidence = json.RawMessage(`{"source":"existing"}`)
+	if err := f.effects.CreateOperationalSuggestion(ctx, &prior); err != nil {
+		t.Fatal(err)
+	}
+	svc := f.service(&rollbackApprovalStatusStore{ApprovalRepository: f.repo}, f.transactor)
+	if err := svc.Approve(ctx, f.approvalID, f.principal, "review"); !errors.Is(err, ErrApprovalOutcomeUncertain) {
+		t.Fatalf("error=%v, want quarantined outcome", err)
+	}
+	if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 1 {
+		t.Fatalf("uncommitted approval or suggestion: status=%s count=%d", f.status(t), f.effectCount(t))
+	}
+	var evidence []byte
+	if err := f.db.QueryRowContext(ctx,
+		`SELECT evidence FROM ai_operational_suggestions WHERE source_type=$1 AND source_key=$2`,
+		prior.SourceType, prior.SourceKey).Scan(&evidence); err != nil {
+		t.Fatal(err)
+	}
+	var value struct { Source string `json:"source"` }
+	if err := json.Unmarshal(evidence, &value); err != nil {
+		t.Fatal(err)
+	}
+	if value.Source != "existing" {
+		t.Fatalf("rollback leaked suggestion update, source=%q", value.Source)
+	}
+	if err := svc.Approve(ctx, f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
+		t.Fatalf("quarantined approval replayed: %v", err)
+	}
+}
