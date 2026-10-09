@@ -145,7 +145,7 @@ func (s *ApprovalService) executeAtomicApproval(ctx context.Context, approval *d
 			return nil
 		})
 	case "create_operational_suggestion":
-		writer, ok := s.effects.(ApprovalEffectTransactionWriter)
+		writer, ok := s.effects.(ApprovalSuggestionTransactionWriter)
 		if !ok {
 			return errors.New("approval transactional effect writer is unavailable")
 		}
