@@ -14,6 +14,7 @@ import (
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/operations"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
@@ -30,7 +31,7 @@ type atomicApprovalFixture struct {
 
 var atomicApprovalTestActions = []string{
 	"create_editorial_task", "reply_comment", "create_content_candidates",
-	"create_media_candidate", "create_distribution_draft",
+	"create_media_candidate", "create_distribution_draft", "create_operational_suggestion",
 }
 
 func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixture {
@@ -55,6 +56,7 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_comment_reply_drafts WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_content_candidate_sets WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_media_candidates WHERE source_approval_id=$1`, fixture.approvalID)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_operational_suggestions WHERE source_type=$1 AND source_run_id=$2`, "approval_atomic_fixture", runID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_agent_runs WHERE id=$1`, runID)
 		if postID != 0 {
 			_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE id=$1`, postID)
@@ -86,6 +88,9 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		}
 		payload = json.RawMessage(fmt.Sprintf(`{"comment_id":%d,"content":"Atomic reply"}`, commentID))
 		targetType = "comment"
+	case "create_operational_suggestion":
+		targetType = "suggestion"
+		payload = json.RawMessage(fmt.Sprintf(`{"source_type":"approval_atomic_fixture","source_key":"suggestion-%d","source_run_id":999999,"title":"Atomic improvement","description":"Proposed improvement","priority":"high","evidence":{"source":"approved"}}`, runID))
 	case "create_content_candidates", "create_media_candidate", "create_distribution_draft":
 		suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 		if err := db.QueryRowContext(ctx, `INSERT INTO posts(title,slug,summary,content,status)
@@ -157,6 +162,8 @@ func (f *atomicApprovalFixture) effectCount(t *testing.T) int {
 		query = `SELECT COUNT(*) FROM ai_content_candidate_sets WHERE source_approval_id=$1`
 	case "create_media_candidate", "create_distribution_draft":
 		query = `SELECT COUNT(*) FROM ai_media_candidates WHERE source_approval_id=$1`
+	case "create_operational_suggestion":
+		query = `SELECT COUNT(*) FROM ai_operational_suggestions WHERE source_type='approval_atomic_fixture' AND source_run_id=(SELECT run_id FROM ai_approvals WHERE id=$1)`
 	default:
 		t.Fatalf("unsupported effect count for %q", f.action)
 	}
