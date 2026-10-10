@@ -14,6 +14,9 @@ import (
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/operations"
+	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
+	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
+	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postrepository "github.com/rushairer/blog-backend/internal/post/repository"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
@@ -29,12 +32,14 @@ type atomicApprovalFixture struct {
 	principal  int64
 	action     string
 	postID     int64
+	pageID     int64
+	pageUpdatedAt time.Time
 }
 
 var atomicApprovalTestActions = []string{
 	"create_editorial_task", "reply_comment", "create_content_candidates",
 	"create_media_candidate", "create_distribution_draft", "create_operational_suggestion",
-	"create_draft", "update_post", "update_tags",
+	"create_draft", "update_post", "update_tags", "create_page_draft", "update_page",
 }
 
 func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixture {
@@ -44,7 +49,7 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 	fixture := &atomicApprovalFixture{db: db, repo: agentrepository.NewApprovalRepository(db), transactor: dbtx.NewTransactor(db, nil), action: action}
 	fixture.effects = operations.NewService(db, nil, nil, fixture.transactor)
 
-	var agentID, runID, toolCallID, postID, commentID int64
+	var agentID, runID, toolCallID, postID, commentID, pageID int64
 	if err := db.QueryRowContext(ctx, `SELECT id FROM ai_agents WHERE deleted_at IS NULL ORDER BY id LIMIT 1`).Scan(&agentID); err != nil {
 		t.Fatal(err)
 	}
@@ -61,6 +66,10 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_media_candidates WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_operational_suggestions WHERE source_type=$1 AND source_run_id=$2`, "approval_atomic_fixture", runID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE slug=$1`, fmt.Sprintf("atomic-draft-%d", runID))
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM pages WHERE slug=$1`, fmt.Sprintf("atomic-page-draft-%d", runID))
+		if pageID != 0 {
+			_, _ = db.ExecContext(context.Background(), `DELETE FROM pages WHERE id=$1`, pageID)
+		}
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_agent_runs WHERE id=$1`, runID)
 		if postID != 0 {
 			_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE id=$1`, postID)
@@ -92,6 +101,28 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		}
 		payload = json.RawMessage(fmt.Sprintf(`{"comment_id":%d,"content":"Atomic reply"}`, commentID))
 		targetType = "comment"
+	case "create_page_draft":
+		targetType = "page"
+		payload = json.RawMessage(fmt.Sprintf(`{"title":"Approved page draft","slug":"/ATOMIC-PAGE-DRAFT-%d/","summary":"new","content":"Approved page draft body","template":"default","show_in_nav":false}`, runID))
+	case "update_page":
+		targetType = "page"
+		p := &pagedomain.Page{
+			Title: "Original page", Slug: fmt.Sprintf("atomic-page-update-%d", time.Now().UnixNano()),
+			Content: "Original page body", Summary: "Before summary",
+			Template: "default", Status: pagedomain.PageStatusDraft,
+		}
+		if err := pagerepository.NewPageRepository(db).Create(ctx, p); err != nil {
+			t.Fatal(err)
+		}
+		pageID = p.ID
+		fixture.pageUpdatedAt = p.UpdatedAt
+		before, err := json.Marshal(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		beforeSnapshot = string(before)
+		targetID = pageID
+		payload = json.RawMessage(`{"title":"Approved page update","summary":"Approved page summary","content":"Approved page body","show_in_nav":true}`)
 	case "create_draft":
 		targetType = "post"
 		payload = json.RawMessage(fmt.Sprintf(`{"title":"Approved draft","slug":"atomic-draft-%d","summary":"","content":"Proposed body","tags":["go"]}`, runID))
@@ -153,6 +184,7 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		t.Fatalf("unsupported test approval action %q", action)
 	}
 	fixture.postID = postID
+	fixture.pageID = pageID
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_approvals
 		(run_id,tool_call_id,action_type,target_type,target_id,proposed_payload,before_snapshot,status)
 		VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,'pending') RETURNING id`,
@@ -168,6 +200,7 @@ func (f *atomicApprovalFixture) service(store ApprovalStore, runner ApprovalTran
 		approvals: store, effects: f.effects, transactor: runner,
 		mediaCandidates: agentrepository.NewMediaCandidateRepository(f.db),
 		posts: postservice.NewPostService(postrepository.NewPostRepository(f.db)),
+		pages: pageservice.NewPageService(pagerepository.NewPageRepository(f.db)),
 	}
 }
 
@@ -201,6 +234,10 @@ func (f *atomicApprovalFixture) effectCount(t *testing.T) int {
 		query = `SELECT COUNT(*) FROM posts WHERE id=(SELECT target_id FROM ai_approvals WHERE id=$1) AND title='Approved title'`
 	case "update_tags":
 		query = `SELECT COUNT(*) FROM posts WHERE id=(SELECT target_id FROM ai_approvals WHERE id=$1) AND tags=ARRAY['approved','tags']::text[]`
+	case "create_page_draft":
+		query = `SELECT COUNT(*) FROM pages WHERE slug=(SELECT CONCAT('atomic-page-draft-', run_id::text) FROM ai_approvals WHERE id=$1)`
+	case "update_page":
+		query = `SELECT COUNT(*) FROM pages WHERE id=(SELECT target_id FROM ai_approvals WHERE id=$1) AND title='Approved page update'`
 	default:
 		t.Fatalf("unsupported effect count for %q", f.action)
 	}
@@ -286,6 +323,56 @@ func (f *atomicApprovalFixture) assertPostTransactionEffects(t *testing.T, commi
 	}
 }
 
+// assertPageTransactionEffects checks generated Page identity, draft-only
+// creation, and timestamp monotonicity together with the approved decision.
+func (f *atomicApprovalFixture) assertPageTransactionEffects(t *testing.T, committed bool) {
+	t.Helper()
+	ctx := context.Background()
+	switch f.action {
+	case "create_page_draft":
+		approval, err := f.repo.GetApproval(ctx, f.approvalID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if (approval.TargetID != nil) != committed {
+			t.Fatalf("Page target assignment out of sync with commit: committed=%t target=%v", committed, approval.TargetID)
+		}
+		if !committed {
+			return // effectCount already verified no orphan Page insert.
+		}
+		var id int64
+		var status string
+		var template string
+		if err := f.db.QueryRowContext(ctx, `SELECT id,status,template FROM pages
+			WHERE slug=(SELECT CONCAT('atomic-page-draft-', run_id::text) FROM ai_approvals WHERE id=$1)`,
+			f.approvalID).Scan(&id, &status, &template); err != nil {
+			t.Fatal(err)
+		}
+		if id != *approval.TargetID || status != "draft" || template != "default" {
+			t.Fatalf("Page draft invariant: row=%d target=%d status=%s template=%s", id, *approval.TargetID, status, template)
+		}
+	case "update_page":
+		var title, summary, content string
+		var showInNav bool
+		var updatedAt time.Time
+		if err := f.db.QueryRowContext(ctx, `SELECT title,summary,content,show_in_nav,updated_at FROM pages WHERE id=$1`, f.pageID).
+			Scan(&title, &summary, &content, &showInNav, &updatedAt); err != nil {
+			t.Fatal(err)
+		}
+		if committed {
+			if title != "Approved page update" || summary != "Approved page summary" ||
+				content != "Approved page body" || !showInNav || !updatedAt.After(f.pageUpdatedAt) {
+				t.Fatalf("approved Page fields/timestamp mismatch: title=%q summary=%q content=%q nav=%t updated=%v old=%v",
+					title, summary, content, showInNav, updatedAt, f.pageUpdatedAt)
+			}
+		} else if title != "Original page" || summary != "Before summary" ||
+			content != "Original page body" || showInNav || !updatedAt.Equal(f.pageUpdatedAt) {
+			t.Fatalf("rollback leaked Page changes: title=%q summary=%q content=%q nav=%t updated=%v original=%v",
+				title, summary, content, showInNav, updatedAt, f.pageUpdatedAt)
+		}
+	}
+}
+
 func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
@@ -301,6 +388,7 @@ func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 				t.Fatalf("candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
 			f.assertPostTransactionEffects(t, true)
+			f.assertPageTransactionEffects(t, true)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("duplicate approval error=%v, want conflict", err)
 			}
@@ -335,6 +423,7 @@ func TestAtomicApprovalRollsBackSideEffectIfStatusFails(t *testing.T) {
 				t.Fatalf("rollback left %d candidate children", f.contentCandidateCount(t))
 			}
 			f.assertPostTransactionEffects(t, false)
+			f.assertPageTransactionEffects(t, false)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe retry after rollback: %v", err)
 			}
@@ -368,6 +457,7 @@ func TestAtomicApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t *testing.T
 				t.Fatalf("committed candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
 			f.assertPostTransactionEffects(t, true)
+			f.assertPageTransactionEffects(t, true)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe replay after committed acknowledgement loss: %v", err)
 			}
@@ -407,6 +497,7 @@ func TestAtomicApprovalConcurrentReviewers(t *testing.T) {
 				t.Fatalf("concurrent candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
 			f.assertPostTransactionEffects(t, true)
+			f.assertPageTransactionEffects(t, true)
 		})
 	}
 }
@@ -566,6 +657,7 @@ func TestAtomicPostDraftTargetAssignmentFailureRollsBackContentAndEvents(t *test
 		t.Fatalf("draft escaped rollback: approval=%s rows=%d", f.status(t), f.effectCount(t))
 	}
 	f.assertPostTransactionEffects(t, false)
+			f.assertPageTransactionEffects(t, false)
 	if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 		t.Fatalf("unsafe draft replay: %v", err)
 	}

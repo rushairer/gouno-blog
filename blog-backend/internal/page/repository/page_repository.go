@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rushairer/blog-backend/internal/page/domain"
 )
@@ -18,6 +19,10 @@ func NewPageRepository(db *sql.DB) *PageRepository {
 }
 
 func (r *PageRepository) Create(ctx context.Context, p *domain.Page) error {
+	return createPageOn(ctx, r.db, p)
+}
+
+func createPageOn(ctx context.Context, writer pageQueryRower, p *domain.Page) error {
 	query := `
 		INSERT INTO pages (
 			title, slug, content, summary, template, status,
@@ -35,30 +40,44 @@ func (r *PageRepository) Create(ctx context.Context, p *domain.Page) error {
 	if status == "" {
 		status = domain.PageStatusDraft
 	}
-	return r.db.QueryRowContext(ctx, query,
+	return writer.QueryRowContext(ctx, query,
 		p.Title, p.Slug, p.Content, p.Summary, template, status,
 		p.AllowComments, p.ShowInNav, p.SortOrder, p.SEOTitle, p.SEODescription,
 	).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
 }
 
 func (r *PageRepository) Update(ctx context.Context, p *domain.Page) error {
+	return updatePageOn(ctx, r.db, p, nil)
+}
+
+// updatePageOn shares Page-owned persistence between product edits and
+// reviewer-approved transactions. Only approvals require an expected
+// updated_at token at the FINAL SQL write: a prior Go read is insufficient.
+//
+// A timestamp must advance even for rapid writes and for transactions that
+// started earlier than another editor's commit. This prevents stale approval
+// snapshots from becoming valid again because NOW() is transaction-scoped.
+func updatePageOn(ctx context.Context, writer pageQueryRower, p *domain.Page, expectedUpdatedAt *time.Time) error {
 	query := `
 		UPDATE pages
 		SET title = $1, slug = $2, content = $3, summary = $4, template = $5,
 		    status = $6, allow_comments = $7, show_in_nav = $8, sort_order = $9,
-		    seo_title = $10, seo_description = $11, updated_at = NOW()
+		    seo_title = $10, seo_description = $11,
+		    updated_at = GREATEST(clock_timestamp(), updated_at + INTERVAL '1 microsecond')
 		WHERE id = $12
-		RETURNING updated_at
 	`
 	template := p.Template
 	if template == "" {
 		template = string(domain.PageTemplateDefault)
 	}
-	return r.db.QueryRowContext(ctx, query,
-		p.Title, p.Slug, p.Content, p.Summary, template,
-		p.Status, p.AllowComments, p.ShowInNav, p.SortOrder,
-		p.SEOTitle, p.SEODescription, p.ID,
-	).Scan(&p.UpdatedAt)
+	args := []any{p.Title, p.Slug, p.Content, p.Summary, template, p.Status,
+		p.AllowComments, p.ShowInNav, p.SortOrder, p.SEOTitle, p.SEODescription, p.ID}
+	if expectedUpdatedAt != nil {
+		query += " AND updated_at = $13"
+		args = append(args, *expectedUpdatedAt)
+	}
+	query += " RETURNING updated_at"
+	return writer.QueryRowContext(ctx, query, args...).Scan(&p.UpdatedAt)
 }
 
 func (r *PageRepository) Delete(ctx context.Context, id int64) error {
@@ -75,6 +94,10 @@ func (r *PageRepository) Delete(ctx context.Context, id int64) error {
 }
 
 func (r *PageRepository) GetByID(ctx context.Context, id int64) (*domain.Page, error) {
+	return getPageByIDOn(ctx, r.db, id)
+}
+
+func getPageByIDOn(ctx context.Context, writer pageQueryRower, id int64) (*domain.Page, error) {
 	query := `
 		SELECT id, title, slug, content, summary, template, status,
 		       allow_comments, show_in_nav, sort_order, seo_title, seo_description,
@@ -83,7 +106,7 @@ func (r *PageRepository) GetByID(ctx context.Context, id int64) (*domain.Page, e
 		WHERE id = $1
 	`
 	var p domain.Page
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := writer.QueryRowContext(ctx, query, id).Scan(
 		&p.ID, &p.Title, &p.Slug, &p.Content, &p.Summary, &p.Template, &p.Status,
 		&p.AllowComments, &p.ShowInNav, &p.SortOrder, &p.SEOTitle, &p.SEODescription,
 		&p.CreatedAt, &p.UpdatedAt,
@@ -95,6 +118,10 @@ func (r *PageRepository) GetByID(ctx context.Context, id int64) (*domain.Page, e
 }
 
 func (r *PageRepository) GetBySlug(ctx context.Context, slug string) (*domain.Page, error) {
+	return getPageBySlugOn(ctx, r.db, slug)
+}
+
+func getPageBySlugOn(ctx context.Context, writer pageQueryRower, slug string) (*domain.Page, error) {
 	query := `
 		SELECT id, title, slug, content, summary, template, status,
 		       allow_comments, show_in_nav, sort_order, seo_title, seo_description,
@@ -103,7 +130,7 @@ func (r *PageRepository) GetBySlug(ctx context.Context, slug string) (*domain.Pa
 		WHERE slug = $1
 	`
 	var p domain.Page
-	err := r.db.QueryRowContext(ctx, query, slug).Scan(
+	err := writer.QueryRowContext(ctx, query, slug).Scan(
 		&p.ID, &p.Title, &p.Slug, &p.Content, &p.Summary, &p.Template, &p.Status,
 		&p.AllowComments, &p.ShowInNav, &p.SortOrder, &p.SEOTitle, &p.SEODescription,
 		&p.CreatedAt, &p.UpdatedAt,

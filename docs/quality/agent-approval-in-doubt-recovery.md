@@ -54,8 +54,11 @@ SELECT id, source_approval_id, post_id
 FROM ai_content_candidate_sets WHERE source_approval_id = :approval_id;
 ```
 
-For `create_draft` / `create_page_draft`, inspect the proposed slug and
-created content; `target_id` may be NULL even after a successful create.
+For current `create_draft` / `create_page_draft` executions, an
+`executed` approval and its created Post/Page `target_id` commit together.
+Older deployments or in-doubt `approved` records may still have a missing
+`target_id`; inspect the proposed slug and actual content before drawing
+any conclusion. A missing ID alone never authorizes replay.
 For edits, compare the captured revision or update timestamp with current
 data. For media proposals and operational suggestions, inspect their
 source-approval or deduplication linkage and any downstream records.
@@ -181,11 +184,47 @@ This does **not** certify PostVersion retention/history accuracy outside
 the existing trigger contract, Page writes, image-generation operations,
 downstream delivery or exactly-once external side effects.
 
+## Atomic Page approvals (phase 5)
+
+`create_page_draft` and `update_page` now run PageService's title,
+normalized Slug, reserved-path, duplicate-Slug and template defaults inside
+a shared PostgreSQL transaction with the Agent decision. Page-owned SQL stays
+in `internal/page/repository`; `create_page_draft` inserts a **draft only**,
+sets `ai_approvals.target_id` while `status='approved'`, and completes
+`approved -> executed` in the **same COMMIT**. An injected failure of either
+the target assignment or the final approval update rolls back the entire
+business effect. Unrecognized proposal fields cannot override draft status,
+ID or timestamps.
+
+Page updates intentionally differ from Post revisions: each review must
+contain a matching `target_type=page`, target ID and a nonzero
+`before_snapshot.updated_at` captured by the proposal generator. A
+pre-claim read checks this token; after the reviewer claim, the Page is
+read **again in the same transaction** and the actual SQL UPDATE requires
+`WHERE id = target AND updated_at = expected`. The predicate prevents a
+concurrent product editor from winning between the Go read and SQL write.
+Both ordinary PageService updates and transactional updates advance
+`updated_at` with
+`GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')` to
+guarantee strictly monotonic timestamp tokens, even in long transactions.
+
+Migrated PostgreSQL tests verify insert/status/target commit and rollback,
+lost COMMIT acknowledgement, 16 competing reviewers, concurrent Page changes
+**after durable reviewer claim** and **after a transactional read**, absent or
+mismatched snapshots, reserved/duplicate Slugs, draft-only output and accepted
+Page update fields/status. As with previous phases, uncertainty about the
+final commit means **quarantine** of the one attempted approval ID, never
+automatic replay.
+
+This is local PostgreSQL atomicity, not delivery of external side effects
+or globally exactly-once Page publishing. Historical `approved` records
+from prior deployments still need read-only reconciliation.
+
 ## Remaining architectural work
 
 The phased atomic paths eliminate the split commit for editorial tasks,
 reply drafts, content candidate sets, approved media candidate briefs,
-operational suggestion upserts and Post draft/revision/tag approvals.
+operational suggestion upserts, Post draft/revision/tag approvals and Page draft/update approvals.
 The remaining guards prevent unsafe **automatic replay** elsewhere but do not
 provide a universal cross-capability atomic commit. A later phase should add durable per-effect
 idempotency keys and transactional completion (or a transactional outbox)

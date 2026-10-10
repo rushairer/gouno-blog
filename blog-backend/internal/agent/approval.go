@@ -16,7 +16,6 @@ import (
 	"github.com/rushairer/blog-backend/internal/media"
 	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
-	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
@@ -604,15 +603,15 @@ func isImageBriefApproval(approval *domain.AgentApproval) bool {
 
 func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain.AgentApproval) error {
 	if approval.ActionType == "update_page" {
-		if s.pages == nil || approval.TargetType != "page" || approval.TargetID == nil || len(approval.BeforeSnapshot) == 0 {
-			return nil
+		if s.pages == nil {
+			return ErrApprovalConflict
 		}
-		var before pagedomain.Page
-		if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
+		before, err := pageApprovalBeforeSnapshot(approval)
+		if err != nil {
 			return ErrApprovalConflict
 		}
 		current, err := s.pages.GetPage(ctx, *approval.TargetID)
-		if err != nil || !current.UpdatedAt.Equal(before.UpdatedAt) {
+		if err != nil || current == nil || !current.UpdatedAt.Equal(before.UpdatedAt) {
 			return ErrApprovalConflict
 		}
 		return nil
@@ -665,90 +664,21 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if s.pages == nil {
 			return errors.New("page service is unavailable")
 		}
-		var payload struct {
-			Title          string `json:"title"`
-			Slug           string `json:"slug"`
-			Summary        string `json:"summary"`
-			Content        string `json:"content"`
-			Template       string `json:"template"`
-			ShowInNav      bool   `json:"show_in_nav"`
-			AllowComments  bool   `json:"allow_comments"`
-			SortOrder      int    `json:"sort_order"`
-			SEOTitle       string `json:"seo_title"`
-			SEODescription string `json:"seo_description"`
-		}
-		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		page, err := decodePageDraftApproval(approval)
+		if err != nil {
 			return err
 		}
-		template := payload.Template
-		if template == "" {
-			template = "default"
-		}
-		return s.pages.CreatePage(ctx, &pagedomain.Page{
-			Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary,
-			Content: payload.Content, Template: template, Status: pagedomain.PageStatusDraft,
-			ShowInNav: payload.ShowInNav, AllowComments: payload.AllowComments,
-			SortOrder: payload.SortOrder, SEOTitle: payload.SEOTitle, SEODescription: payload.SEODescription,
-		})
+		return s.pages.CreatePage(ctx, page)
 	case "update_page":
-		if s.pages == nil {
-			return errors.New("page service is unavailable")
-		}
-		if approval.TargetID == nil {
-			return errors.New("page target is required")
+		if s.pages == nil || approval.TargetID == nil {
+			return errors.New("page target is unavailable")
 		}
 		current, err := s.pages.GetPage(ctx, *approval.TargetID)
 		if err != nil {
 			return err
 		}
-		var payload struct {
-			Title          *string `json:"title"`
-			Slug           *string `json:"slug"`
-			Summary        *string `json:"summary"`
-			Content        *string `json:"content"`
-			Template       *string `json:"template"`
-			Status         *string `json:"status"`
-			ShowInNav      *bool   `json:"show_in_nav"`
-			AllowComments  *bool   `json:"allow_comments"`
-			SortOrder      *int    `json:"sort_order"`
-			SEOTitle       *string `json:"seo_title"`
-			SEODescription *string `json:"seo_description"`
-		}
-		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		if err := applyPageApprovalPatch(approval, current); err != nil {
 			return err
-		}
-		if payload.Title != nil {
-			current.Title = *payload.Title
-		}
-		if payload.Slug != nil {
-			current.Slug = *payload.Slug
-		}
-		if payload.Summary != nil {
-			current.Summary = *payload.Summary
-		}
-		if payload.Content != nil {
-			current.Content = *payload.Content
-		}
-		if payload.Template != nil {
-			current.Template = *payload.Template
-		}
-		if payload.Status != nil {
-			current.Status = pagedomain.PageStatus(*payload.Status)
-		}
-		if payload.ShowInNav != nil {
-			current.ShowInNav = *payload.ShowInNav
-		}
-		if payload.AllowComments != nil {
-			current.AllowComments = *payload.AllowComments
-		}
-		if payload.SortOrder != nil {
-			current.SortOrder = *payload.SortOrder
-		}
-		if payload.SEOTitle != nil {
-			current.SEOTitle = *payload.SEOTitle
-		}
-		if payload.SEODescription != nil {
-			current.SEODescription = *payload.SEODescription
 		}
 		return s.pages.UpdatePage(ctx, current)
 	case "reply_comment":
