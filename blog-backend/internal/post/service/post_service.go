@@ -77,6 +77,10 @@ func (s *PostService) GetByID(ctx context.Context, id int64) (*postdomain.Post, 
 }
 
 func (s *PostService) preparePost(ctx context.Context, post *postdomain.Post, current *postdomain.Post) error {
+	return s.preparePostWithSlugLookup(ctx, post, current, s.repo.GetBySlug)
+}
+
+func (s *PostService) preparePostWithSlugLookup(ctx context.Context, post *postdomain.Post, current *postdomain.Post, getBySlug func(context.Context, string) (*postdomain.Post, error)) error {
 	if post.Slug == "" {
 		post.Slug = generateSlug(post.Title)
 	} else {
@@ -89,7 +93,7 @@ func (s *PostService) preparePost(ctx context.Context, post *postdomain.Post, cu
 		post.Slug = fmt.Sprintf("post-%d", timeNowUnixNano())
 	}
 
-	bySlug, err := s.repo.GetBySlug(ctx, post.Slug)
+	bySlug, err := getBySlug(ctx, post.Slug)
 	if err != nil {
 		return err
 	}
