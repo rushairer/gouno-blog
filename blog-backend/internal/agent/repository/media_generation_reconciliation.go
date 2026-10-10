@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
@@ -34,14 +35,19 @@ func (r *MediaCandidateRepository) ListMediaGenerationReconciliation(ctx context
 		SELECT c.id,c.post_id,c.source_run_id,c.workflow_run_id,c.generation_attempt,
 		       c.generation_started_at,c.generation_deadline_at,c.media_asset_id,c.error_code,
 		       a.id,COALESCE(a.status,''),COALESCE(a.error_code,''),
-		       a.media_asset_id,a.created_at
+		       a.media_asset_id,a.created_at,a.generation_attempt,
+		       current_a.id,COALESCE(current_a.status,''),COALESCE(current_a.error_code,''),
+		       current_a.media_asset_id,current_a.created_at
 		FROM needs_review c
 		LEFT JOIN LATERAL (
-			SELECT id,status,error_code,media_asset_id,created_at
+			SELECT id,status,error_code,media_asset_id,created_at,generation_attempt
 			FROM ai_generation_audits
 			WHERE media_candidate_id=c.id AND operation='media.generate_candidate'
 			ORDER BY created_at DESC,id DESC LIMIT 1
 		) a ON true
+		LEFT JOIN ai_generation_audits current_a
+		  ON current_a.media_candidate_id=c.id AND current_a.generation_attempt=c.generation_attempt
+		 AND current_a.generation_attempt IS NOT NULL AND current_a.operation='media.generate_candidate'
 		ORDER BY c.review_deadline ASC,c.id ASC
 	`, limit)
 	if err != nil {
@@ -52,12 +58,29 @@ func (r *MediaCandidateRepository) ListMediaGenerationReconciliation(ctx context
 	items := make([]*domain.MediaGenerationReconciliation, 0)
 	for rows.Next() {
 		var item domain.MediaGenerationReconciliation
-		if err := rows.Scan(&item.CandidateID,&item.PostID,&item.SourceRunID,
-			&item.WorkflowRunID,&item.GenerationAttempt,&item.GenerationStartedAt,
-			&item.GenerationDeadlineAt,&item.MediaAssetID,&item.ErrorCode,
-			&item.LatestAuditID,&item.LatestAuditStatus,&item.LatestAuditErrorCode,
-			&item.LatestAuditMediaAssetID,&item.LatestAuditAt); err != nil {
+		var currentID sql.NullInt64
+		var currentAt sql.NullTime
+		var currentStatus, currentError string
+		var currentAssetID *int64
+		if err := rows.Scan(&item.CandidateID, &item.PostID, &item.SourceRunID,
+			&item.WorkflowRunID, &item.GenerationAttempt, &item.GenerationStartedAt,
+			&item.GenerationDeadlineAt, &item.MediaAssetID, &item.ErrorCode,
+			&item.LatestAuditID, &item.LatestAuditStatus, &item.LatestAuditErrorCode,
+			&item.LatestAuditMediaAssetID, &item.LatestAuditAt, &item.LatestAuditGenerationAttempt,
+			&currentID, &currentStatus, &currentError, &currentAssetID, &currentAt); err != nil {
 			return nil, err
+		}
+		item.LatestAuditMatchesCurrentAttempt = item.LatestAuditID != nil &&
+			item.LatestAuditGenerationAttempt != nil && item.GenerationAttempt > 0 &&
+			*item.LatestAuditGenerationAttempt == item.GenerationAttempt
+		if currentID.Valid {
+			if !currentAt.Valid {
+				return nil, errors.New("generation audit timestamp is missing")
+			}
+			item.CurrentAttemptAudit = &domain.MediaGenerationAuditEvidence{
+				ID: currentID.Int64, CandidateID: item.CandidateID, GenerationAttempt: item.GenerationAttempt,
+				Status: currentStatus, ErrorCode: currentError, MediaAssetID: currentAssetID, CreatedAt: currentAt.Time,
+			}
 		}
 		items = append(items, &item)
 	}
