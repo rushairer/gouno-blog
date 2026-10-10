@@ -80,7 +80,7 @@ func isAtomicApprovalAction(actionType string) bool {
 	switch actionType {
 	case "create_editorial_task", "reply_comment", "create_content_candidates",
 		"create_media_candidate", "create_distribution_draft", "create_operational_suggestion",
-		"create_draft", "update_post", "update_tags":
+		"create_draft", "update_post", "update_tags", "create_page_draft", "update_page":
 		return true
 	default:
 		return false
@@ -110,6 +110,48 @@ func (s *ApprovalService) executeAtomicApproval(ctx context.Context, approval *d
 	}
 
 	switch approval.ActionType {
+	case "create_page_draft":
+		if s.pages == nil || approval.TargetType != "page" || approval.TargetID != nil {
+			return ErrApprovalConflict
+		}
+		targetWriter, ok := s.approvals.(ApprovalTargetTransactionWriter)
+		if !ok {
+			return errors.New("approval transactional target writer is unavailable")
+		}
+		page, err := decodePageDraftApproval(approval)
+		if err != nil {
+			return err
+		}
+		return s.commitApprovalEffect(ctx, approval.ID, func(tx *sql.Tx) error {
+			if err := s.pages.CreatePageTx(ctx, tx, page); err != nil {
+				return err
+			}
+			return targetWriter.SetApprovalTargetTx(ctx, tx, approval.ID, page.ID)
+		})
+	case "update_page":
+		if s.pages == nil {
+			return ErrApprovalConflict
+		}
+		before, err := pageApprovalBeforeSnapshot(approval)
+		if err != nil {
+			return ErrApprovalConflict
+		}
+		return s.commitApprovalEffect(ctx, approval.ID, func(tx *sql.Tx) error {
+			page, err := s.pages.GetPageTx(ctx, tx, *approval.TargetID)
+			if err != nil || page == nil {
+				if err == nil {
+					return ErrApprovalConflict
+				}
+				return err
+			}
+			if !page.UpdatedAt.Equal(before.UpdatedAt) {
+				return ErrApprovalConflict
+			}
+			if err := applyPageApprovalPatch(approval, page); err != nil {
+				return err
+			}
+			return s.pages.UpdatePageTx(ctx, tx, page, before.UpdatedAt)
+		})
 	case "create_draft":
 		if s.posts == nil {
 			return errors.New("post service is unavailable")
