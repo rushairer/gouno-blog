@@ -81,6 +81,11 @@ func (s *PostService) preparePost(ctx context.Context, post *postdomain.Post, cu
 }
 
 func (s *PostService) preparePostWithSlugLookup(ctx context.Context, post *postdomain.Post, current *postdomain.Post, getBySlug func(context.Context, string) (*postdomain.Post, error)) error {
+	// Tags are optional at the API/approval boundary, but posts.tags is NOT NULL.
+	// Normalize absent tags once for both regular and transactional writes.
+	if post.Tags == nil {
+		post.Tags = []string{}
+	}
 	if post.Slug == "" {
 		post.Slug = generateSlug(post.Title)
 	} else {
