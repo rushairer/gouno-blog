@@ -410,6 +410,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.POST("/admin/ai-workflow-runs/:id/media-candidates/apply", agentCtrl.ApplyWorkflowImageTasks)
 				aiOps.POST("/admin/ai-workflow-runs/:id/media-candidates/reject", agentCtrl.RejectWorkflowImageTasks)
 				aiOps.GET("/admin/ai-media-candidates", agentCtrl.ListMediaCandidates)
+				aiOps.GET("/admin/ai-media-generation-reconciliation", agentCtrl.ListMediaGenerationReconciliation)
 				aiOps.POST("/admin/ai-media-candidates/:id/review", agentCtrl.ReviewMediaCandidate)
 				aiOps.POST("/admin/ai-media-candidates/:id/attach-media", agentCtrl.AttachMediaAsset)
 				aiOps.POST("/admin/ai-media-candidates/:id/generate", agentCtrl.GenerateMediaCandidate)
