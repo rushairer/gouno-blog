@@ -85,13 +85,13 @@ type mediaGenerationFailureStub struct {
 func (s *mediaGenerationFailureStub) ClaimMediaGeneration(context.Context, int64) (*domain.MediaCandidate, error) {
 	return nil, errors.New("unused")
 }
-func (s *mediaGenerationFailureStub) CompleteMediaGeneration(context.Context, int64, int64, bool) error {
+func (s *mediaGenerationFailureStub) CompleteMediaGeneration(context.Context, int64, int, int64, bool) error {
 	return errors.New("unused")
 }
 func (s *mediaGenerationFailureStub) CancelMediaGeneration(context.Context, int64) error {
 	return errors.New("unused")
 }
-func (s *mediaGenerationFailureStub) RecordMediaGenerationError(_ context.Context, candidateID int64, code, message string) (*int64, error) {
+func (s *mediaGenerationFailureStub) RecordMediaGenerationError(_ context.Context, candidateID int64, generationAttempt int, code, message string) (*int64, error) {
 	s.candidateID, s.code, s.message = candidateID, code, message
 	return s.workflowRunID, s.recordErr
 }
@@ -119,7 +119,7 @@ func TestRecordMediaGenerationFailureOwnsWorkflowOrchestration(t *testing.T) {
 	events := &workflowEventStub{appendErr: errors.New("audit unavailable")}
 	svc := &ApprovalService{mediaGeneration: mediaStore, workflowEvents: events}
 
-	svc.recordMediaGenerationFailure(context.Background(), 7, "image_generation_timeout", "provider timed out")
+	svc.recordMediaGenerationFailure(context.Background(), 7, 1, "image_generation_timeout", "provider timed out")
 
 	if mediaStore.candidateID != 7 || mediaStore.code != "image_generation_timeout" || mediaStore.message != "provider timed out" {
 		t.Fatalf("media failure write = id:%d code:%q message:%q", mediaStore.candidateID, mediaStore.code, mediaStore.message)
@@ -152,7 +152,7 @@ func TestRecordMediaGenerationFailureSkipsWorkflowWhenUnavailable(t *testing.T) 
 		t.Run(test.name, func(t *testing.T) {
 			events := &workflowEventStub{}
 			svc := &ApprovalService{mediaGeneration: test.store, workflowEvents: events}
-			svc.recordMediaGenerationFailure(context.Background(), 9, "image_generation_failed", "failed")
+			svc.recordMediaGenerationFailure(context.Background(), 9, 1, "image_generation_failed", "failed")
 			if len(events.events) != test.wantSeen {
 				t.Fatalf("workflow events = %d, want %d", len(events.events), test.wantSeen)
 			}
