@@ -641,19 +641,9 @@ func approvalMutatesExistingPost(actionType string) bool {
 func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApproval) error {
 	switch approval.ActionType {
 	case "create_draft":
-		var payload struct {
-			Title   string   `json:"title"`
-			Slug    string   `json:"slug"`
-			Summary string   `json:"summary"`
-			Content string   `json:"content"`
-			Tags    []string `json:"tags"`
-		}
-		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		post, err := decodeDraftPostApproval(approval)
+		if err != nil {
 			return err
-		}
-		post := &postdomain.Post{
-			Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary,
-			Content: payload.Content, Tags: payload.Tags, Status: postdomain.PostStatusDraft,
 		}
 		if err := s.posts.CreatePost(ctx, post); err != nil {
 			return err
@@ -667,40 +657,9 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if err != nil {
 			return err
 		}
-		var payload struct {
-			Title    *string   `json:"title"`
-			Slug     *string   `json:"slug"`
-			Summary  *string   `json:"summary"`
-			Content  *string   `json:"content"`
-			Tags     *[]string `json:"tags"`
-			CoverAlt *string   `json:"cover_alt"`
-		}
-		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		if err := applyPostApprovalPatch(approval, current); err != nil {
 			return err
 		}
-		if payload.Title != nil {
-			current.Title = *payload.Title
-		}
-		if payload.Slug != nil {
-			current.Slug = *payload.Slug
-		}
-		if payload.Summary != nil {
-			current.Summary = *payload.Summary
-		}
-		if payload.Content != nil {
-			current.Content = *payload.Content
-		}
-		if payload.Tags != nil {
-			current.Tags = *payload.Tags
-		}
-		if payload.CoverAlt != nil {
-			current.CoverAlt = *payload.CoverAlt
-		}
-		var before postdomain.Post
-		if json.Unmarshal(approval.BeforeSnapshot, &before) != nil || before.Revision <= 0 {
-			return ErrApprovalConflict
-		}
-		current.Revision = before.Revision
 		return s.posts.UpdatePost(ctx, current)
 	case "create_page_draft":
 		if s.pages == nil {
