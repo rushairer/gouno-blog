@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"regexp"
@@ -76,41 +77,55 @@ func ValidateSlug(slug string) error {
 	return nil
 }
 
-func (s *PageService) CreatePage(ctx context.Context, page *domain.Page) error {
-	if strings.TrimSpace(page.Title) == "" {
+// validatePageWrite is the single Slug/title policy used by regular product
+// edits and approval-owned database transactions. Unexpected lookup errors must
+// fail closed; sql.ErrNoRows means that the Slug is available.
+func (s *PageService) validatePageWrite(
+	ctx context.Context, page *domain.Page,
+	getBySlug func(context.Context, string) (*domain.Page, error),
+) error {
+	if page == nil || strings.TrimSpace(page.Title) == "" {
 		return ErrPageTitleEmpty
 	}
 	page.Slug = NormalizeSlug(page.Slug)
 	if err := ValidateSlug(page.Slug); err != nil {
 		return err
 	}
-
-	existing, err := s.repo.GetBySlug(ctx, page.Slug)
-	if err == nil && existing != nil {
+	existing, err := getBySlug(ctx, page.Slug)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if existing != nil && (page.ID == 0 || existing.ID != page.ID) {
 		return ErrDuplicateSlug
 	}
+	return nil
+}
 
-	return s.repo.Create(ctx, page)
+func (s *PageService) CreatePage(ctx context.Context, page *domain.Page) error {
+	if err := s.validatePageWrite(ctx, page, s.repo.GetBySlug); err != nil {
+		return err
+	}
+	return pageSaveError(s.repo.Create(ctx, page))
 }
 
 func (s *PageService) UpdatePage(ctx context.Context, page *domain.Page) error {
-	if page.ID <= 0 {
+	if page == nil || page.ID <= 0 {
 		return ErrPageNotFound
 	}
-	if strings.TrimSpace(page.Title) == "" {
-		return ErrPageTitleEmpty
-	}
-	page.Slug = NormalizeSlug(page.Slug)
-	if err := ValidateSlug(page.Slug); err != nil {
+	if err := s.validatePageWrite(ctx, page, s.repo.GetBySlug); err != nil {
 		return err
 	}
+	return pageSaveError(s.repo.Update(ctx, page))
+}
 
-	existing, err := s.repo.GetBySlug(ctx, page.Slug)
-	if err == nil && existing != nil && existing.ID != page.ID {
+// pageSaveError prevents a concurrent duplicate-Slug insert/rename from
+// surfacing the raw PostgreSQL uniqueness constraint in a public response.
+func pageSaveError(err error) error {
+	var sqlState interface{ SQLState() string }
+	if errors.As(err, &sqlState) && sqlState.SQLState() == "23505" {
 		return ErrDuplicateSlug
 	}
-
-	return s.repo.Update(ctx, page)
+	return err
 }
 
 func (s *PageService) DeletePage(ctx context.Context, id int64) error {
