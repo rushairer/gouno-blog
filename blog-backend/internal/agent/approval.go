@@ -475,22 +475,35 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		}
 		return fail(code, err.Error())
 	}
-	if err := s.mediaGeneration.CompleteMediaGeneration(ctx, id, candidate.GenerationAttempt, asset.ID, false); err != nil {
-		// sql.ErrNoRows means the guarded transition definitively did NOT
-		// apply (cancelled/superseded attempt). The generated asset is then
-		// unreferenced and may be compensated.
-		//
-		// A database/transport error can also be a LOST COMMIT ACK. In that
-		// case the candidate may ALREADY reference the asset. Never delete
-		// the bytes or Media row on an ambiguous outcome: preserve both for
-		// operator reconciliation and do not automatically reissue generation.
+	return s.completeGeneratedMediaCandidate(ctx, candidate, asset)
+}
+
+// completeGeneratedMediaCandidate performs the last guarded persistence step
+// after external generation has already produced durable media bytes and its
+// Media DB row. That external work cannot be rolled back with the Candidate.
+//
+// A definite CAS miss means the attempt was cancelled/superseded and the
+// just-produced media may be compensated. A transport/DB error may mean the
+// Candidate link ALREADY COMMITTED; deleting its asset would corrupt data.
+// Retain both storage and metadata for manual reconciliation instead.
+func (s *ApprovalService) completeGeneratedMediaCandidate(ctx context.Context, candidate *domain.MediaCandidate, asset *mediadomain.MediaAsset) error {
+	if candidate == nil || asset == nil || candidate.ID <= 0 || candidate.GenerationAttempt <= 0 || asset.ID <= 0 {
+		return ErrInvalid
+	}
+	if err := s.mediaGeneration.CompleteMediaGeneration(ctx, candidate.ID, candidate.GenerationAttempt, asset.ID, false); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			_, _ = s.mediaAssets.DeleteMedia(ctx, asset.ID)
-			_ = s.media.Delete(ctx, asset.StorageName)
+			// The guarded UPDATE definitely did not occur. Do not let stale
+			// attempts attach assets after cancellation or regeneration.
+			if s.mediaAssets != nil {
+				_, _ = s.mediaAssets.DeleteMedia(ctx, asset.ID)
+			}
+			if s.media != nil {
+				_ = s.media.Delete(ctx, asset.StorageName)
+			}
 		}
 		return err
 	}
-	s.appendCandidateEvent(ctx, id, "image_generation_completed", map[string]any{"media_asset_id": asset.ID})
+	s.appendCandidateEvent(ctx, candidate.ID, "image_generation_completed", map[string]any{"media_asset_id": asset.ID})
 	return nil
 }
 
