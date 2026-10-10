@@ -223,6 +223,69 @@ func (f *atomicApprovalFixture) contentCandidateCount(t *testing.T) int {
 	return n
 }
 
+// assertPostTransactionEffects checks business rows, the PostVersion trigger,
+// the Post workflow-event trigger, revision advancement and approval target ID.
+// All must follow the same COMMIT/ROLLBACK decision.
+func (f *atomicApprovalFixture) assertPostTransactionEffects(t *testing.T, committed bool) {
+	t.Helper()
+	ctx := context.Background()
+	switch f.action {
+	case "create_draft":
+		approval, err := f.repo.GetApproval(ctx, f.approvalID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if (approval.TargetID != nil) != committed {
+			t.Fatalf("draft target persisted out of sync with commit: committed=%t target=%v", committed, approval.TargetID)
+		}
+		var eventCount int
+		if err := f.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_events
+			WHERE event_type='post.published' AND payload->>'post_id' IN
+			(SELECT id::text FROM posts WHERE slug=(SELECT CONCAT('atomic-draft-', run_id::text) FROM ai_approvals WHERE id=$1))`,
+			f.approvalID).Scan(&eventCount); err != nil {
+			t.Fatal(err)
+		}
+		want := 0
+		if committed {
+			want = 1
+			var postID int64
+			var status string
+			if err := f.db.QueryRowContext(ctx, `SELECT id,status FROM posts WHERE
+				slug=(SELECT CONCAT('atomic-draft-', run_id::text) FROM ai_approvals WHERE id=$1)`,
+				f.approvalID).Scan(&postID, &status); err != nil {
+				t.Fatal(err)
+			}
+			if postID != *approval.TargetID || status != "draft" {
+				t.Fatalf("draft target/status mismatch: post=%d target=%d status=%s", postID, *approval.TargetID, status)
+			}
+		}
+		if eventCount != want {
+			t.Fatalf("draft event count=%d want=%d", eventCount, want)
+		}
+	case "update_post", "update_tags":
+		var revision int64
+		if err := f.db.QueryRowContext(ctx, `SELECT revision FROM posts WHERE id=$1`, f.postID).Scan(&revision); err != nil {
+			t.Fatal(err)
+		}
+		var versions, events int
+		if err := f.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_versions WHERE post_id=$1`, f.postID).Scan(&versions); err != nil {
+			t.Fatal(err)
+		}
+		if err := f.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_events
+			WHERE event_type='post.updated' AND payload->>'post_id'=$1`, fmt.Sprint(f.postID)).Scan(&events); err != nil {
+			t.Fatal(err)
+		}
+		wantRevision, wantEffects := int64(1), 0
+		if committed {
+			wantRevision, wantEffects = 2, 1
+		}
+		if revision != wantRevision || versions != wantEffects || events != wantEffects {
+			t.Fatalf("post/trigger commit mismatch: revision=%d versions=%d events=%d; want %d/%d/%d",
+				revision, versions, events, wantRevision, wantEffects, wantEffects)
+		}
+	}
+}
+
 func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
@@ -237,6 +300,7 @@ func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
 				t.Fatalf("candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
+			f.assertPostTransactionEffects(t, true)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("duplicate approval error=%v, want conflict", err)
 			}
@@ -270,6 +334,7 @@ func TestAtomicApprovalRollsBackSideEffectIfStatusFails(t *testing.T) {
 			if action == "create_content_candidates" && f.contentCandidateCount(t) != 0 {
 				t.Fatalf("rollback left %d candidate children", f.contentCandidateCount(t))
 			}
+			f.assertPostTransactionEffects(t, false)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe retry after rollback: %v", err)
 			}
@@ -302,6 +367,7 @@ func TestAtomicApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t *testing.T
 			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
 				t.Fatalf("committed candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
+			f.assertPostTransactionEffects(t, true)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe replay after committed acknowledgement loss: %v", err)
 			}
@@ -340,6 +406,7 @@ func TestAtomicApprovalConcurrentReviewers(t *testing.T) {
 			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
 				t.Fatalf("concurrent candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
+			f.assertPostTransactionEffects(t, true)
 		})
 	}
 }
