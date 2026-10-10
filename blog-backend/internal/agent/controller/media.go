@@ -1,17 +1,35 @@
 package controller
 
 import (
-	"github.com/rushairer/blog-backend/internal/controllerutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/agent/domain"
+	"github.com/rushairer/blog-backend/internal/controllerutil"
 	"github.com/rushairer/gouno"
 )
 
 func (ctrl *Controller) ListMediaCandidates(c *gin.Context) {
 	items, err := ctrl.approvals.ListMediaCandidates(c.Request.Context())
+	if err != nil {
+		controllerutil.WriteDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+// ListMediaGenerationReconciliation exposes read-only, bounded evidence for
+// an authenticated AI-Operations administrator. A deadline is an investigation
+// signal and MUST NOT reset a lease, retry a model, or imply the provider quit.
+func (ctrl *Controller) ListMediaGenerationReconciliation(c *gin.Context) {
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if err != nil || limit < 1 || limit > 100 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "limit must be an integer between 1 and 100"))
+		return
+	}
+	items, err := ctrl.approvals.ListMediaGenerationReconciliation(c.Request.Context(), limit)
 	if err != nil {
 		controllerutil.WriteDomainError(c, err)
 		return
