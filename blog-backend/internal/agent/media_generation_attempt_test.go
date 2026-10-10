@@ -37,6 +37,7 @@ func (s *finalizedMediaCleanupSpy) DeleteMedia(_ context.Context,_ int64)(*media
 type finalizedObjectCleanupSpy struct{ deleted int }
 func (s *finalizedObjectCleanupSpy) Put(context.Context,string,io.Reader,string) error { return nil }
 func (s *finalizedObjectCleanupSpy) URL(string) string { return "" }
+func (s *finalizedObjectCleanupSpy) LocalPath(string) (string, bool) { return "", false }
 func (s *finalizedObjectCleanupSpy) Delete(context.Context,string) error {
 	s.deleted++
 	return nil
