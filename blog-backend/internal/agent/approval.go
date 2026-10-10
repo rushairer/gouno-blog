@@ -69,6 +69,15 @@ func (s *ApprovalService) List(ctx context.Context, status string, page, pageSiz
 func (s *ApprovalService) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
 	return s.mediaCandidates.ListMediaCandidates(ctx)
 }
+
+// ListMediaGenerationReconciliation only reads expired or provider-uncertain
+// attempts. No state transition, retry, lease reset or provider call occurs.
+func (s *ApprovalService) ListMediaGenerationReconciliation(ctx context.Context, limit int) ([]*domain.MediaGenerationReconciliation, error) {
+	if s.mediaGeneration == nil {
+		return nil, ErrInvalid
+	}
+	return s.mediaGeneration.ListMediaGenerationReconciliation(ctx, limit)
+}
 func (s *ApprovalService) ListMediaCandidatesByWorkflowRun(ctx context.Context, runID int64) ([]*domain.MediaCandidate, error) {
 	return s.mediaCandidates.ListMediaCandidatesByWorkflowRun(ctx, runID)
 }
@@ -413,6 +422,9 @@ func (s *ApprovalService) recordMediaGenerationFailure(ctx context.Context, cand
 }
 
 func generationFailureEvent(code string) string {
+	if code == domain.MediaGenerationOutcomeUncertainCode {
+		return "image_generation_outcome_uncertain"
+	}
 	if code == "image_generation_timeout" {
 		return "image_generation_timed_out"
 	}
@@ -457,9 +469,19 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		s.appendCandidateEvent(ctx, id, "regeneration_requested", map[string]any{"attempt": candidate.GenerationAttempt})
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_started", map[string]any{"attempt": candidate.GenerationAttempt})
-	fail := func(code, reason string) error {
-		s.recordMediaGenerationFailure(ctx, id, candidate.GenerationAttempt, code, reason)
-		return errors.New(reason)
+// A provider error (including timeout or worker cancellation) cannot
+	// prove the upstream request was not executed or billed. Even preflight
+	// errors are conservatively quarantined until evidence is reviewed.
+	fail := func(err error) error {
+		// Worker shutdown cancels ctx. Use a short detached context so the
+		// fail-closed marker can still be durably persisted. If that write
+		// also fails, the original 'generating' claim remains unclaimable
+		// and the stale-deadline reconciliation query will surface it.
+		persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		s.recordMediaGenerationFailure(persistCtx, id, candidate.GenerationAttempt,
+			domain.MediaGenerationOutcomeUncertainCode, "provider outcome unconfirmed; manual reconciliation required")
+		return err
 	}
 	prompt := candidate.Brief
 	if candidate.RegenerationInstruction != "" {
@@ -469,11 +491,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		Source: "agent_candidate", Operation: "media.generate_candidate", Deadline: 15 * time.Minute,
 		AgentRunID: &candidate.SourceRunID, WorkflowRunID: candidate.WorkflowRunID, MediaCandidateID: &candidate.ID, Filename: "ai-" + strconv.FormatInt(candidate.ID, 10) + "%s"})
 	if err != nil {
-		code := "image_generation_failed"
-		if strings.Contains(err.Error(), "timed out") {
-			code = "image_generation_timeout"
-		}
-		return fail(code, err.Error())
+		return fail(err)
 	}
 	return s.completeGeneratedMediaCandidate(ctx, candidate, asset)
 }
