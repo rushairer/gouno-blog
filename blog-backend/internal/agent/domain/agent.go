@@ -197,23 +197,39 @@ type AgentApproval struct {
 const MediaGenerationOutcomeUncertainCode = "outcome_uncertain"
 
 // MediaGenerationReconciliation is a bounded read-only operational snapshot.
-// The latest generation audit is evidence only: historical audits do not store
-// generation_attempt and MUST NOT be assumed to identify the current attempt.
+// LatestAudit fields may describe a historical or uncorrelated attempt. Only
+// CurrentAttemptAudit is matched by candidate ID AND persisted attempt number.
+// Neither missing nor failed audit evidence proves the provider did not bill.
 type MediaGenerationReconciliation struct {
-	CandidateID            int64      `json:"candidate_id"`
-	PostID                 int64      `json:"post_id"`
-	SourceRunID            int64      `json:"source_run_id"`
-	WorkflowRunID          *int64     `json:"workflow_run_id,omitempty"`
-	GenerationAttempt      int        `json:"generation_attempt"`
-	GenerationStartedAt    *time.Time `json:"generation_started_at,omitempty"`
-	GenerationDeadlineAt   *time.Time `json:"generation_deadline_at,omitempty"`
-	MediaAssetID           *int64     `json:"media_asset_id,omitempty"`
-	ErrorCode              string     `json:"error_code,omitempty"`
-	LatestAuditID          *int64     `json:"latest_audit_id,omitempty"`
-	LatestAuditStatus      string     `json:"latest_audit_status,omitempty"`
-	LatestAuditErrorCode   string     `json:"latest_audit_error_code,omitempty"`
-	LatestAuditMediaAssetID *int64    `json:"latest_audit_media_asset_id,omitempty"`
-	LatestAuditAt          *time.Time `json:"latest_audit_at,omitempty"`
+	CandidateID                      int64                         `json:"candidate_id"`
+	PostID                           int64                         `json:"post_id"`
+	SourceRunID                      int64                         `json:"source_run_id"`
+	WorkflowRunID                    *int64                        `json:"workflow_run_id,omitempty"`
+	GenerationAttempt                int                           `json:"generation_attempt"`
+	GenerationStartedAt              *time.Time                    `json:"generation_started_at,omitempty"`
+	GenerationDeadlineAt             *time.Time                    `json:"generation_deadline_at,omitempty"`
+	MediaAssetID                     *int64                        `json:"media_asset_id,omitempty"`
+	ErrorCode                        string                        `json:"error_code,omitempty"`
+	LatestAuditID                    *int64                        `json:"latest_audit_id,omitempty"`
+	LatestAuditStatus                string                        `json:"latest_audit_status,omitempty"`
+	LatestAuditErrorCode             string                        `json:"latest_audit_error_code,omitempty"`
+	LatestAuditMediaAssetID          *int64                        `json:"latest_audit_media_asset_id,omitempty"`
+	LatestAuditAt                    *time.Time                    `json:"latest_audit_at,omitempty"`
+	LatestAuditGenerationAttempt     *int                          `json:"latest_audit_generation_attempt,omitempty"`
+	LatestAuditMatchesCurrentAttempt bool                          `json:"latest_audit_matches_current_attempt"`
+	CurrentAttemptAudit              *MediaGenerationAuditEvidence `json:"current_attempt_audit,omitempty"`
+}
+
+// MediaGenerationAuditEvidence identifies one result audit, not a provider
+// idempotency guarantee or permission to retry, attach, publish or delete media.
+type MediaGenerationAuditEvidence struct {
+	ID                int64     `json:"id"`
+	CandidateID       int64     `json:"candidate_id"`
+	GenerationAttempt int       `json:"generation_attempt"`
+	Status            string    `json:"status"`
+	ErrorCode         string    `json:"error_code,omitempty"`
+	MediaAssetID      *int64    `json:"media_asset_id,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 type MediaCandidate struct {
@@ -259,21 +275,24 @@ type MediaCandidate struct {
 
 // GenerationAudit captures minimal, non-sensitive execution evidence for AI
 // generation initiated outside an Agent Run as well as governed media tasks.
+// GenerationAttempt is absent for editor/legacy audits; never infer or backfill
+// it from the current candidate, timestamps, filenames, or the latest audit.
 type GenerationAudit struct {
-	ID               int64
-	Source           string
-	Operation        string
-	TemplateVersion  int
-	Provider         string
-	Model            string
-	InputTokens      int64
-	OutputTokens     int64
-	Status           string
-	ErrorCode        string
-	AgentRunID       *int64
-	WorkflowRunID    *int64
-	MediaCandidateID *int64
-	MediaAssetID     *int64
+	ID                int64
+	Source            string
+	Operation         string
+	TemplateVersion   int
+	Provider          string
+	Model             string
+	InputTokens       int64
+	OutputTokens      int64
+	Status            string
+	ErrorCode         string
+	AgentRunID        *int64
+	WorkflowRunID     *int64
+	MediaCandidateID  *int64
+	MediaAssetID      *int64
+	GenerationAttempt *int
 }
 
 // MediaCandidateSelection is the user-authored placement for one generated
