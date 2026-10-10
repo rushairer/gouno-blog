@@ -14,6 +14,8 @@ import (
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/operations"
+	postrepository "github.com/rushairer/blog-backend/internal/post/repository"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
@@ -32,6 +34,7 @@ type atomicApprovalFixture struct {
 var atomicApprovalTestActions = []string{
 	"create_editorial_task", "reply_comment", "create_content_candidates",
 	"create_media_candidate", "create_distribution_draft", "create_operational_suggestion",
+	"create_draft", "update_post", "update_tags",
 }
 
 func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixture {
@@ -57,6 +60,7 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_content_candidate_sets WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_media_candidates WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_operational_suggestions WHERE source_type=$1 AND source_run_id=$2`, "approval_atomic_fixture", runID)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE slug=$1`, fmt.Sprintf("atomic-draft-%d", runID))
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_agent_runs WHERE id=$1`, runID)
 		if postID != 0 {
 			_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE id=$1`, postID)
@@ -88,6 +92,32 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		}
 		payload = json.RawMessage(fmt.Sprintf(`{"comment_id":%d,"content":"Atomic reply"}`, commentID))
 		targetType = "comment"
+	case "create_draft":
+		targetType = "post"
+		payload = json.RawMessage(fmt.Sprintf(`{"title":"Approved draft","slug":"atomic-draft-%d","summary":"","content":"Proposed body","tags":["go"]}`, runID))
+	case "update_post", "update_tags":
+		suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+		if err := db.QueryRowContext(ctx, `INSERT INTO posts(title,slug,summary,content,tags,status)
+			VALUES($1,$2,'Before summary','Original body',ARRAY['before']::text[],'draft') RETURNING id`,
+			"Original title", "atomic-update-"+suffix).Scan(&postID); err != nil {
+			t.Fatal(err)
+		}
+		var revision int64
+		if err := db.QueryRowContext(ctx, `SELECT revision FROM posts WHERE id=$1`, postID).Scan(&revision); err != nil {
+			t.Fatal(err)
+		}
+		before, err := json.Marshal(map[string]any{"id":postID,"revision":revision,"title":"Original title"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		beforeSnapshot = string(before)
+		targetType = "post"
+		targetID = postID
+		if action == "update_tags" {
+			payload = json.RawMessage(`{"tags":["approved","tags"]}`)
+		} else {
+			payload = json.RawMessage(`{"title":"Approved title","summary":"Updated summary","content":"Approved content"}`)
+		}
 	case "create_operational_suggestion":
 		targetType = "suggestion"
 		payload = json.RawMessage(fmt.Sprintf(`{"source_type":"approval_atomic_fixture","source_key":"suggestion-%d","source_run_id":999999,"title":"Atomic improvement","description":"Proposed improvement","priority":"high","evidence":{"source":"approved"}}`, runID))
@@ -137,6 +167,7 @@ func (f *atomicApprovalFixture) service(store ApprovalStore, runner ApprovalTran
 	return &ApprovalService{
 		approvals: store, effects: f.effects, transactor: runner,
 		mediaCandidates: agentrepository.NewMediaCandidateRepository(f.db),
+		posts: postservice.NewPostService(postrepository.NewPostRepository(f.db)),
 	}
 }
 
@@ -164,6 +195,12 @@ func (f *atomicApprovalFixture) effectCount(t *testing.T) int {
 		query = `SELECT COUNT(*) FROM ai_media_candidates WHERE source_approval_id=$1`
 	case "create_operational_suggestion":
 		query = `SELECT COUNT(*) FROM ai_operational_suggestions WHERE source_type='approval_atomic_fixture' AND source_run_id=(SELECT run_id FROM ai_approvals WHERE id=$1)`
+	case "create_draft":
+		query = `SELECT COUNT(*) FROM posts WHERE slug=(SELECT CONCAT('atomic-draft-', run_id::text) FROM ai_approvals WHERE id=$1)`
+	case "update_post":
+		query = `SELECT COUNT(*) FROM posts WHERE id=(SELECT target_id FROM ai_approvals WHERE id=$1) AND title='Approved title'`
+	case "update_tags":
+		query = `SELECT COUNT(*) FROM posts WHERE id=(SELECT target_id FROM ai_approvals WHERE id=$1) AND tags=ARRAY['approved','tags']::text[]`
 	default:
 		t.Fatalf("unsupported effect count for %q", f.action)
 	}
