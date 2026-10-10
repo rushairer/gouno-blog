@@ -395,8 +395,8 @@ func (s *ApprovalService) appendCandidateEvent(ctx context.Context, candidateID 
 	_ = s.workflowEvents.AppendWorkflowRunEvent(ctx, &workflowdomain.WorkflowRunEvent{WorkflowRunID: &runID, WorkflowStepID: candidate.WorkflowStepID, InteractionTaskID: candidate.InteractionTaskID, EventType: eventType, Payload: raw})
 }
 
-func (s *ApprovalService) recordMediaGenerationFailure(ctx context.Context, candidateID int64, code, message string) {
-	workflowRunID, err := s.mediaGeneration.RecordMediaGenerationError(ctx, candidateID, code, message)
+func (s *ApprovalService) recordMediaGenerationFailure(ctx context.Context, candidateID int64, generationAttempt int, code, message string) {
+	workflowRunID, err := s.mediaGeneration.RecordMediaGenerationError(ctx, candidateID, generationAttempt, code, message)
 	if err != nil || workflowRunID == nil {
 		return
 	}
@@ -458,7 +458,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_started", map[string]any{"attempt": candidate.GenerationAttempt})
 	fail := func(code, reason string) error {
-		s.recordMediaGenerationFailure(ctx, id, code, reason)
+		s.recordMediaGenerationFailure(ctx, id, candidate.GenerationAttempt, code, reason)
 		return errors.New(reason)
 	}
 	prompt := candidate.Brief
@@ -475,9 +475,19 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		}
 		return fail(code, err.Error())
 	}
-	if err := s.mediaGeneration.CompleteMediaGeneration(ctx, id, asset.ID, false); err != nil {
-		_, _ = s.mediaAssets.DeleteMedia(ctx, asset.ID)
-		_ = s.media.Delete(ctx, asset.StorageName)
+	if err := s.mediaGeneration.CompleteMediaGeneration(ctx, id, candidate.GenerationAttempt, asset.ID, false); err != nil {
+		// sql.ErrNoRows means the guarded transition definitively did NOT
+		// apply (cancelled/superseded attempt). The generated asset is then
+		// unreferenced and may be compensated.
+		//
+		// A database/transport error can also be a LOST COMMIT ACK. In that
+		// case the candidate may ALREADY reference the asset. Never delete
+		// the bytes or Media row on an ambiguous outcome: preserve both for
+		// operator reconciliation and do not automatically reissue generation.
+		if errors.Is(err, sql.ErrNoRows) {
+			_, _ = s.mediaAssets.DeleteMedia(ctx, asset.ID)
+			_ = s.media.Delete(ctx, asset.StorageName)
+		}
 		return err
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_completed", map[string]any{"media_asset_id": asset.ID})
