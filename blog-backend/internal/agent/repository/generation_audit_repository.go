@@ -51,14 +51,13 @@ func (r *GenerationAuditRepository) RecordGenerationAudit(ctx context.Context, v
 		// index prevents a second dispatch from reusing the same attempt.
 		return r.db.QueryRowContext(ctx, `INSERT INTO ai_generation_audits
 			(source,operation,template_version,provider,model,input_tokens,output_tokens,status,error_code,agent_run_id,workflow_run_id,media_candidate_id,media_asset_id,generation_attempt)
-			SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,c.source_run_id,c.workflow_run_id,c.id,$13,c.generation_attempt
+			SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,c.source_run_id,c.workflow_run_id,c.id,$10,c.generation_attempt
 			FROM ai_media_candidates c
-			WHERE c.id=$12 AND c.generation_attempt=$14 AND c.generation_status='generating'
+			WHERE c.id=$11 AND c.generation_attempt=$12 AND c.generation_status='generating'
 			  AND COALESCE(c.error_code,'')=''
 			RETURNING id`, value.Source, value.Operation, value.TemplateVersion,
 			value.Provider, value.Model, value.InputTokens, value.OutputTokens,
-			value.Status, value.ErrorCode, value.AgentRunID, value.WorkflowRunID,
-			value.MediaCandidateID, value.MediaAssetID, value.GenerationAttempt).Scan(&value.ID)
+			value.Status, value.ErrorCode, value.MediaAssetID, value.MediaCandidateID, value.GenerationAttempt).Scan(&value.ID)
 	}
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_generation_audits
 		(source,operation,template_version,provider,model,input_tokens,output_tokens,status,error_code,agent_run_id,workflow_run_id,media_candidate_id,media_asset_id,generation_attempt)
