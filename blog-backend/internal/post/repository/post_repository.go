@@ -22,18 +22,26 @@ func NewPostRepository(db *sql.DB) *PostRepository {
 }
 
 func (r *PostRepository) Create(ctx context.Context, post *postdomain.Post) error {
+	return createPostOn(ctx, r.db, post)
+}
+
+func createPostOn(ctx context.Context, writer postQueryRower, post *postdomain.Post) error {
 	query := `
 		INSERT INTO posts (title, slug, summary, content, tags, category_id, cover_url, cover_alt, seo_title, seo_description, status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
 		RETURNING id, created_at, updated_at, revision
 	`
-	err := r.db.QueryRowContext(ctx, query,
+	err := writer.QueryRowContext(ctx, query,
 		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.ViewsCount, post.LikesCount, post.PublishedAt, post.ScheduledAt, post.CreatedByPrincipalID, post.UpdatedByPrincipalID,
 	).Scan(&post.ID, &post.CreatedAt, &post.UpdatedAt, &post.Revision)
 	return err
 }
 
 func (r *PostRepository) Update(ctx context.Context, post *postdomain.Post) error {
+	return updatePostOn(ctx, r.db, post)
+}
+
+func updatePostOn(ctx context.Context, writer postQueryRower, post *postdomain.Post) error {
 	query := `
 		UPDATE posts
 		SET title = $1, slug = $2, summary = $3, content = $4, tags = $5, category_id = $6,
@@ -42,10 +50,10 @@ func (r *PostRepository) Update(ctx context.Context, post *postdomain.Post) erro
 		WHERE id = $15 AND revision = $16
 		RETURNING updated_at, revision
 	`
-	err := r.db.QueryRowContext(ctx, query,
+	err := writer.QueryRowContext(ctx, query,
 		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.PublishedAt, post.ScheduledAt, post.UpdatedByPrincipalID, post.ID, post.Revision,
 	).Scan(&post.UpdatedAt, &post.Revision)
-	return r.writeError(ctx, err, post.ID)
+	return writeErrorOn(ctx, writer, err, post.ID)
 }
 
 // RestoreSnapshotTx applies a Post-owned restore command inside a caller-owned
@@ -88,13 +96,17 @@ func (r *PostRepository) Delete(ctx context.Context, id int64) error {
 }
 
 func (r *PostRepository) GetByID(ctx context.Context, id int64) (*postdomain.Post, error) {
+	return getPostByIDOn(ctx, r.db, id)
+}
+
+func getPostByIDOn(ctx context.Context, writer postQueryRower, id int64) (*postdomain.Post, error) {
 	query := `
 		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at, revision
 		FROM posts
 		WHERE id = $1
 	`
 	var post postdomain.Post
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := writer.QueryRowContext(ctx, query, id).Scan(
 		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt, &post.Revision,
 	)
 	if err == sql.ErrNoRows {
@@ -107,13 +119,17 @@ func (r *PostRepository) GetByID(ctx context.Context, id int64) (*postdomain.Pos
 }
 
 func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*postdomain.Post, error) {
+	return getPostBySlugOn(ctx, r.db, slug)
+}
+
+func getPostBySlugOn(ctx context.Context, writer postQueryRower, slug string) (*postdomain.Post, error) {
 	query := `
 		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at, revision
 		FROM posts
 		WHERE slug = $1
 	`
 	var post postdomain.Post
-	err := r.db.QueryRowContext(ctx, query, slug).Scan(
+	err := writer.QueryRowContext(ctx, query, slug).Scan(
 		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt, &post.Revision,
 	)
 	if err == sql.ErrNoRows {
