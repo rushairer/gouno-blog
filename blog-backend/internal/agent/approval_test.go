@@ -80,6 +80,7 @@ type mediaGenerationFailureStub struct {
 	candidateID   int64
 	code          string
 	message       string
+	contextErr    error
 }
 
 func (s *mediaGenerationFailureStub) ClaimMediaGeneration(context.Context, int64) (*domain.MediaCandidate, error) {
@@ -91,8 +92,12 @@ func (s *mediaGenerationFailureStub) CompleteMediaGeneration(context.Context, in
 func (s *mediaGenerationFailureStub) CancelMediaGeneration(context.Context, int64) error {
 	return errors.New("unused")
 }
-func (s *mediaGenerationFailureStub) RecordMediaGenerationError(_ context.Context, candidateID int64, generationAttempt int, code, message string) (*int64, error) {
+func (s *mediaGenerationFailureStub) ListMediaGenerationReconciliation(context.Context, int) ([]*domain.MediaGenerationReconciliation, error) {
+	return nil, errors.New("unused")
+}
+func (s *mediaGenerationFailureStub) RecordMediaGenerationError(ctx context.Context, candidateID int64, generationAttempt int, code, message string) (*int64, error) {
 	s.candidateID, s.code, s.message = candidateID, code, message
+	s.contextErr = ctx.Err()
 	return s.workflowRunID, s.recordErr
 }
 

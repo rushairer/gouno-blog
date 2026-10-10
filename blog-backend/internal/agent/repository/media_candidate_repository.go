@@ -260,7 +260,18 @@ func (r *MediaCandidateRepository) CompleteMediaGeneration(ctx context.Context, 
 // associated Workflow Run, if any, so callers can append the cross-capability
 // audit event through the Workflow repository rather than writing that table here.
 func (r *MediaCandidateRepository) RecordMediaGenerationError(ctx context.Context, candidateID int64, generationAttempt int, code, message string) (*int64, error) {
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='failed',error_code=$2,error_message=$3 WHERE id=$1 AND generation_status='generating' AND generation_attempt=$4`, candidateID, code, message, generationAttempt)
+	// A provider timeout/transport error does not prove the external request
+	// failed. Keep it unclaimable as 'generating', but set the deadline to
+	// NOW() so the read-only reconciliation queue surfaces it immediately.
+	// This transition is fenced by the exact generation attempt.
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates
+		SET generation_status=CASE WHEN $2='outcome_uncertain' THEN 'generating' ELSE 'failed' END,
+		    error_code=$2,error_message=$3,
+		    generation_deadline_at=CASE WHEN $2='outcome_uncertain'
+		      THEN LEAST(COALESCE(generation_deadline_at,NOW()), NOW())
+		      ELSE generation_deadline_at END
+		WHERE id=$1 AND generation_status='generating' AND generation_attempt=$4`,
+		candidateID, code, message, generationAttempt)
 	if err != nil {
 		return nil, err
 	}
