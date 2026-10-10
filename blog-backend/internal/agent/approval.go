@@ -475,7 +475,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	}
 	asset, err := s.generation.GenerateImage(ctx, ImageGenerationRequest{Prompt: prompt, AltText: candidate.AltText, CreatorPrincipalID: creatorPrincipalID,
 		Source: "agent_candidate", Operation: "media.generate_candidate", Deadline: 15 * time.Minute,
-		AgentRunID: &candidate.SourceRunID, WorkflowRunID: candidate.WorkflowRunID, MediaCandidateID: &candidate.ID, Filename: "ai-" + strconv.FormatInt(candidate.ID, 10) + "%s"})
+		AgentRunID: &candidate.SourceRunID, WorkflowRunID: candidate.WorkflowRunID, MediaCandidateID: &candidate.ID, GenerationAttempt: &candidate.GenerationAttempt, Filename: "ai-" + strconv.FormatInt(candidate.ID, 10) + "%s"})
 	if err != nil {
 		s.markMediaGenerationUncertain(ctx, id, candidate.GenerationAttempt)
 		return err
