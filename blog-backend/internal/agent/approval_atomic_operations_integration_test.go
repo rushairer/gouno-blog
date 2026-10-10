@@ -547,3 +547,103 @@ func TestAtomicOperationalSuggestionDedupeUpdateRollsBackWithApproval(t *testing
 		t.Fatalf("quarantined approval replayed: %v", err)
 	}
 }
+
+type failApprovalTargetStore struct {
+	*agentrepository.ApprovalRepository
+}
+
+func (f *failApprovalTargetStore) SetApprovalTargetTx(context.Context, *sql.Tx, int64, int64) error {
+	return errors.New("injected: cannot store generated Post target")
+}
+
+func TestAtomicPostDraftTargetAssignmentFailureRollsBackContentAndEvents(t *testing.T) {
+	f := newAtomicApprovalFixture(t, "create_draft")
+	svc := f.service(&failApprovalTargetStore{ApprovalRepository: f.repo}, f.transactor)
+	if err := svc.Approve(context.Background(), f.approvalID, f.principal, "review"); !errors.Is(err, ErrApprovalOutcomeUncertain) {
+		t.Fatalf("target assignment failure=%v, want quarantined outcome", err)
+	}
+	if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 0 {
+		t.Fatalf("draft escaped rollback: approval=%s rows=%d", f.status(t), f.effectCount(t))
+	}
+	f.assertPostTransactionEffects(t, false)
+	if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
+		t.Fatalf("unsafe draft replay: %v", err)
+	}
+}
+
+type advancePostAfterClaimStore struct {
+	*agentrepository.ApprovalRepository
+	db     *sql.DB
+	postID int64
+}
+
+func (s *advancePostAfterClaimStore) ClaimApproval(ctx context.Context, approvalID, principalID int64, note string) error {
+	if err := s.ApprovalRepository.ClaimApproval(ctx, approvalID, principalID, note); err != nil {
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, `UPDATE posts SET content=content || ' competing edit' WHERE id=$1`, s.postID)
+	return err
+}
+
+func TestAtomicPostUpdateRejectsConcurrentRevisionAfterClaim(t *testing.T) {
+	for _, action := range []string{"update_post", "update_tags"} {
+		t.Run(action, func(t *testing.T) {
+			f := newAtomicApprovalFixture(t, action)
+			store := &advancePostAfterClaimStore{ApprovalRepository: f.repo, db: f.db, postID: f.postID}
+			svc := f.service(store, f.transactor)
+			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "stale review"); !errors.Is(err, ErrApprovalOutcomeUncertain) {
+				t.Fatalf("concurrent post update result=%v, want quarantine", err)
+			}
+			if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 0 {
+				t.Fatalf("stale review applied: status=%s changed=%d", f.status(t), f.effectCount(t))
+			}
+			var revision int64
+			var versions int
+			var content string
+			if err := f.db.QueryRowContext(context.Background(), `SELECT content, revision FROM posts WHERE id=$1`, f.postID).
+				Scan(&content, &revision); err != nil {
+				t.Fatal(err)
+			}
+			if err := f.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM post_versions WHERE post_id=$1`, f.postID).Scan(&versions); err != nil {
+				t.Fatal(err)
+			}
+			if content != "Original body competing edit" || revision != 2 || versions != 1 {
+				t.Fatalf("lost external edit or repeated snapshot: content=%q revision=%d versions=%d", content, revision, versions)
+			}
+			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "replay"); !errors.Is(err, ErrApprovalConflict) {
+				t.Fatalf("stale approval replayed: %v", err)
+			}
+		})
+	}
+}
+
+func TestAtomicDraftIgnoresAttemptedStatusAndPrincipalEscalation(t *testing.T) {
+	f := newAtomicApprovalFixture(t, "create_draft")
+	var runID int64
+	if err := f.db.QueryRowContext(context.Background(), `SELECT run_id FROM ai_approvals WHERE id=$1`,
+		f.approvalID).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+	payload := fmt.Sprintf(`{"title":"Approved draft","slug":"atomic-draft-%d","content":"body",
+		"status":"published","created_by_principal_id":99999999,"updated_by_principal_id":99999999,
+		"revision":99999999}`, runID)
+	if _, err := f.db.ExecContext(context.Background(), `UPDATE ai_approvals SET proposed_payload=$2::jsonb WHERE id=$1`,
+		f.approvalID, payload); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.service(f.repo, f.transactor).Approve(context.Background(), f.approvalID, f.principal, "approved"); err != nil {
+		t.Fatal(err)
+	}
+	var status string
+	var createdBy, updatedBy sql.NullInt64
+	var revision int64
+	if err := f.db.QueryRowContext(context.Background(), `SELECT status,created_by_principal_id,updated_by_principal_id,revision
+		FROM posts WHERE slug=$1`, fmt.Sprintf("atomic-draft-%d", runID)).
+		Scan(&status, &createdBy, &updatedBy, &revision); err != nil {
+		t.Fatal(err)
+	}
+	if status != "draft" || createdBy.Valid || updatedBy.Valid || revision != 1 {
+		t.Fatalf("draft privilege escalation: status=%q created=%v updated=%v revision=%d",
+			status, createdBy, updatedBy, revision)
+	}
+}
