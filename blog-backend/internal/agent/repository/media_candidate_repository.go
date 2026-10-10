@@ -238,13 +238,15 @@ func (r *MediaCandidateRepository) ClaimMediaGeneration(ctx context.Context, id 
 	return &item, err
 }
 
-func (r *MediaCandidateRepository) CompleteMediaGeneration(ctx context.Context, candidateID, mediaAssetID int64, failed bool) error {
+// Completion may mutate only the exact active attempt acquired by ClaimMediaGeneration.
+// Cancelled or superseded requests cannot attach stale generated assets.
+func (r *MediaCandidateRepository) CompleteMediaGeneration(ctx context.Context, candidateID int64, generationAttempt int, mediaAssetID int64, failed bool) error {
 	status := "generated"
 	if failed {
 		status = "failed"
 	}
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status=$2, media_asset_id=CASE WHEN $3 > 0 THEN $3 ELSE media_asset_id END
-		WHERE id=$1 AND generation_status='generating'`, candidateID, status, mediaAssetID)
+		WHERE id=$1 AND generation_status='generating' AND generation_attempt=$4`, candidateID, status, mediaAssetID, generationAttempt)
 	if err != nil {
 		return err
 	}
@@ -257,8 +259,8 @@ func (r *MediaCandidateRepository) CompleteMediaGeneration(ctx context.Context, 
 // RecordMediaGenerationError owns only Media Candidate state. It returns the
 // associated Workflow Run, if any, so callers can append the cross-capability
 // audit event through the Workflow repository rather than writing that table here.
-func (r *MediaCandidateRepository) RecordMediaGenerationError(ctx context.Context, candidateID int64, code, message string) (*int64, error) {
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='failed',error_code=$2,error_message=$3 WHERE id=$1 AND generation_status='generating'`, candidateID, code, message)
+func (r *MediaCandidateRepository) RecordMediaGenerationError(ctx context.Context, candidateID int64, generationAttempt int, code, message string) (*int64, error) {
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='failed',error_code=$2,error_message=$3 WHERE id=$1 AND generation_status='generating' AND generation_attempt=$4`, candidateID, code, message, generationAttempt)
 	if err != nil {
 		return nil, err
 	}

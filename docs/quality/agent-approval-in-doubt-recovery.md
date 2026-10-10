@@ -220,13 +220,50 @@ This is local PostgreSQL atomicity, not delivery of external side effects
 or globally exactly-once Page publishing. Historical `approved` records
 from prior deployments still need read-only reconciliation.
 
+## Image-generation attempt fencing and uncertain completion (phase 6)
+
+Image generation cannot be made atomic with a PostgreSQL transaction:
+the external AI provider, object storage and Media metadata are separate
+durability boundaries. A Media Candidate is claimed by atomically setting
+`generation_status='generating'` and increasing its `generation_attempt`.
+Every subsequent candidate completion or error update now includes
+`WHERE generation_status='generating' AND generation_attempt=:claimed_attempt`.
+Cancelling and manually regenerating increments the attempt: a late response
+from the old attempt may not attach an old asset or mark the new attempt failed.
+
+After an external image succeeds, Media binary bytes and `media_assets`
+metadata can already be durable BEFORE the Candidate references them.
+Classify finalization errors precisely:
+
+- **Definite guarded CAS miss (`sql.ErrNoRows`)**: this write did not
+  attach the newly generated asset. An old, cancelled or superseded attempt
+  may compensate its orphan Media row and object bytes.
+- **Database/transport error, ambiguous COMMIT**: the Candidate MAY
+  already reference the asset. Never delete Media bytes or metadata solely
+  because the client did not receive the commit acknowledgement. Preserve
+  the asset and its GenerationAudit linkage for manual reconciliation.
+- **Confirmed success**: Candidate references the generated asset with the
+  same attempt; do not initiate another provider generation.
+
+Investigate `ai_media_candidates.id`, `generation_attempt`,
+`generation_status`, `media_asset_id`, matching `media_assets` and
+`ai_generation_audits` (where present) **read only** before any cleanup
+or new human-authorized attempt. Do not reset a running lease or automatically
+retry a provider call following an uncertain response. This phase is an
+at-most-one-claimed-attempt fence and safe compensation policy, **not** an
+exactly-once external generation guarantee.
+
+Migrated PostgreSQL tests cover cancel -> re-claim -> delayed old failure
+or success, and unit fault injection proves ambiguous completion never
+deletes a candidate-referenced asset.
+
 ## Remaining architectural work
 
 The phased atomic paths eliminate the split commit for editorial tasks,
 reply drafts, content candidate sets, approved media candidate briefs,
 operational suggestion upserts, Post draft/revision/tag approvals and Page draft/update approvals.
 The remaining guards prevent unsafe **automatic replay** elsewhere but do not
-provide a universal cross-capability atomic commit. A later phase should add durable per-effect
+provide a universal cross-capability atomic commit. For other external effects, a later phase should add durable per-effect
 idempotency keys and transactional completion (or a transactional outbox)
 where feasible. Only then should selective, provably safe retries be
 reintroduced, with database fault-injection tests for each action type.
