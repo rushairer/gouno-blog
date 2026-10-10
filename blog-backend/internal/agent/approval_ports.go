@@ -70,10 +70,13 @@ type MediaCandidateStore interface {
 	SetMediaGenerationInstruction(context.Context, int64, string) error
 }
 
+// MediaGenerationStore fences each result against its claimed generation
+// attempt. A cancelled/restarted image request must not finalize or fail a
+// different attempt for the same MediaCandidate ID.
 type MediaGenerationStore interface {
 	ClaimMediaGeneration(context.Context, int64) (*domain.MediaCandidate, error)
-	CompleteMediaGeneration(context.Context, int64, int64, bool) error
-	RecordMediaGenerationError(context.Context, int64, string, string) (*int64, error)
+	CompleteMediaGeneration(context.Context, int64, int, int64, bool) error
+	RecordMediaGenerationError(context.Context, int64, int, string, string) (*int64, error)
 	CancelMediaGeneration(context.Context, int64) error
 }
 
