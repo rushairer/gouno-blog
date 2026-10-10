@@ -62,7 +62,9 @@ type ImageGenerationRequest struct {
 	AgentRunID         *int64
 	WorkflowRunID      *int64
 	MediaCandidateID   *int64
+	GenerationAttempt  *int
 	Filename           string
+	auditID            int64
 }
 
 func NewGenerationService(repo generationAuditRepository, management *ManagementService, mediaAssets mediaCreator, store media.Store) *GenerationService {
@@ -102,6 +104,9 @@ func (s *GenerationService) GenerateEditorText(ctx context.Context, req EditorTe
 }
 
 func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerationRequest) (*mediadomain.MediaAsset, error) {
+	if err := validateImageGenerationIdentity(req); err != nil {
+		return nil, err
+	}
 	if s.management == nil || s.mediaAssets == nil || s.media == nil || strings.TrimSpace(req.Prompt) == "" {
 		return nil, ErrInvalid
 	}
@@ -138,7 +143,12 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 		s.recordImageAudit(req, string(selected.ProviderType), selected.Model, 0, 0, nil, err)
 		return nil, err
 	}
-	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: cleanImagePrompt(req.Prompt)})
+	image, err := s.requestAuditedImage(generationCtx, &req, string(selected.ProviderType), selected.Model, generator)
+	if errors.Is(err, errImageAuditUnconfirmed) {
+		// The audit INSERT may have committed. Do not overwrite that uncertain
+		// evidence or call the provider again to recover a missing ACK.
+		return nil, err
+	}
 	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
 		if errors.Is(generationCtx.Err(), context.DeadlineExceeded) {
 			err = errors.New("image generation timed out")
@@ -195,7 +205,7 @@ func editorTemplate(task string) (editorTemplateDefinition, bool) {
 		"slug":         {base + " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create lowercase URL slugs using ASCII letters, numbers, and hyphens only.", fixedTokens(800)},
 		"tags":         {base + " Produce 3 to 5 highly relevant, concise Chinese topic tags (1-4 words each) reflecting the core themes of this draft. Return only valid JSON: {\"suggestions\":[\"tag1\", \"tag2\", \"tag3\"]}. Do not explain.", fixedTokens(800)},
 		"seo":          {"You are an SEO specialist. Analyze the draft and produce optimal SEO metadata. Return only valid JSON in the form: {\"seo_title\": \"...\", \"seo_description\": \"...\", \"slug\": \"...\"}. Ensure seo_title is under 60 characters with core keywords, seo_description is under 160 characters engaging search snippet, and slug is lowercase ASCII words with hyphens.", fixedTokens(2000)},
-		"alt":          {base + " Produce 3 concise, descriptive Chinese image alt texts (accessibility scene descriptions) suitable for the cover image of this article. Return only valid JSON: {\"suggestions\":[\"alt 1\", \"alt 2\", \"alt 3\"]}. Do not explain.", fixedTokens(800)},
+		"alt":          {base + " Produce 3 concise, descriptive Chinese image alt texts (accessibility scene descriptions) suitable for the cover image of this article. Return only valid JSON: {\"suggestions\":[\"alt 1\", \"alt 2\", \"alt 3\"]}.", fixedTokens(800)},
 		"category":     {"You are a blog editor. Given the candidate categories list in the request, select the single most appropriate category name for this draft. Return only valid JSON in the form: {\"suggestions\":[\"category_name\"]}.", fixedTokens(500)},
 		"cover_prompt": {"You are an AI art director. Generate 3 distinct, highly creative, and detailed text-to-image prompts in English (each followed by a concise Chinese summary in brackets: [中文说明: ...]) for generating an eye-catching, modern blog cover image suitable for Midjourney or DALL-E 3. Provide 3 different visual directions (e.g. 1. Futuristic Surreal Tech, 2. Minimalist Conceptual Graphic, 3. Cinematic 3D Scene). Return only valid JSON: {\"suggestions\":[\"Prompt 1... [中文说明: ...]\", \"Prompt 2... [中文说明: ...]\", \"Prompt 3... [中文说明: ...]\"]}.", fixedTokens(2500)},
 		"metadata_all": {"You are a senior blog managing editor. Analyze the draft and generate all publishing metadata in a single valid JSON object with format:\n{\"summary\":\"...\",\"tags\":[\"...\"],\"slug\":\"...\",\"seo_title\":\"...\",\"seo_description\":\"...\",\"category\":\"...\",\"cover_alt\":\"...\"}.\nEnsure summary is ~150-250 Chinese chars, tags has 3-5 keywords, slug is ASCII lowercase words with hyphens, seo_title is <=60 chars, seo_description is <=160 chars, category matches the best choice from candidate categories (if supplied), and cover_alt describes the cover scene.", fixedTokens(3000)},
@@ -263,11 +273,20 @@ func generationErrorCode(err error) string {
 }
 
 func (s *GenerationService) recordImageAudit(req ImageGenerationRequest, providerName, model string, inputTokens, outputTokens int64, assetID *int64, err error) {
-	s.record(domain.GenerationAudit{Source: req.Source, Operation: req.Operation, TemplateVersion: editorTemplateVersion, Provider: providerName, Model: model, InputTokens: inputTokens, OutputTokens: outputTokens, Status: generationStatus(err), ErrorCode: generationErrorCode(err), AgentRunID: req.AgentRunID, WorkflowRunID: req.WorkflowRunID, MediaCandidateID: req.MediaCandidateID, MediaAssetID: assetID})
+	status, code := generationStatus(err), generationErrorCode(err)
+	if req.GenerationAttempt != nil && err != nil {
+		status, code = domain.MediaGenerationOutcomeUncertainCode, domain.MediaGenerationOutcomeUncertainCode
+	}
+	s.record(domain.GenerationAudit{ID: req.auditID, Source: req.Source, Operation: req.Operation, TemplateVersion: editorTemplateVersion, Provider: providerName, Model: model, InputTokens: inputTokens, OutputTokens: outputTokens, Status: status, ErrorCode: code, AgentRunID: req.AgentRunID, WorkflowRunID: req.WorkflowRunID, MediaCandidateID: req.MediaCandidateID, MediaAssetID: assetID, GenerationAttempt: req.GenerationAttempt})
 }
 
 func (s *GenerationService) record(value domain.GenerationAudit) {
 	if s != nil && s.repo != nil {
-		_ = s.repo.RecordGenerationAudit(context.Background(), &value)
+		// A cancelled worker must still be able to record minimal evidence, but
+		// audit storage cannot block it forever. A failed terminal write leaves
+		// the durable started row uncertain; it never triggers another request.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = s.repo.RecordGenerationAudit(ctx, &value)
 	}
 }
