@@ -27,6 +27,29 @@ func (s *PostService) approvalTransactionRepository() (approvalTransactionPostRe
 	return writer, nil
 }
 
+// GetAdminPostTx is a transaction-scoped administrative read. Approval
+// coordinators must not acquire an unrelated DB connection while holding a Tx.
+func (s *PostService) GetAdminPostTx(ctx context.Context, tx *sql.Tx, id int64) (*postdomain.Post, error) {
+	if tx == nil {
+		return nil, errors.New("post read requires a transaction")
+	}
+	if id <= 0 {
+		return nil, ErrInvalidPostID
+	}
+	repo, err := s.approvalTransactionRepository()
+	if err != nil {
+		return nil, err
+	}
+	post, err := repo.GetByIDTx(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if post == nil {
+		return nil, ErrPostNotFound
+	}
+	return post, nil
+}
+
 // CreatePostTx runs the same validation, slug resolution and status rules as
 // CreatePost, but reads and writes through the caller's transaction. Domain
 // event and PostVersion triggers then participate in the approval commit.
