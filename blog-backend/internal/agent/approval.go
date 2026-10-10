@@ -469,20 +469,6 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		s.appendCandidateEvent(ctx, id, "regeneration_requested", map[string]any{"attempt": candidate.GenerationAttempt})
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_started", map[string]any{"attempt": candidate.GenerationAttempt})
-// A provider error (including timeout or worker cancellation) cannot
-	// prove the upstream request was not executed or billed. Even preflight
-	// errors are conservatively quarantined until evidence is reviewed.
-	fail := func(err error) error {
-		// Worker shutdown cancels ctx. Use a short detached context so the
-		// fail-closed marker can still be durably persisted. If that write
-		// also fails, the original 'generating' claim remains unclaimable
-		// and the stale-deadline reconciliation query will surface it.
-		persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		s.recordMediaGenerationFailure(persistCtx, id, candidate.GenerationAttempt,
-			domain.MediaGenerationOutcomeUncertainCode, "provider outcome unconfirmed; manual reconciliation required")
-		return err
-	}
 	prompt := candidate.Brief
 	if candidate.RegenerationInstruction != "" {
 		prompt += "\n\nAdditional editor requirements for this generation:\n" + candidate.RegenerationInstruction
@@ -491,9 +477,26 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		Source: "agent_candidate", Operation: "media.generate_candidate", Deadline: 15 * time.Minute,
 		AgentRunID: &candidate.SourceRunID, WorkflowRunID: candidate.WorkflowRunID, MediaCandidateID: &candidate.ID, Filename: "ai-" + strconv.FormatInt(candidate.ID, 10) + "%s"})
 	if err != nil {
-		return fail(err)
+		s.markMediaGenerationUncertain(ctx, id, candidate.GenerationAttempt)
+		return err
 	}
 	return s.completeGeneratedMediaCandidate(ctx, candidate, asset)
+}
+
+// markMediaGenerationUncertain is fail-closed after ANY error from the
+// provider/generation path. A timeout or cancellation does not prove that an
+// upstream request was never executed or billed. Preflight errors also remain
+// quarantined until an operator can distinguish them.
+//
+// A shutdown may have cancelled ctx. Use a bounded detached context to
+// persist the marker. If that fails, the durable 'generating' claim remains
+// unclaimable and appears in the overdue reconciliation report.
+func (s *ApprovalService) markMediaGenerationUncertain(ctx context.Context, candidateID int64, generationAttempt int) {
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	s.recordMediaGenerationFailure(persistCtx, candidateID, generationAttempt,
+		domain.MediaGenerationOutcomeUncertainCode,
+		"provider outcome unconfirmed; manual reconciliation required")
 }
 
 // completeGeneratedMediaCandidate performs the last guarded persistence step
