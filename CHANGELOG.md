@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Atomically commit Agent-approved draft creation, article revisions and tag edits with review completion; share Post-owned validation/SQL for transaction-scoped read/write, persist generated draft approval targets in the same commit and verify PostVersion/workflow-event trigger rollback, revision races, commit-ACK loss and permission-field isolation in migrated PostgreSQL tests.
 - Patch five reachable HTTP/2 vulnerabilities (`GO-2026-6617`, `GO-2026-6612`, `GO-2026-6611`, `GO-2026-6610`, `GO-2026-6603`) by updating backend `golang.org/x/net` to `v0.60.0`, along with its compatible `x/crypto`, `x/sys`, `x/term`, and `x/text` requirements and verified module checksums; enforce the patched x/net floor in CI.
 - Upgrade backend and Seed to Go 1.27.2 to fix reachable standard-library crypto/tls vulnerability `GO-2026-6607` (`CVE-2026-97031`), pin the official Linux multiarchitecture builder index to immutable digest `sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673`, and add a CI regression guard against Go version/digest drift.
 - Atomically commit approved operational-suggestion upserts with Agent approval completion while retaining natural-key evidence refresh, terminal suggestion status protection and trusted run provenance; add real PostgreSQL fault/concurrency/duplicate-dedupe regressions.
