@@ -191,6 +191,31 @@ type AgentApproval struct {
 
 // MediaCandidate is a governed hand-off from either an approved proposal or
 // an internal image task. Generation and publication remain separate actions.
+// MediaGenerationOutcomeUncertainCode means an external provider may have
+// accepted/charged the request even though its result was not acknowledged.
+// Retain the current attempt in generating until an authorized human checks it.
+const MediaGenerationOutcomeUncertainCode = "outcome_uncertain"
+
+// MediaGenerationReconciliation is a bounded read-only operational snapshot.
+// The latest generation audit is evidence only: historical audits do not store
+// generation_attempt and MUST NOT be assumed to identify the current attempt.
+type MediaGenerationReconciliation struct {
+	CandidateID            int64      `json:"candidate_id"`
+	PostID                 int64      `json:"post_id"`
+	SourceRunID            int64      `json:"source_run_id"`
+	WorkflowRunID          *int64     `json:"workflow_run_id,omitempty"`
+	GenerationAttempt      int        `json:"generation_attempt"`
+	GenerationStartedAt    *time.Time `json:"generation_started_at,omitempty"`
+	GenerationDeadlineAt   *time.Time `json:"generation_deadline_at,omitempty"`
+	MediaAssetID           *int64     `json:"media_asset_id,omitempty"`
+	ErrorCode              string     `json:"error_code,omitempty"`
+	LatestAuditID          *int64     `json:"latest_audit_id,omitempty"`
+	LatestAuditStatus      string     `json:"latest_audit_status,omitempty"`
+	LatestAuditErrorCode   string     `json:"latest_audit_error_code,omitempty"`
+	LatestAuditMediaAssetID *int64    `json:"latest_audit_media_asset_id,omitempty"`
+	LatestAuditAt          *time.Time `json:"latest_audit_at,omitempty"`
+}
+
 type MediaCandidate struct {
 	ID                      int64                       `json:"id"`
 	PostID                  int64                       `json:"post_id"`
