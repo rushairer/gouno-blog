@@ -91,6 +91,9 @@ func (s *mediaGenerationFailureStub) CompleteMediaGeneration(context.Context, in
 func (s *mediaGenerationFailureStub) CancelMediaGeneration(context.Context, int64) error {
 	return errors.New("unused")
 }
+func (s *mediaGenerationFailureStub) ListMediaGenerationReconciliation(context.Context, int) ([]*domain.MediaGenerationReconciliation, error) {
+	return nil, errors.New("unused")
+}
 func (s *mediaGenerationFailureStub) RecordMediaGenerationError(_ context.Context, candidateID int64, generationAttempt int, code, message string) (*int64, error) {
 	s.candidateID, s.code, s.message = candidateID, code, message
 	return s.workflowRunID, s.recordErr
