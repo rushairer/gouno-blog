@@ -47,6 +47,13 @@ type ApprovalMediaCandidateTransactionWriter interface {
 	CreateMediaCandidateTx(context.Context, *sql.Tx, *domain.AgentApproval) error
 }
 
+// ApprovalTargetTransactionWriter persists the generated Post ID before the
+// approval completes. It is intentionally separate from ApprovalStore so
+// unrelated test doubles need not implement a new method.
+type ApprovalTargetTransactionWriter interface {
+	SetApprovalTargetTx(context.Context, *sql.Tx, int64, int64) error
+}
+
 type MediaCandidateStore interface {
 	CreateMediaCandidate(context.Context, *domain.AgentApproval) error
 	ListMediaCandidates(context.Context) ([]*domain.MediaCandidate, error)
