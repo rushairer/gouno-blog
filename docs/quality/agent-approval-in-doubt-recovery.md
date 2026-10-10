@@ -150,11 +150,42 @@ source run provenance and terminal-status protection. These tests do **not**
 claim delivery of downstream workflow events or exactly-once behavior across
 external systems.
 
+## Atomic Post draft and revision approvals (phase 4)
+
+`create_draft`, `update_post` and `update_tags` use Post capability-owned
+validation/SQL with a shared approval transaction. New draft creation now
+inserts `posts`, writes `ai_approvals.target_id` with its guarded
+`status='approved'` predicate, and completes the approval within **one**
+commit. Title, status, principal fields, revision and publication cannot
+be overridden through a draft proposal.
+
+Post mutation fetches the existing record inside the transaction, validates
+the proposal's recorded before-snapshot revision, preserves the PostService
+slug and publication validation, then applies the existing SQL
+`WHERE revision = expected` optimistic lock. This closes the race between
+the pre-claim conflict check and the later business UPDATE. Existing
+`post_versions` and `ai_workflow_events` triggers run in the same
+transaction; they disappear on rollback, along with the content change.
+Post link-health job triggers also retain their existing database
+transaction semantics where relevant.
+
+The migrated PostgreSQL integration matrix now tests normal approval,
+business/status rollback, lost COMMIT response, 16 concurrent reviewers,
+PostVersion and event rollback, created-draft target write failure,
+concurrent edit after durable approval claim and draft-only field
+allowlisting. A caller-reported uncertain result still does **not**
+authorize replay, even where the database transaction itself rolled back;
+reconciliation and a fresh approval remain required.
+
+This does **not** certify PostVersion retention/history accuracy outside
+the existing trigger contract, Page writes, image-generation operations,
+downstream delivery or exactly-once external side effects.
+
 ## Remaining architectural work
 
 The phased atomic paths eliminate the split commit for editorial tasks,
-reply drafts, content candidate sets, approved media candidate briefs and
-operational suggestion upserts.
+reply drafts, content candidate sets, approved media candidate briefs,
+operational suggestion upserts and Post draft/revision/tag approvals.
 The remaining guards prevent unsafe **automatic replay** elsewhere but do not
 provide a universal cross-capability atomic commit. A later phase should add durable per-effect
 idempotency keys and transactional completion (or a transactional outbox)

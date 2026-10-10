@@ -159,8 +159,11 @@ func (r *ApprovalRepository) CompleteApprovalTx(ctx context.Context, tx *sql.Tx,
 	return completeApprovalOn(ctx, tx, id, status, note)
 }
 
-func (r *ApprovalRepository) SetApprovalTarget(ctx context.Context, id, targetID int64) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET target_id=$2 WHERE id=$1 AND status='approved' AND target_id IS NULL`, id, targetID)
+func setApprovalTargetOn(ctx context.Context, writer approvalStatusWriter, id, targetID int64) error {
+	if targetID <= 0 {
+		return fmt.Errorf("approval target ID must be positive")
+	}
+	result, err := writer.ExecContext(ctx, `UPDATE ai_approvals SET target_id=$2 WHERE id=$1 AND status='approved' AND target_id IS NULL`, id, targetID)
 	if err != nil {
 		return err
 	}
@@ -168,6 +171,20 @@ func (r *ApprovalRepository) SetApprovalTarget(ctx context.Context, id, targetID
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (r *ApprovalRepository) SetApprovalTarget(ctx context.Context, id, targetID int64) error {
+	return setApprovalTargetOn(ctx, r.db, id, targetID)
+}
+
+// SetApprovalTargetTx records a newly created post's ID in the same commit as
+// Post persistence and the approval's approved -> executed CAS. Rollback removes
+// the post, its trigger-owned rows and this newly assigned approval target.
+func (r *ApprovalRepository) SetApprovalTargetTx(ctx context.Context, tx *sql.Tx, id, targetID int64) error {
+	if tx == nil {
+		return fmt.Errorf("approval target transaction is required")
+	}
+	return setApprovalTargetOn(ctx, tx, id, targetID)
 }
 
 func (r *ApprovalRepository) RejectApproval(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {

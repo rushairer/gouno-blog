@@ -14,6 +14,8 @@ import (
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/operations"
+	postrepository "github.com/rushairer/blog-backend/internal/post/repository"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
@@ -32,6 +34,7 @@ type atomicApprovalFixture struct {
 var atomicApprovalTestActions = []string{
 	"create_editorial_task", "reply_comment", "create_content_candidates",
 	"create_media_candidate", "create_distribution_draft", "create_operational_suggestion",
+	"create_draft", "update_post", "update_tags",
 }
 
 func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixture {
@@ -57,6 +60,7 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_content_candidate_sets WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_media_candidates WHERE source_approval_id=$1`, fixture.approvalID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_operational_suggestions WHERE source_type=$1 AND source_run_id=$2`, "approval_atomic_fixture", runID)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE slug=$1`, fmt.Sprintf("atomic-draft-%d", runID))
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_agent_runs WHERE id=$1`, runID)
 		if postID != 0 {
 			_, _ = db.ExecContext(context.Background(), `DELETE FROM posts WHERE id=$1`, postID)
@@ -88,6 +92,32 @@ func newAtomicApprovalFixture(t *testing.T, action string) *atomicApprovalFixtur
 		}
 		payload = json.RawMessage(fmt.Sprintf(`{"comment_id":%d,"content":"Atomic reply"}`, commentID))
 		targetType = "comment"
+	case "create_draft":
+		targetType = "post"
+		payload = json.RawMessage(fmt.Sprintf(`{"title":"Approved draft","slug":"atomic-draft-%d","summary":"","content":"Proposed body","tags":["go"]}`, runID))
+	case "update_post", "update_tags":
+		suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+		if err := db.QueryRowContext(ctx, `INSERT INTO posts(title,slug,summary,content,tags,status)
+			VALUES($1,$2,'Before summary','Original body',ARRAY['before']::text[],'draft') RETURNING id`,
+			"Original title", "atomic-update-"+suffix).Scan(&postID); err != nil {
+			t.Fatal(err)
+		}
+		var revision int64
+		if err := db.QueryRowContext(ctx, `SELECT revision FROM posts WHERE id=$1`, postID).Scan(&revision); err != nil {
+			t.Fatal(err)
+		}
+		before, err := json.Marshal(map[string]any{"id":postID,"revision":revision,"title":"Original title"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		beforeSnapshot = string(before)
+		targetType = "post"
+		targetID = postID
+		if action == "update_tags" {
+			payload = json.RawMessage(`{"tags":["approved","tags"]}`)
+		} else {
+			payload = json.RawMessage(`{"title":"Approved title","summary":"Updated summary","content":"Approved content"}`)
+		}
 	case "create_operational_suggestion":
 		targetType = "suggestion"
 		payload = json.RawMessage(fmt.Sprintf(`{"source_type":"approval_atomic_fixture","source_key":"suggestion-%d","source_run_id":999999,"title":"Atomic improvement","description":"Proposed improvement","priority":"high","evidence":{"source":"approved"}}`, runID))
@@ -137,6 +167,7 @@ func (f *atomicApprovalFixture) service(store ApprovalStore, runner ApprovalTran
 	return &ApprovalService{
 		approvals: store, effects: f.effects, transactor: runner,
 		mediaCandidates: agentrepository.NewMediaCandidateRepository(f.db),
+		posts: postservice.NewPostService(postrepository.NewPostRepository(f.db)),
 	}
 }
 
@@ -164,6 +195,12 @@ func (f *atomicApprovalFixture) effectCount(t *testing.T) int {
 		query = `SELECT COUNT(*) FROM ai_media_candidates WHERE source_approval_id=$1`
 	case "create_operational_suggestion":
 		query = `SELECT COUNT(*) FROM ai_operational_suggestions WHERE source_type='approval_atomic_fixture' AND source_run_id=(SELECT run_id FROM ai_approvals WHERE id=$1)`
+	case "create_draft":
+		query = `SELECT COUNT(*) FROM posts WHERE slug=(SELECT CONCAT('atomic-draft-', run_id::text) FROM ai_approvals WHERE id=$1)`
+	case "update_post":
+		query = `SELECT COUNT(*) FROM posts WHERE id=(SELECT target_id FROM ai_approvals WHERE id=$1) AND title='Approved title'`
+	case "update_tags":
+		query = `SELECT COUNT(*) FROM posts WHERE id=(SELECT target_id FROM ai_approvals WHERE id=$1) AND tags=ARRAY['approved','tags']::text[]`
 	default:
 		t.Fatalf("unsupported effect count for %q", f.action)
 	}
@@ -186,6 +223,69 @@ func (f *atomicApprovalFixture) contentCandidateCount(t *testing.T) int {
 	return n
 }
 
+// assertPostTransactionEffects checks business rows, the PostVersion trigger,
+// the Post workflow-event trigger, revision advancement and approval target ID.
+// All must follow the same COMMIT/ROLLBACK decision.
+func (f *atomicApprovalFixture) assertPostTransactionEffects(t *testing.T, committed bool) {
+	t.Helper()
+	ctx := context.Background()
+	switch f.action {
+	case "create_draft":
+		approval, err := f.repo.GetApproval(ctx, f.approvalID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if (approval.TargetID != nil) != committed {
+			t.Fatalf("draft target persisted out of sync with commit: committed=%t target=%v", committed, approval.TargetID)
+		}
+		var eventCount int
+		if err := f.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_events
+			WHERE event_type='post.published' AND payload->>'post_id' IN
+			(SELECT id::text FROM posts WHERE slug=(SELECT CONCAT('atomic-draft-', run_id::text) FROM ai_approvals WHERE id=$1))`,
+			f.approvalID).Scan(&eventCount); err != nil {
+			t.Fatal(err)
+		}
+		want := 0
+		if committed {
+			want = 1
+			var postID int64
+			var status string
+			if err := f.db.QueryRowContext(ctx, `SELECT id,status FROM posts WHERE
+				slug=(SELECT CONCAT('atomic-draft-', run_id::text) FROM ai_approvals WHERE id=$1)`,
+				f.approvalID).Scan(&postID, &status); err != nil {
+				t.Fatal(err)
+			}
+			if postID != *approval.TargetID || status != "draft" {
+				t.Fatalf("draft target/status mismatch: post=%d target=%d status=%s", postID, *approval.TargetID, status)
+			}
+		}
+		if eventCount != want {
+			t.Fatalf("draft event count=%d want=%d", eventCount, want)
+		}
+	case "update_post", "update_tags":
+		var revision int64
+		if err := f.db.QueryRowContext(ctx, `SELECT revision FROM posts WHERE id=$1`, f.postID).Scan(&revision); err != nil {
+			t.Fatal(err)
+		}
+		var versions, events int
+		if err := f.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_versions WHERE post_id=$1`, f.postID).Scan(&versions); err != nil {
+			t.Fatal(err)
+		}
+		if err := f.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_events
+			WHERE event_type='post.updated' AND payload->>'post_id'=$1`, fmt.Sprint(f.postID)).Scan(&events); err != nil {
+			t.Fatal(err)
+		}
+		wantRevision, wantEffects := int64(1), 0
+		if committed {
+			wantRevision, wantEffects = 2, 1
+		}
+		if revision != wantRevision || versions != wantEffects || events != wantEffects {
+			t.Fatalf("post/trigger commit mismatch: revision=%d versions=%d events=%d; want %d/%d/%d",
+				revision, versions, events, wantRevision, wantEffects, wantEffects)
+		}
+	}
+}
+
 func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
@@ -200,6 +300,7 @@ func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
 				t.Fatalf("candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
+			f.assertPostTransactionEffects(t, true)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("duplicate approval error=%v, want conflict", err)
 			}
@@ -233,6 +334,7 @@ func TestAtomicApprovalRollsBackSideEffectIfStatusFails(t *testing.T) {
 			if action == "create_content_candidates" && f.contentCandidateCount(t) != 0 {
 				t.Fatalf("rollback left %d candidate children", f.contentCandidateCount(t))
 			}
+			f.assertPostTransactionEffects(t, false)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe retry after rollback: %v", err)
 			}
@@ -265,6 +367,7 @@ func TestAtomicApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t *testing.T
 			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
 				t.Fatalf("committed candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
+			f.assertPostTransactionEffects(t, true)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe replay after committed acknowledgement loss: %v", err)
 			}
@@ -303,6 +406,7 @@ func TestAtomicApprovalConcurrentReviewers(t *testing.T) {
 			if action == "create_content_candidates" && f.contentCandidateCount(t) != 2 {
 				t.Fatalf("concurrent candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
+			f.assertPostTransactionEffects(t, true)
 		})
 	}
 }
@@ -441,5 +545,105 @@ func TestAtomicOperationalSuggestionDedupeUpdateRollsBackWithApproval(t *testing
 	}
 	if err := svc.Approve(ctx, f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 		t.Fatalf("quarantined approval replayed: %v", err)
+	}
+}
+
+type failApprovalTargetStore struct {
+	*agentrepository.ApprovalRepository
+}
+
+func (f *failApprovalTargetStore) SetApprovalTargetTx(context.Context, *sql.Tx, int64, int64) error {
+	return errors.New("injected: cannot store generated Post target")
+}
+
+func TestAtomicPostDraftTargetAssignmentFailureRollsBackContentAndEvents(t *testing.T) {
+	f := newAtomicApprovalFixture(t, "create_draft")
+	svc := f.service(&failApprovalTargetStore{ApprovalRepository: f.repo}, f.transactor)
+	if err := svc.Approve(context.Background(), f.approvalID, f.principal, "review"); !errors.Is(err, ErrApprovalOutcomeUncertain) {
+		t.Fatalf("target assignment failure=%v, want quarantined outcome", err)
+	}
+	if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 0 {
+		t.Fatalf("draft escaped rollback: approval=%s rows=%d", f.status(t), f.effectCount(t))
+	}
+	f.assertPostTransactionEffects(t, false)
+	if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
+		t.Fatalf("unsafe draft replay: %v", err)
+	}
+}
+
+type advancePostAfterClaimStore struct {
+	*agentrepository.ApprovalRepository
+	db     *sql.DB
+	postID int64
+}
+
+func (s *advancePostAfterClaimStore) ClaimApproval(ctx context.Context, approvalID, principalID int64, note string) error {
+	if err := s.ApprovalRepository.ClaimApproval(ctx, approvalID, principalID, note); err != nil {
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, `UPDATE posts SET content=content || ' competing edit' WHERE id=$1`, s.postID)
+	return err
+}
+
+func TestAtomicPostUpdateRejectsConcurrentRevisionAfterClaim(t *testing.T) {
+	for _, action := range []string{"update_post", "update_tags"} {
+		t.Run(action, func(t *testing.T) {
+			f := newAtomicApprovalFixture(t, action)
+			store := &advancePostAfterClaimStore{ApprovalRepository: f.repo, db: f.db, postID: f.postID}
+			svc := f.service(store, f.transactor)
+			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "stale review"); !errors.Is(err, ErrApprovalOutcomeUncertain) {
+				t.Fatalf("concurrent post update result=%v, want quarantine", err)
+			}
+			if f.status(t) != domain.ApprovalApproved || f.effectCount(t) != 0 {
+				t.Fatalf("stale review applied: status=%s changed=%d", f.status(t), f.effectCount(t))
+			}
+			var revision int64
+			var versions int
+			var content string
+			if err := f.db.QueryRowContext(context.Background(), `SELECT content, revision FROM posts WHERE id=$1`, f.postID).
+				Scan(&content, &revision); err != nil {
+				t.Fatal(err)
+			}
+			if err := f.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM post_versions WHERE post_id=$1`, f.postID).Scan(&versions); err != nil {
+				t.Fatal(err)
+			}
+			if content != "Original body competing edit" || revision != 2 || versions != 1 {
+				t.Fatalf("lost external edit or repeated snapshot: content=%q revision=%d versions=%d", content, revision, versions)
+			}
+			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "replay"); !errors.Is(err, ErrApprovalConflict) {
+				t.Fatalf("stale approval replayed: %v", err)
+			}
+		})
+	}
+}
+
+func TestAtomicDraftIgnoresAttemptedStatusAndPrincipalEscalation(t *testing.T) {
+	f := newAtomicApprovalFixture(t, "create_draft")
+	var runID int64
+	if err := f.db.QueryRowContext(context.Background(), `SELECT run_id FROM ai_approvals WHERE id=$1`,
+		f.approvalID).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+	payload := fmt.Sprintf(`{"title":"Approved draft","slug":"atomic-draft-%d","content":"body",
+		"status":"published","created_by_principal_id":99999999,"updated_by_principal_id":99999999,
+		"revision":99999999}`, runID)
+	if _, err := f.db.ExecContext(context.Background(), `UPDATE ai_approvals SET proposed_payload=$2::jsonb WHERE id=$1`,
+		f.approvalID, payload); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.service(f.repo, f.transactor).Approve(context.Background(), f.approvalID, f.principal, "approved"); err != nil {
+		t.Fatal(err)
+	}
+	var status string
+	var createdBy, updatedBy sql.NullInt64
+	var revision int64
+	if err := f.db.QueryRowContext(context.Background(), `SELECT status,created_by_principal_id,updated_by_principal_id,revision
+		FROM posts WHERE slug=$1`, fmt.Sprintf("atomic-draft-%d", runID)).
+		Scan(&status, &createdBy, &updatedBy, &revision); err != nil {
+		t.Fatal(err)
+	}
+	if status != "draft" || createdBy.Valid || updatedBy.Valid || revision != 1 {
+		t.Fatalf("draft privilege escalation: status=%q created=%v updated=%v revision=%d",
+			status, createdBy, updatedBy, revision)
 	}
 }

@@ -79,7 +79,8 @@ func decodeDistributionDraftApproval(approval *domain.AgentApproval) (distributi
 func isAtomicApprovalAction(actionType string) bool {
 	switch actionType {
 	case "create_editorial_task", "reply_comment", "create_content_candidates",
-		"create_media_candidate", "create_distribution_draft", "create_operational_suggestion":
+		"create_media_candidate", "create_distribution_draft", "create_operational_suggestion",
+		"create_draft", "update_post", "update_tags":
 		return true
 	default:
 		return false
@@ -109,6 +110,38 @@ func (s *ApprovalService) executeAtomicApproval(ctx context.Context, approval *d
 	}
 
 	switch approval.ActionType {
+	case "create_draft":
+		if s.posts == nil {
+			return errors.New("post service is unavailable")
+		}
+		targetWriter, ok := s.approvals.(ApprovalTargetTransactionWriter)
+		if !ok {
+			return errors.New("approval transactional target writer is unavailable")
+		}
+		post, err := decodeDraftPostApproval(approval)
+		if err != nil {
+			return err
+		}
+		return s.commitApprovalEffect(ctx, approval.ID, func(tx *sql.Tx) error {
+			if err := s.posts.CreatePostTx(ctx, tx, post); err != nil {
+				return err
+			}
+			return targetWriter.SetApprovalTargetTx(ctx, tx, approval.ID, post.ID)
+		})
+	case "update_post", "update_tags":
+		if s.posts == nil || approval.TargetID == nil {
+			return ErrApprovalConflict
+		}
+		return s.commitApprovalEffect(ctx, approval.ID, func(tx *sql.Tx) error {
+			post, err := s.posts.GetAdminPostTx(ctx, tx, *approval.TargetID)
+			if err != nil {
+				return err
+			}
+			if err := applyPostApprovalPatch(approval, post); err != nil {
+				return err
+			}
+			return s.posts.UpdatePostTx(ctx, tx, post)
+		})
 	case "create_editorial_task":
 		writer, ok := s.effects.(ApprovalEffectTransactionWriter)
 		if !ok {
