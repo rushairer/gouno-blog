@@ -78,6 +78,7 @@ type MediaGenerationStore interface {
 	CompleteMediaGeneration(context.Context, int64, int, int64, bool) error
 	RecordMediaGenerationError(context.Context, int64, int, string, string) (*int64, error)
 	CancelMediaGeneration(context.Context, int64) error
+	ListMediaGenerationReconciliation(context.Context, int) ([]*domain.MediaGenerationReconciliation, error)
 }
 
 type WorkflowInteractionStore interface {
