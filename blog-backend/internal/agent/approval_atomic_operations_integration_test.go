@@ -323,6 +323,56 @@ func (f *atomicApprovalFixture) assertPostTransactionEffects(t *testing.T, commi
 	}
 }
 
+// assertPageTransactionEffects checks generated Page identity, draft-only
+// creation, and timestamp monotonicity together with the approved decision.
+func (f *atomicApprovalFixture) assertPageTransactionEffects(t *testing.T, committed bool) {
+	t.Helper()
+	ctx := context.Background()
+	switch f.action {
+	case "create_page_draft":
+		approval, err := f.repo.GetApproval(ctx, f.approvalID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if (approval.TargetID != nil) != committed {
+			t.Fatalf("Page target assignment out of sync with commit: committed=%t target=%v", committed, approval.TargetID)
+		}
+		if !committed {
+			return // effectCount already verified no orphan Page insert.
+		}
+		var id int64
+		var status string
+		var template string
+		if err := f.db.QueryRowContext(ctx, `SELECT id,status,template FROM pages
+			WHERE slug=(SELECT CONCAT('atomic-page-draft-', run_id::text) FROM ai_approvals WHERE id=$1)`,
+			f.approvalID).Scan(&id, &status, &template); err != nil {
+			t.Fatal(err)
+		}
+		if id != *approval.TargetID || status != "draft" || template != "default" {
+			t.Fatalf("Page draft invariant: row=%d target=%d status=%s template=%s", id, *approval.TargetID, status, template)
+		}
+	case "update_page":
+		var title, summary, content string
+		var showInNav bool
+		var updatedAt time.Time
+		if err := f.db.QueryRowContext(ctx, `SELECT title,summary,content,show_in_nav,updated_at FROM pages WHERE id=$1`, f.pageID).
+			Scan(&title, &summary, &content, &showInNav, &updatedAt); err != nil {
+			t.Fatal(err)
+		}
+		if committed {
+			if title != "Approved page update" || summary != "Approved page summary" ||
+				content != "Approved page body" || !showInNav || !updatedAt.After(f.pageUpdatedAt) {
+				t.Fatalf("approved Page fields/timestamp mismatch: title=%q summary=%q content=%q nav=%t updated=%v old=%v",
+					title, summary, content, showInNav, updatedAt, f.pageUpdatedAt)
+			}
+		} else if title != "Original page" || summary != "Before summary" ||
+			content != "Original page body" || showInNav || !updatedAt.Equal(f.pageUpdatedAt) {
+			t.Fatalf("rollback leaked Page changes: title=%q summary=%q content=%q nav=%t updated=%v original=%v",
+				title, summary, content, showInNav, updatedAt, f.pageUpdatedAt)
+		}
+	}
+}
+
 func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 	for _, action := range atomicApprovalTestActions {
 		t.Run(action, func(t *testing.T) {
@@ -338,6 +388,7 @@ func TestAtomicApprovalCommitsEffectAndStatus(t *testing.T) {
 				t.Fatalf("candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
 			f.assertPostTransactionEffects(t, true)
+			f.assertPageTransactionEffects(t, true)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("duplicate approval error=%v, want conflict", err)
 			}
@@ -372,6 +423,7 @@ func TestAtomicApprovalRollsBackSideEffectIfStatusFails(t *testing.T) {
 				t.Fatalf("rollback left %d candidate children", f.contentCandidateCount(t))
 			}
 			f.assertPostTransactionEffects(t, false)
+			f.assertPageTransactionEffects(t, false)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe retry after rollback: %v", err)
 			}
@@ -405,6 +457,7 @@ func TestAtomicApprovalCommitAckLossKeepsOneEffectAndExecutedStatus(t *testing.T
 				t.Fatalf("committed candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
 			f.assertPostTransactionEffects(t, true)
+			f.assertPageTransactionEffects(t, true)
 			if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 				t.Fatalf("unsafe replay after committed acknowledgement loss: %v", err)
 			}
@@ -444,6 +497,7 @@ func TestAtomicApprovalConcurrentReviewers(t *testing.T) {
 				t.Fatalf("concurrent candidate children=%d, want 2", f.contentCandidateCount(t))
 			}
 			f.assertPostTransactionEffects(t, true)
+			f.assertPageTransactionEffects(t, true)
 		})
 	}
 }
@@ -603,6 +657,7 @@ func TestAtomicPostDraftTargetAssignmentFailureRollsBackContentAndEvents(t *test
 		t.Fatalf("draft escaped rollback: approval=%s rows=%d", f.status(t), f.effectCount(t))
 	}
 	f.assertPostTransactionEffects(t, false)
+			f.assertPageTransactionEffects(t, false)
 	if err := svc.Approve(context.Background(), f.approvalID, f.principal, "retry"); !errors.Is(err, ErrApprovalConflict) {
 		t.Fatalf("unsafe draft replay: %v", err)
 	}
