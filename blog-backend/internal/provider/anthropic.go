@@ -150,7 +150,7 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 	}
 	result := Result{
 		InputTokens: decoded.Usage.InputTokens, OutputTokens: decoded.Usage.OutputTokens,
-		StopReason: decoded.StopReason,
+		StopReason: decoded.StopReason, Evidence: p.responseEvidence(resp, false),
 	}
 	for _, block := range decoded.Content {
 		switch block.Type {
@@ -189,5 +189,5 @@ func (p *HTTPProvider) anthropicGenerateImage(ctx context.Context, req ImageRequ
 	if err != nil || len(data) == 0 {
 		return ImageResult{}, errors.New("Anthropic-compatible response did not contain a valid image")
 	}
-	return ImageResult{Data: data, MIMEType: match[1]}, nil
+	return ImageResult{Data: data, MIMEType: match[1], Evidence: result.Evidence}, nil
 }
