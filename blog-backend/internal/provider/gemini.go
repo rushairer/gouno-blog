@@ -287,16 +287,16 @@ func (p *HTTPProvider) geminiGenerateContentImage(ctx context.Context, req Image
 				if mime == "" {
 					mime = "image/png"
 				}
-				return ImageResult{Data: data, MIMEType: mime, Evidence: RequestEvidence{RequestID: strings.TrimSpace(decoded.ResponseID)}}, nil
+				return ImageResult{Data: data, MIMEType: mime, Evidence: RequestEvidence{RequestID: boundedEvidenceValue(decoded.ResponseID)}}, nil
 			}
 		}
 		if part.Text != "" {
 			if img, ok := parseImageDataOrBase64(part.Text); ok {
-				img.Evidence = RequestEvidence{RequestID: strings.TrimSpace(decoded.ResponseID)}
+				img.Evidence = RequestEvidence{RequestID: boundedEvidenceValue(decoded.ResponseID)}
 				return img, nil
 			}
 		}
 	}
-	return ImageResult{Evidence: RequestEvidence{RequestID: strings.TrimSpace(decoded.ResponseID)}},
+	return ImageResult{Evidence: RequestEvidence{RequestID: boundedEvidenceValue(decoded.ResponseID)}},
 		errors.New("generateContent response did not contain an image")
 }
