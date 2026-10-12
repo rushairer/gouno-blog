@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Capture bounded upstream request/account correlation evidence for governed image attempts: OpenAI request/organization IDs, Anthropic request/organization/workspace IDs, and Gemini GenerateContent response IDs when returned. Forward the local dispatch ID as `X-Client-Request-Id` only to the official OpenAI API host; do not treat any captured identifier as a generic idempotency key or retry permission.
 - Persist bounded, non-secret Provider profile/configuration and local dispatch evidence for governed image attempts; persist an exact object locator before object-store mutation so ACK-loss cases remain independently traceable without enabling replay or cleanup.
 - Select exactly one Gemini image endpoint before dispatch and remove error-driven `predict`/GenerateContent fallback; model-based auto selection is pre-dispatch only, with real HTTP request-count regressions.
 - Select the OpenAI-compatible image protocol before dispatch and remove error-driven endpoint fallback. Auto/empty image protocol now uses Responses once; Chat-only gateways must explicitly select `chat_completions`. Preserve text-generation negotiation and existing image stream-mode semantics; add real HTTP request-count regressions.
