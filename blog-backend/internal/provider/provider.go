@@ -11,11 +11,24 @@ import (
 
 var imageDataURI = regexp.MustCompile(`data:(image/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)`)
 
-type ImageRequest struct{ Prompt, AspectRatio, ImageSize string }
+type ImageRequest struct {
+	Prompt, AspectRatio, ImageSize string
+	// ClientRequestID is local correlation only. Provider implementations may
+	// forward it only where official semantics have been independently verified.
+	ClientRequestID string
+}
+
+type RequestEvidence struct {
+	RequestID           string
+	AccountID           string
+	WorkspaceID         string
+	ClientRequestIDSent bool
+}
 
 type ImageResult struct {
 	Data     []byte
 	MIMEType string
+	Evidence RequestEvidence
 }
 
 type ImageGenerator interface {
@@ -57,6 +70,7 @@ type Result struct {
 	InputTokens  int64
 	OutputTokens int64
 	StopReason   string
+	Evidence     RequestEvidence
 }
 
 type Provider interface {
