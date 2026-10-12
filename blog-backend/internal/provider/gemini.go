@@ -297,5 +297,6 @@ func (p *HTTPProvider) geminiGenerateContentImage(ctx context.Context, req Image
 			}
 		}
 	}
-	return ImageResult{}, errors.New("generateContent response did not contain an image")
+	return ImageResult{Evidence: RequestEvidence{RequestID: strings.TrimSpace(decoded.ResponseID)}},
+		errors.New("generateContent response did not contain an image")
 }
