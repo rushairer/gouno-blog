@@ -329,6 +329,19 @@ func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Res
 	return p.doWithHeaders(ctx, path, body, nil)
 }
 
+func boundedEvidenceValue(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || len(value) > 512 {
+		return ""
+	}
+	for _, r := range value {
+		if r < 0x20 || r == 0x7f {
+			return ""
+		}
+	}
+	return value
+}
+
 func (p *HTTPProvider) responseEvidence(resp *http.Response, clientRequestIDSent bool) RequestEvidence {
 	evidence := RequestEvidence{ClientRequestIDSent: clientRequestIDSent}
 	if resp == nil {
@@ -336,12 +349,12 @@ func (p *HTTPProvider) responseEvidence(resp *http.Response, clientRequestIDSent
 	}
 	switch p.vendor {
 	case "openai":
-		evidence.RequestID = strings.TrimSpace(resp.Header.Get("x-request-id"))
-		evidence.AccountID = strings.TrimSpace(resp.Header.Get("openai-organization"))
+		evidence.RequestID = boundedEvidenceValue(resp.Header.Get("x-request-id"))
+		evidence.AccountID = boundedEvidenceValue(resp.Header.Get("openai-organization"))
 	case "anthropic":
-		evidence.RequestID = strings.TrimSpace(resp.Header.Get("request-id"))
-		evidence.AccountID = strings.TrimSpace(resp.Header.Get("anthropic-organization-id"))
-		evidence.WorkspaceID = strings.TrimSpace(resp.Header.Get("anthropic-workspace-id"))
+		evidence.RequestID = boundedEvidenceValue(resp.Header.Get("request-id"))
+		evidence.AccountID = boundedEvidenceValue(resp.Header.Get("anthropic-organization-id"))
+		evidence.WorkspaceID = boundedEvidenceValue(resp.Header.Get("anthropic-workspace-id"))
 	}
 	return evidence
 }
@@ -408,7 +421,7 @@ func (p *HTTPProvider) doWithHeaders(ctx context.Context, path string, body any,
 				RequestID string `json:"request_id"`
 			}
 			if json.Unmarshal(limited, &decoded) == nil {
-				evidence.RequestID = strings.TrimSpace(decoded.RequestID)
+				evidence.RequestID = boundedEvidenceValue(decoded.RequestID)
 			}
 		}
 		return nil, &upstreamHTTPError{
