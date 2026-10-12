@@ -145,7 +145,11 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 	}
 	profileID := selected.ID
 	req.providerProfileID = &profileID
-	req.providerVendor = string(selected.Vendor)
+	vendor := selected.Vendor
+	if vendor == "" {
+		vendor = providerdomain.DefaultVendor(selected.ProviderType)
+	}
+	req.providerVendor = string(vendor)
 	req.providerConfigFingerprint = providerConfigFingerprint(selected)
 	req.dispatchID, err = newGenerationDispatchID()
 	if err != nil {
