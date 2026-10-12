@@ -11,10 +11,11 @@
 ## 写入顺序与失败处理
 
 1. 领取候选的生成尝试，保留原有状态与尝试号保护。
-2. 在调用 Provider 之前，写入并确认 `started` 审计，同时固化 Provider Profile ID、规范化 Vendor、配置 SHA-256 指纹和随机本地 `dispatch_id`。指纹覆盖模型、协议/流式模式、Base URL、超时/Token 配置和凭据版本，但审计不保存这些敏感原值。
-3. Provider 返回一张通过校验的图片后，先生成最终 `storage_name`，并把 `storage_name` 与当时的 Store URL 写回同一条 `started` 审计；该写入确认后才允许调用对象存储 `Put`。定位证据写入失败或确认丢失时，停止在对象存储之前，不重新请求 Provider。
-4. 外部生成结束后，只按审计 ID、候选 ID、尝试号和 `status='started'` 更新该记录。成功写为 `succeeded`；不能确认结果的错误写为 `outcome_uncertain`。前置检查失败也可能直接留下不确定记录，但不解除候选的隔离。
-5. 审计写入最长五秒。终态写入失败不重发生成请求；已有的 `started` 记录保留为未确认的证据。候选的最终关联仍使用尝试号保护。
+2. 在调用 Provider 之前，写入并确认 `started` 审计，同时固化 Provider Profile ID、规范化 Vendor、配置 SHA-256 指纹和随机本地 `dispatch_id`。指纹覆盖模型、协议/流式模式、Base URL、超时/Token 配置和凭据版本，但审计不保存这些敏感原值。只有 Vendor 为 OpenAI 且目标主机严格为官方 `api.openai.com` 时，本地 `dispatch_id` 才可作为官方文档定义的 `X-Client-Request-Id` 发给上游；兼容/自建网关不发送该头。
+3. Provider 返回响应后，尽可能保留其实际提供的、长度受限的诊断标识：OpenAI 的 `x-request-id` / organization，Anthropic 的 `request-id` / organization / workspace，以及 Gemini GenerateContent 的 `responseId`。这些值是上游关联证据，不是账单收据、幂等键或自动重试许可；缺失也不能证明请求没有执行。
+4. Provider 返回一张通过校验的图片后，先生成最终 `storage_name`，并把 `storage_name`、Store URL 以及已经取得的上游关联证据写回同一条 `started` 审计；该写入确认后才允许调用对象存储 `Put`。定位/证据写入失败或确认丢失时，停止在对象存储之前，不重新请求 Provider。
+5. 外部生成结束后，只按审计 ID、候选 ID、尝试号和 `status='started'` 更新该记录。成功写为 `succeeded`；不能确认结果的错误写为 `outcome_uncertain`。HTTP 错误中若已经取得 Request ID，也随该终态证据保留。前置检查失败也可能直接留下不确定记录，但不解除候选的隔离。
+6. 审计写入最长五秒。终态写入失败不重发生成请求；已有的 `started` 记录保留为未确认的证据。候选的最终关联仍使用尝试号保护。
 
 `started` 只说明允许进入外部调用阶段，既不证明请求已经发送，也不证明 Provider 已经执行或计费。审计 INSERT 已提交但确认丢失时，本次程序没有调用 Provider，数据库仍可能保留 `started`；不能凭这个状态自动重试。
 
@@ -63,6 +64,9 @@ GET /api/admin/ai-media-generation-reconciliation?limit=50
 | `current_attempt_audit.provider_config_fingerprint` | 非敏感的一向 SHA-256 配置指纹，用于判断配置是否发生变化；不暴露 API Key 或 Base URL 原值。 |
 | `current_attempt_audit.dispatch_id` | 本地唯一发送关联 ID；不是 Provider Request ID，也不是幂等键。 |
 | `current_attempt_audit.storage_name` / `storage_url` | 在对象存储 `Put` 前确认保存的计划对象位置；不证明对象已经写入。 |
+| `current_attempt_audit.upstream_request_id` | Provider 实际返回的上游请求/响应关联 ID（若支持且返回）；OpenAI 对应 `x-request-id`，Anthropic 对应 `request-id`，Gemini GenerateContent 对应 `responseId`。不是幂等键。 |
+| `current_attempt_audit.upstream_account_id` / `upstream_workspace_id` | 上游实际返回的组织/Workspace 关联证据（若有）；不是本地权限来源。 |
+| `current_attempt_audit.client_request_id_sent` | 是否真的向官方 OpenAI API 发送了 `X-Client-Request-Id`。即使为 `true`，也只表示可追踪，不表示 Provider 已实现幂等。 |
 
 例如候选已经进入尝试 2，尝试 1 的前置失败记录却更晚写入：最新记录会显示尝试 1、匹配标志为 `false`，当前尝试证据仍显示尝试 2。旧版本程序迟到写入的无尝试号记录也不会遮蔽精确关联。
 
@@ -70,13 +74,13 @@ GET /api/admin/ai-media-generation-reconciliation?limit=50
 
 ## 升级与历史兼容
 
-依次执行 `094_generation_attempt_audit.sql` 与 `095_generation_provider_evidence.sql`，再运行依赖新证据列的程序。095 只新增可空证据列、格式约束和局部索引，不回填历史数据；旧记录继续保持 Provider/dispatch/locator 为空。删除候选不会级联清除审计。旧程序仍可写入原有终态记录，其尝试号和新证据保持 NULL。
+依次执行 `094_generation_attempt_audit.sql`、`095_generation_provider_evidence.sql` 与 `096_generation_upstream_request_evidence.sql`，再运行依赖新证据列的程序。095/096 只新增可空/默认关闭的证据列、格式约束和局部索引，不回填历史数据；旧记录继续保持 Provider/dispatch/locator/upstream evidence 为空，`client_request_id_sent=false`。删除候选不会级联清除审计。旧程序仍可写入原有终态记录，其尝试号和新证据保持 NULL。
 
 混合版本期间，旧工作进程并不会自动获得调用前审计、禁止图像协议回退或错误后保留文件的保护。应完成升级并排空旧工作进程，再按新链路评估新任务。不能将保证追溯到历史任务，也不要删除新列来配合旧程序回滚。
 
 ## 回归覆盖
 
-审计单元测试覆盖身份校验、调用前落库顺序、数据库失败与确认丢失时零适配器调用、取消后有界终态审计、敏感错误不进入审计，以及编辑器直接生成的兼容性。
+审计单元测试覆盖身份校验、调用前落库顺序、数据库失败与确认丢失时零适配器调用、取消后有界终态审计、敏感错误不进入审计、dispatch correlation 传递、解码失败时保留已收到的上游 Request ID，以及编辑器直接生成的兼容性。
 
 `internal/provider/image_no_replay_test.go` 在真实本地 HTTP 服务端计数：OpenAI-compatible 覆盖四种协议配置、十四种故障结果、三种流式配置和未知协议零请求；Gemini 额外覆盖模型驱动 auto、显式 `predict`/`generate_content` 及故障后的单请求约束。它验证受测场景的实际请求次数，不将适配器 mock 的一次调用当作一次 HTTP 请求。
 
@@ -88,7 +92,7 @@ GET /api/admin/ai-media-generation-reconciliation?limit=50
 
 ## 尚未解决的边界
 
-本地唯一关联、`dispatch_id`、配置指纹和不自动回退，都不是 Provider 的幂等键，不保证第三方 exactly-once 执行或绝不重复计费。本轮没有添加通用幂等请求头，也没有把本地 dispatch ID 冒充第三方 Request ID。各 Vendor/端点的官方幂等语义、可验证的上游 Request ID/账号证据及留存期限仍需逐一确认；在确认前一律按“不可安全自动重放”处理。
+本地唯一关联、`dispatch_id`、配置指纹、上游 Request ID 和不自动回退，都不是 Provider 的通用幂等键，不保证第三方 exactly-once 执行或绝不重复计费。现在已经能够保存部分 Provider 实际返回的请求/账号关联证据，并且只对官方 OpenAI 主机发送其文档支持的 `X-Client-Request-Id`；该请求头用于追踪，不被解释为幂等保证。OpenAI-compatible 自建/第三方网关不会收到该头。Anthropic 只记录其返回的 Request/组织/Workspace 证据；Gemini 当前只把 GenerateContent 的 `responseId` 作为关联证据，Predict 未发现时保持未知，不从其他头或时间戳猜测。各 Vendor/端点真正可依赖的幂等/重放语义仍需分别验证；在明确证明前一律按“不可安全自动重放”处理。
 
 受治理候选现在具有独立对象定位证据，但 locator 不证明对象存在。带权限、带 stale-attempt 防护、带独立审计轨迹的人工恢复决策仍属于 Issue #338 后续工作，当前没有新增自动重试、自动挂接、SQL lease reset 或自动清理。
 
