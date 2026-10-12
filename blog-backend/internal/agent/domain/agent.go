@@ -223,13 +223,19 @@ type MediaGenerationReconciliation struct {
 // MediaGenerationAuditEvidence identifies one result audit, not a provider
 // idempotency guarantee or permission to retry, attach, publish or delete media.
 type MediaGenerationAuditEvidence struct {
-	ID                int64     `json:"id"`
-	CandidateID       int64     `json:"candidate_id"`
-	GenerationAttempt int       `json:"generation_attempt"`
-	Status            string    `json:"status"`
-	ErrorCode         string    `json:"error_code,omitempty"`
-	MediaAssetID      *int64    `json:"media_asset_id,omitempty"`
-	CreatedAt         time.Time `json:"created_at"`
+	ID                        int64      `json:"id"`
+	CandidateID               int64      `json:"candidate_id"`
+	GenerationAttempt         int        `json:"generation_attempt"`
+	Status                    string     `json:"status"`
+	ErrorCode                 string     `json:"error_code,omitempty"`
+	MediaAssetID              *int64     `json:"media_asset_id,omitempty"`
+	ProviderProfileID         *int64     `json:"provider_profile_id,omitempty"`
+	ProviderVendor            string     `json:"provider_vendor,omitempty"`
+	ProviderConfigFingerprint string     `json:"provider_config_fingerprint,omitempty"`
+	DispatchID                string     `json:"dispatch_id,omitempty"`
+	StorageName               string     `json:"storage_name,omitempty"`
+	StorageURL                string     `json:"storage_url,omitempty"`
+	CreatedAt                 time.Time  `json:"created_at"`
 }
 
 type MediaCandidate struct {
@@ -278,21 +284,27 @@ type MediaCandidate struct {
 // GenerationAttempt is absent for editor/legacy audits; never infer or backfill
 // it from the current candidate, timestamps, filenames, or the latest audit.
 type GenerationAudit struct {
-	ID                int64
-	Source            string
-	Operation         string
-	TemplateVersion   int
-	Provider          string
-	Model             string
-	InputTokens       int64
-	OutputTokens      int64
-	Status            string
-	ErrorCode         string
-	AgentRunID        *int64
-	WorkflowRunID     *int64
-	MediaCandidateID  *int64
-	MediaAssetID      *int64
-	GenerationAttempt *int
+	ID                        int64
+	Source                    string
+	Operation                 string
+	TemplateVersion           int
+	Provider                  string
+	Model                     string
+	InputTokens               int64
+	OutputTokens              int64
+	Status                    string
+	ErrorCode                 string
+	AgentRunID                *int64
+	WorkflowRunID             *int64
+	MediaCandidateID          *int64
+	MediaAssetID              *int64
+	GenerationAttempt         *int
+	ProviderProfileID         *int64
+	ProviderVendor            string
+	ProviderConfigFingerprint string
+	DispatchID                string
+	StorageName               string
+	StorageURL                string
 }
 
 // MediaCandidateSelection is the user-authored placement for one generated
