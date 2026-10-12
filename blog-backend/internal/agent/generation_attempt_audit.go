@@ -49,8 +49,12 @@ func providerConfigFingerprint(profile *providerdomain.ProviderProfile) string {
 	if profile == nil {
 		return ""
 	}
+	vendor := profile.Vendor
+	if vendor == "" {
+		vendor = providerdomain.DefaultVendor(profile.ProviderType)
+	}
 	raw := fmt.Sprintf("%d\x00%s\x00%s\x00%s\x00%s\x00%s\x00%s\x00%d\x00%d\x00%s\x00%d\x00%d",
-		profile.ID, profile.ProviderType, profile.Vendor, strings.TrimSpace(profile.BaseURL),
+		profile.ID, profile.ProviderType, vendor, strings.TrimSpace(profile.BaseURL),
 		profile.Model, profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds,
 		profile.MaxOutputTokens, profile.APIKeyLast4, profile.KeyVersion, profile.UpdatedAt.UTC().UnixNano())
 	sum := sha256.Sum256([]byte(raw))
