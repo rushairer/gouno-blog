@@ -182,7 +182,11 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 		asset.CreatedByPrincipalID = &req.CreatorPrincipalID
 	}
 	if err = s.mediaAssets.CreateMedia(ctx, asset); err != nil {
-		_ = s.media.Delete(ctx, storageName)
+		// INSERT may have committed before its acknowledgement was lost, even
+		// when asset.ID is still zero. Keep the bytes and any committed metadata.
+		// Unlike the final candidate CAS, this port cannot prove a rollback from
+		// sql.ErrNoRows or another error. Orphan cleanup requires independent
+		// reconciliation; never compensate or re-generate on this error path.
 		s.recordImageAudit(req, string(selected.ProviderType), selected.Model, 0, 0, nil, err)
 		return nil, err
 	}
