@@ -65,6 +65,12 @@ type ImageGenerationRequest struct {
 	GenerationAttempt  *int
 	Filename           string
 	auditID            int64
+	providerProfileID  *int64
+	providerVendor     string
+	providerConfigFingerprint string
+	dispatchID         string
+	storageName        string
+	storageURL         string
 }
 
 func NewGenerationService(repo generationAuditRepository, management *ManagementService, mediaAssets mediaCreator, store media.Store) *GenerationService {
@@ -137,6 +143,19 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 		s.recordImageAudit(req, string(selected.ProviderType), selected.Model, 0, 0, nil, err)
 		return nil, err
 	}
+	profileID := selected.ID
+	req.providerProfileID = &profileID
+	vendor := selected.Vendor
+	if vendor == "" {
+		vendor = providerdomain.DefaultVendor(selected.ProviderType)
+	}
+	req.providerVendor = string(vendor)
+	req.providerConfigFingerprint = providerConfigFingerprint(selected)
+	req.dispatchID, err = newGenerationDispatchID()
+	if err != nil {
+		s.recordImageAudit(req, string(selected.ProviderType), selected.Model, 0, 0, nil, err)
+		return nil, err
+	}
 	generator, ok := client.(provider.ImageGenerator)
 	if !ok {
 		err = errors.New("provider does not support image generation")
@@ -167,6 +186,13 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 		return nil, err
 	}
 	storageName := fmt.Sprintf("ai-%x%s", nameBytes, ext)
+	req.storageName = storageName
+	req.storageURL = s.media.URL(storageName)
+	if err = s.confirmImageObjectLocator(ctx, req); err != nil {
+		// Provider work may already have completed. Stop before object storage,
+		// keep the attempt quarantined and never regenerate to repair evidence.
+		return nil, err
+	}
 	if err = s.media.Put(ctx, storageName, bytes.NewReader(image.Data), image.MIMEType); err != nil {
 		s.recordImageAudit(req, string(selected.ProviderType), selected.Model, 0, 0, nil, err)
 		return nil, err
@@ -177,7 +203,7 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 	} else if strings.Contains(filename, "%s") {
 		filename = fmt.Sprintf(filename, ext)
 	}
-	asset := &mediadomain.MediaAsset{Filename: filename, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: req.AltText}
+	asset := &mediadomain.MediaAsset{Filename: filename, StorageName: storageName, URL: req.storageURL, ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: req.AltText}
 	if req.CreatorPrincipalID > 0 {
 		asset.CreatedByPrincipalID = &req.CreatorPrincipalID
 	}
@@ -281,7 +307,15 @@ func (s *GenerationService) recordImageAudit(req ImageGenerationRequest, provide
 	if req.GenerationAttempt != nil && err != nil {
 		status, code = domain.MediaGenerationOutcomeUncertainCode, domain.MediaGenerationOutcomeUncertainCode
 	}
-	s.record(domain.GenerationAudit{ID: req.auditID, Source: req.Source, Operation: req.Operation, TemplateVersion: editorTemplateVersion, Provider: providerName, Model: model, InputTokens: inputTokens, OutputTokens: outputTokens, Status: status, ErrorCode: code, AgentRunID: req.AgentRunID, WorkflowRunID: req.WorkflowRunID, MediaCandidateID: req.MediaCandidateID, MediaAssetID: assetID, GenerationAttempt: req.GenerationAttempt})
+	s.record(domain.GenerationAudit{
+		ID: req.auditID, Source: req.Source, Operation: req.Operation, TemplateVersion: editorTemplateVersion,
+		Provider: providerName, Model: model, InputTokens: inputTokens, OutputTokens: outputTokens,
+		Status: status, ErrorCode: code, AgentRunID: req.AgentRunID, WorkflowRunID: req.WorkflowRunID,
+		MediaCandidateID: req.MediaCandidateID, MediaAssetID: assetID, GenerationAttempt: req.GenerationAttempt,
+		ProviderProfileID: req.providerProfileID, ProviderVendor: req.providerVendor,
+		ProviderConfigFingerprint: req.providerConfigFingerprint, DispatchID: req.dispatchID,
+		StorageName: req.storageName, StorageURL: req.storageURL,
+	})
 }
 
 func (s *GenerationService) record(value domain.GenerationAudit) {

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"sync/atomic"
 	"testing"
+	"fmt"
+	"strings"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
@@ -42,11 +44,14 @@ func newGenerationAuditFixture(t *testing.T) (*atomicApprovalFixture, *agentrepo
 }
 
 func newStartedAttemptAudit(candidate *domain.MediaCandidate) *domain.GenerationAudit {
+	profileID := int64(42)
 	return &domain.GenerationAudit{
 		Source: "agent_candidate", Operation: "media.generate_candidate", TemplateVersion: 1,
 		Provider: "test", Model: "test", Status: "started",
 		MediaCandidateID: &candidate.ID, GenerationAttempt: &candidate.GenerationAttempt,
 		AgentRunID: &candidate.SourceRunID, WorkflowRunID: candidate.WorkflowRunID,
+		ProviderProfileID: &profileID, ProviderVendor: "custom",
+		ProviderConfigFingerprint: strings.Repeat("a", 64), DispatchID: fmt.Sprintf("%032x", candidate.ID*1000+int64(candidate.GenerationAttempt)),
 	}
 }
 
@@ -75,6 +80,7 @@ func TestAttemptAuditReconciliationDoesNotInferLegacyOrLateWorkerIdentity(t *tes
 	audits := agentrepository.NewGenerationAuditRepository(f.db)
 	legacy := newStartedAttemptAudit(first)
 	legacy.GenerationAttempt, legacy.Status, legacy.ErrorCode = nil, "failed", "timeout"
+	legacy.ProviderProfileID, legacy.ProviderVendor, legacy.ProviderConfigFingerprint, legacy.DispatchID = nil, "", "", ""
 	if err := audits.RecordGenerationAudit(ctx, legacy); err != nil {
 		t.Fatal(err)
 	}
@@ -120,6 +126,7 @@ func TestAttemptAuditReconciliationDoesNotInferLegacyOrLateWorkerIdentity(t *tes
 	// attempt. Keep that observation visible but separate from current evidence.
 	lateLegacy := newStartedAttemptAudit(first)
 	lateLegacy.GenerationAttempt, lateLegacy.Status = nil, "failed"
+	lateLegacy.ProviderProfileID, lateLegacy.ProviderVendor, lateLegacy.ProviderConfigFingerprint, lateLegacy.DispatchID = nil, "", "", ""
 	if err := audits.RecordGenerationAudit(ctx, lateLegacy); err != nil {
 		t.Fatal(err)
 	}

@@ -163,3 +163,83 @@ func TestInvalidImageProtocolStopsBeforeHTTP(t *testing.T) {
 		t.Fatalf("invalid protocol sent %d requests", requests.Load())
 	}
 }
+
+
+func TestGeminiImageHTTPFailuresNeverFallbackOrReplay(t *testing.T) {
+	cases := []struct {
+		name, mode, model, path string
+	}{
+		{"auto_imagen", "auto", "imagen-fixture", "/v1beta/models/imagen-fixture:predict"},
+		{"empty_gemini", "", "gemini-fixture", "/v1beta/models/gemini-fixture:generateContent"},
+		{"predict", "predict", "gemini-fixture", "/v1beta/models/gemini-fixture:predict"},
+		{"generate_content", "generate_content", "imagen-fixture", "/v1beta/models/imagen-fixture:generateContent"},
+	}
+	for _, tc := range cases {
+		for _, outcome := range []string{"http_500", "disconnect", "truncated_json", "missing_image"} {
+			t.Run(tc.name+"/"+outcome, func(t *testing.T) {
+				var requests atomic.Int32
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					requests.Add(1)
+					if r.Method != http.MethodPost || r.URL.Path != tc.path {
+						t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+					}
+					_, _ = io.Copy(io.Discard, r.Body)
+					_ = r.Body.Close()
+					switch outcome {
+					case "http_500":
+						w.WriteHeader(http.StatusInternalServerError)
+						_, _ = io.WriteString(w, `{"error":{"message":"fixture"}}`)
+					case "disconnect":
+						conn, _, err := w.(http.Hijacker).Hijack()
+						if err != nil {
+							t.Error(err)
+							return
+						}
+						_ = conn.Close()
+					case "truncated_json":
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = io.WriteString(w, `{"candidates":[`)
+					case "missing_image":
+						w.Header().Set("Content-Type", "application/json")
+						if strings.Contains(tc.path, ":predict") {
+							_, _ = io.WriteString(w, `{"predictions":[]}`)
+						} else {
+							_, _ = io.WriteString(w, `{"candidates":[{"content":{"parts":[{"text":"no image"}]}}]}`)
+						}
+					}
+				}))
+				defer server.Close()
+				client, err := NewHTTPProviderWithConfig("gemini", server.URL, "fixture-key", tc.model, tc.mode, "auto", []string{"127.0.0.1"}, time.Second)
+				if err != nil {
+					t.Fatal(err)
+				}
+				result, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "fixture image"})
+				if err == nil || len(result.Data) != 0 {
+					t.Fatalf("failure became success: result=%#v err=%v", result, err)
+				}
+				if got := requests.Load(); got != 1 {
+					t.Fatalf("received %d Gemini HTTP requests for one image attempt; want exactly 1", got)
+				}
+			})
+		}
+	}
+}
+
+func TestInvalidGeminiImageProtocolStopsBeforeHTTP(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+	client, err := NewHTTPProviderWithConfig("gemini", server.URL, "fixture-key", "gemini-fixture", "unsupported", "auto", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "fixture image"}); err == nil {
+		t.Fatal("invalid Gemini image protocol accepted")
+	}
+	if requests.Load() != 0 {
+		t.Fatalf("invalid Gemini protocol sent %d requests", requests.Load())
+	}
+}

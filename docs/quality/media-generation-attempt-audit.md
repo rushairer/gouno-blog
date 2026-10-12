@@ -11,9 +11,10 @@
 ## 写入顺序与失败处理
 
 1. 领取候选的生成尝试，保留原有状态与尝试号保护。
-2. 在调用 Provider 之前，写入并确认 `started` 审计。数据库错误、唯一键冲突、提交确认丢失或没有返回审计 ID，都停止这次外部调用。
-3. 外部生成结束后，只按审计 ID、候选 ID、尝试号和 `status='started'` 更新该记录。成功写为 `succeeded`；不能确认结果的错误写为 `outcome_uncertain`。前置检查失败也可能直接留下不确定记录，但不解除候选的隔离。
-4. 审计写入最长五秒。终态写入失败不重发生成请求；已有的 `started` 记录保留为未确认的证据。候选的最终关联仍使用尝试号保护。
+2. 在调用 Provider 之前，写入并确认 `started` 审计，同时固化 Provider Profile ID、规范化 Vendor、配置 SHA-256 指纹和随机本地 `dispatch_id`。指纹覆盖模型、协议/流式模式、Base URL、超时/Token 配置和凭据版本，但审计不保存这些敏感原值。
+3. Provider 返回一张通过校验的图片后，先生成最终 `storage_name`，并把 `storage_name` 与当时的 Store URL 写回同一条 `started` 审计；该写入确认后才允许调用对象存储 `Put`。定位证据写入失败或确认丢失时，停止在对象存储之前，不重新请求 Provider。
+4. 外部生成结束后，只按审计 ID、候选 ID、尝试号和 `status='started'` 更新该记录。成功写为 `succeeded`；不能确认结果的错误写为 `outcome_uncertain`。前置检查失败也可能直接留下不确定记录，但不解除候选的隔离。
+5. 审计写入最长五秒。终态写入失败不重发生成请求；已有的 `started` 记录保留为未确认的证据。候选的最终关联仍使用尝试号保护。
 
 `started` 只说明允许进入外部调用阶段，既不证明请求已经发送，也不证明 Provider 已经执行或计费。审计 INSERT 已提交但确认丢失时，本次程序没有调用 Provider，数据库仍可能保留 `started`；不能凭这个状态自动重试。
 
@@ -27,6 +28,8 @@ OpenAI 兼容图像调用的 `auto` 或空协议值现在只选择原来的第�
 
 只支持 Chat Completions 的兼容网关，需要在新的生成任务开始前明确设置 `chat_completions`；不能用一次可能计费的生成调用做协议探测。修改配置不解除既有不确定任务的隔离。
 
+Gemini 图像调用也执行相同原则：`predict` 和 `generate_content` 为明确单端点模式；`auto`/空值只在发送前根据模型名选择一个端点——Imagen 命名模型选择 `predict`，其他模型选择 `generateContent`。任何错误、超时、截断或“没有图片”都不再切换到另一个端点。这个选择规则是兼容策略，不是 Provider 幂等保证。
+
 图像的流式配置保留现有语义：`auto`/`always` 发送 `stream=true`，`never` 发送 `stream=false`。本次不修改文本生成的协议协商和流式兼容逻辑，文本侧已有回归测试仍须通过。
 
 ## 首次媒体元数据报错时保留文件
@@ -35,7 +38,7 @@ OpenAI 兼容图像调用的 `auto` 或空协议值现在只选择原来的第�
 
 AI 候选生成、编辑器直接生成、普通图片上传的首次 `CreateMedia` 报错，现在都保留已经写入的文件和可能已提交的元数据。包括取消、超时、返回 ID 为零和 `sql.ErrNoRows`；后者在这个接口上不代表候选最终关联 CAS 的确定失败。错误仍返回给调用方，不伪装成功，不自动挂接或再次生成。
 
-代价是：真正没有提交元数据时，可能留下孤立文件。保留待核验对象优先于误删可能有效的资产；禁止仅凭时间、空 ID 或缺少审计就自动清理。当前核对接口尚不能定位所有缺少资产 ID 的孤立对象，不能据此自动恢复或删除。独立对象定位证据和受控恢复仍是后续工作。
+代价是：真正没有提交元数据时，可能留下孤立文件。保留待核验对象优先于误删可能有效的资产；禁止仅凭时间、空 ID 或缺少审计就自动清理。对于受治理的候选生成，当前尝试审计现在会在对象存储写入前保存精确的计划 `storage_name` 和 Store URL，因此即使随后 Media INSERT 没有返回资产 ID，也有独立定位线索。这个 locator 只说明“计划写到哪里”，不能证明对象实际存在，更不能授权自动挂接或删除。普通上传和无候选尝试号的编辑器请求仍不具备同等的候选级恢复契约。
 
 普通上传与编辑器直接生成没有候选尝试号，也没有跨请求去重保证；本次文件保留修复不意味着用户再次提交同一请求一定不会生成重复资产。
 
@@ -56,6 +59,10 @@ GET /api/admin/ai-media-generation-reconciliation?limit=50
 | `latest_audit_generation_attempt` | 最新记录自身保存的尝试号；历史记录可能没有。 |
 | `latest_audit_matches_current_attempt` | 最新记录是否明确匹配当前尝试，缺少尝试号时为 `false`。 |
 | `current_attempt_audit` | 独立按候选 ID 与当前尝试号匹配的记录；不存在时省略，不借用其他记录。 |
+| `current_attempt_audit.provider_profile_id` / `provider_vendor` | 当次发送前选择的本地 Provider 配置身份；不是第三方账号证明。 |
+| `current_attempt_audit.provider_config_fingerprint` | 非敏感的一向 SHA-256 配置指纹，用于判断配置是否发生变化；不暴露 API Key 或 Base URL 原值。 |
+| `current_attempt_audit.dispatch_id` | 本地唯一发送关联 ID；不是 Provider Request ID，也不是幂等键。 |
+| `current_attempt_audit.storage_name` / `storage_url` | 在对象存储 `Put` 前确认保存的计划对象位置；不证明对象已经写入。 |
 
 例如候选已经进入尝试 2，尝试 1 的前置失败记录却更晚写入：最新记录会显示尝试 1、匹配标志为 `false`，当前尝试证据仍显示尝试 2。旧版本程序迟到写入的无尝试号记录也不会遮蔽精确关联。
 
@@ -63,7 +70,7 @@ GET /api/admin/ai-media-generation-reconciliation?limit=50
 
 ## 升级与历史兼容
 
-先执行迁移 `094_generation_attempt_audit.sql`，再运行依赖新列的程序。迁移保留旧记录和原有可空外键；删除候选不会级联清除审计。旧程序仍可写入原有终态记录，其尝试号保持 NULL。本次协议与首次文件保留修复不新增迁移。
+依次执行 `094_generation_attempt_audit.sql` 与 `095_generation_provider_evidence.sql`，再运行依赖新证据列的程序。095 只新增可空证据列、格式约束和局部索引，不回填历史数据；旧记录继续保持 Provider/dispatch/locator 为空。删除候选不会级联清除审计。旧程序仍可写入原有终态记录，其尝试号和新证据保持 NULL。
 
 混合版本期间，旧工作进程并不会自动获得调用前审计、禁止图像协议回退或错误后保留文件的保护。应完成升级并排空旧工作进程，再按新链路评估新任务。不能将保证追溯到历史任务，也不要删除新列来配合旧程序回滚。
 
@@ -71,7 +78,7 @@ GET /api/admin/ai-media-generation-reconciliation?limit=50
 
 审计单元测试覆盖身份校验、调用前落库顺序、数据库失败与确认丢失时零适配器调用、取消后有界终态审计、敏感错误不进入审计，以及编辑器直接生成的兼容性。
 
-`internal/provider/image_no_replay_test.go` 在真实本地 HTTP 服务端计数，覆盖四种协议配置、十四种故障结果，以及三种流式配置的成功路径和未知协议的零请求路径。它验证受测场景的实际请求次数，不将适配器 mock 的一次调用当作一次 HTTP 请求。
+`internal/provider/image_no_replay_test.go` 在真实本地 HTTP 服务端计数：OpenAI-compatible 覆盖四种协议配置、十四种故障结果、三种流式配置和未知协议零请求；Gemini 额外覆盖模型驱动 auto、显式 `predict`/`generate_content` 及故障后的单请求约束。它验证受测场景的实际请求次数，不将适配器 mock 的一次调用当作一次 HTTP 请求。
 
 `internal/agent/generation_persistence_integration_test.go` 将真实 HTTP Provider、正式生成入口、迁移后的 PostgreSQL 和本地文件存储串起来。故障注入先执行真正的 Media INSERT，再丢弃返回 ID 并报告确认丢失或取消；随后核验文件、元数据、当前尝试审计、候选隔离和再次请求未到达上游。另覆盖提交前失败、对象 PUT 确认丢失、Provider 失败、正常成功和编辑器直接生成。
 
@@ -81,6 +88,8 @@ GET /api/admin/ai-media-generation-reconciliation?limit=50
 
 ## 尚未解决的边界
 
-本地唯一关联和不自动回退，不是 Provider 的幂等键，不保证第三方 exactly-once 执行或绝不重复计费。本轮不假定各厂商支持通用幂等请求头，也没有新增自动重试或人工恢复写接口。Provider 请求标识、账号/配置证据、官方幂等语义与留存期限、独立对象定位证据、带权限和证据的人工决策仍属于 Issue #338 的后续工作。
+本地唯一关联、`dispatch_id`、配置指纹和不自动回退，都不是 Provider 的幂等键，不保证第三方 exactly-once 执行或绝不重复计费。本轮没有添加通用幂等请求头，也没有把本地 dispatch ID 冒充第三方 Request ID。各 Vendor/端点的官方幂等语义、可验证的上游 Request ID/账号证据及留存期限仍需逐一确认；在确认前一律按“不可安全自动重放”处理。
+
+受治理候选现在具有独立对象定位证据，但 locator 不证明对象存在。带权限、带 stale-attempt 防护、带独立审计轨迹的人工恢复决策仍属于 Issue #338 后续工作，当前没有新增自动重试、自动挂接、SQL lease reset 或自动清理。
 
 首次元数据写入报错时保留文件，不等于已经实现 PostgreSQL 与对象存储的原子提交；保留证据、确认结果、恢复关联和清理孤立对象是不同的操作，不得合并成一个自动重试流程。
