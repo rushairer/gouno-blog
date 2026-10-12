@@ -25,10 +25,12 @@ func (f attemptImageGeneratorFunc) GenerateImage(ctx context.Context, req provid
 }
 
 func testImageAttemptRequest() ImageGenerationRequest {
-	candidateID, attempt := int64(73), 4
+	candidateID, attempt, profileID := int64(73), 4, int64(42)
 	return ImageGenerationRequest{
 		Prompt: "private prompt sentinel", Source: "agent_candidate", Operation: "media.generate_candidate",
 		MediaCandidateID: &candidateID, GenerationAttempt: &attempt,
+		providerProfileID: &profileID, providerVendor: "custom",
+		providerConfigFingerprint: strings.Repeat("a", 64), dispatchID: strings.Repeat("b", 32),
 	}
 }
 
@@ -72,6 +74,33 @@ func TestImageAttemptIdentityRejectsMissingOrMixedIdentityBeforeDispatch(t *test
 				t.Fatalf("invalid identity performed work: writes=%d calls=%d", writes, calls)
 			}
 		})
+	}
+}
+
+func TestGovernedImageAttemptRequiresProviderEvidenceBeforeDispatch(t *testing.T) {
+	for _, mutate := range []func(*ImageGenerationRequest){
+		func(r *ImageGenerationRequest) { r.providerProfileID = nil },
+		func(r *ImageGenerationRequest) { r.providerVendor = "" },
+		func(r *ImageGenerationRequest) { r.providerConfigFingerprint = "" },
+		func(r *ImageGenerationRequest) { r.dispatchID = "" },
+	} {
+		req := testImageAttemptRequest()
+		mutate(&req)
+		writes, calls := 0, 0
+		s := &GenerationService{repo: attemptAuditRecorderFunc(func(context.Context, *domain.GenerationAudit) error {
+			writes++
+			return nil
+		})}
+		generator := attemptImageGeneratorFunc(func(context.Context, provider.ImageRequest) (provider.ImageResult, error) {
+			calls++
+			return provider.ImageResult{}, nil
+		})
+		if _, err := s.requestAuditedImage(context.Background(), &req, "test", "test", generator); !errors.Is(err, errImageAuditUnconfirmed) {
+			t.Fatalf("missing provider evidence accepted: %v", err)
+		}
+		if writes != 0 || calls != 0 {
+			t.Fatalf("missing evidence performed work: writes=%d calls=%d", writes, calls)
+		}
 	}
 }
 
