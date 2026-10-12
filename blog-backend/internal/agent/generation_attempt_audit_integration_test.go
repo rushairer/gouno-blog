@@ -80,6 +80,7 @@ func TestAttemptAuditReconciliationDoesNotInferLegacyOrLateWorkerIdentity(t *tes
 	audits := agentrepository.NewGenerationAuditRepository(f.db)
 	legacy := newStartedAttemptAudit(first)
 	legacy.GenerationAttempt, legacy.Status, legacy.ErrorCode = nil, "failed", "timeout"
+	legacy.ProviderProfileID, legacy.ProviderVendor, legacy.ProviderConfigFingerprint, legacy.DispatchID = nil, "", "", ""
 	if err := audits.RecordGenerationAudit(ctx, legacy); err != nil {
 		t.Fatal(err)
 	}
@@ -125,6 +126,7 @@ func TestAttemptAuditReconciliationDoesNotInferLegacyOrLateWorkerIdentity(t *tes
 	// attempt. Keep that observation visible but separate from current evidence.
 	lateLegacy := newStartedAttemptAudit(first)
 	lateLegacy.GenerationAttempt, lateLegacy.Status = nil, "failed"
+	lateLegacy.ProviderProfileID, lateLegacy.ProviderVendor, lateLegacy.ProviderConfigFingerprint, lateLegacy.DispatchID = nil, "", "", ""
 	if err := audits.RecordGenerationAudit(ctx, lateLegacy); err != nil {
 		t.Fatal(err)
 	}
