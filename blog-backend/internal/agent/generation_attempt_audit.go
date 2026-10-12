@@ -98,7 +98,10 @@ func (s *GenerationService) requestAuditedImage(ctx context.Context, req *ImageG
 	})
 	evidence := result.Evidence
 	if err != nil {
-		evidence = provider.RequestEvidenceFromError(err)
+		errorEvidence := provider.RequestEvidenceFromError(err)
+		if errorEvidence != (provider.RequestEvidence{}) {
+			evidence = errorEvidence
+		}
 	}
 	req.upstreamRequestID = strings.TrimSpace(evidence.RequestID)
 	req.upstreamAccountID = strings.TrimSpace(evidence.AccountID)
