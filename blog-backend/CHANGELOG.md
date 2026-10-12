@@ -77,5 +77,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Gin web server with graceful shutdown.
 - `Makefile` with build, run, dev, test targets.
 - `.air.toml` for hot-reload development.
-- Code generation templates (`domain.tmpl`, `repository.tmpl`, `service.tmpl`, `task.tmpl`).
+- Code generation templates (`domain.tmpl`, `repository.tmpl`, `service.tmpl`, `controller.tmpl`, `task.tmpl`).
 - Bilingual README (English / Chinese).
