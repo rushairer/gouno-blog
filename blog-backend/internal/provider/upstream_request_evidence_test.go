@@ -147,3 +147,52 @@ func TestGeminiGenerateContentCapturesResponseID(t *testing.T) {
 		t.Fatalf("Gemini responseId lost: %#v", result.Evidence)
 	}
 }
+
+
+func TestOpenAIDecodeFailureStillRetainsResponseEvidence(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("x-request-id", "req_openai_decode")
+		w.Header().Set("openai-organization", "org_openai_decode")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"output":[`)
+	}))
+	defer server.Close()
+
+	p, err := NewHTTPProviderWithVendorConfig("openai", "openai", server.URL, "key", "model", "responses", "never", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := p.GenerateImage(context.Background(), ImageRequest{Prompt: "fixture"})
+	if err == nil {
+		t.Fatal("expected decode failure")
+	}
+	if result.Evidence.RequestID != "req_openai_decode" || result.Evidence.AccountID != "org_openai_decode" {
+		t.Fatalf("decode failure dropped response evidence: %#v", result.Evidence)
+	}
+}
+
+func TestTransportErrorRetainsThatClientRequestIDWasSent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, _, err := w.(http.Hijacker).Hijack()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_ = conn.Close()
+	}))
+	defer server.Close()
+
+	p, err := NewHTTPProviderWithVendorConfig("openai", "openai", server.URL, "key", "model", "responses", "never", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = p.doWithHeaders(context.Background(), "/v1/responses", map[string]any{"model": "model"},
+		map[string]string{"X-Client-Request-Id": "0123456789abcdef0123456789abcdef"})
+	if err == nil {
+		t.Fatal("expected transport error")
+	}
+	evidence := RequestEvidenceFromError(err)
+	if !evidence.ClientRequestIDSent || evidence.RequestID != "" {
+		t.Fatalf("transport evidence incorrect: %#v", evidence)
+	}
+}
