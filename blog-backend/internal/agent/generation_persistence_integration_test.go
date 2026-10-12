@@ -132,6 +132,8 @@ func newImagePipelineFixture(t *testing.T, mode string, cancel context.CancelFun
 		}
 		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
+		w.Header().Set("x-request-id", "req-pipeline-"+strconv.FormatInt(candidateID, 10))
+		w.Header().Set("openai-organization", "org-pipeline-fixture")
 		if mode == "provider_error" {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = io.WriteString(w, `{"error":{"message":"fixture unavailable"}}`)
@@ -230,6 +232,11 @@ func (f *imagePipelineFixture) assertQuarantinedWithoutReplay(t *testing.T) {
 		len(audit.ProviderConfigFingerprint) != 64 || len(audit.DispatchID) != 32 {
 		t.Fatalf("missing bounded provider evidence: %#v", audit)
 	}
+	if audit.UpstreamRequestID != "req-pipeline-"+strconv.FormatInt(f.candidateID, 10) ||
+		audit.UpstreamAccountID != "org-pipeline-fixture" || audit.UpstreamWorkspaceID != "" ||
+		audit.ClientRequestIDSent {
+		t.Fatalf("missing or unsafe upstream request evidence: %#v", audit)
+	}
 	if f.store.key != "" && (audit.StorageName != f.store.key || audit.StorageURL != f.store.URL(f.store.key)) {
 		t.Fatalf("object locator was not retained: audit=%#v key=%q", audit, f.store.key)
 	}
@@ -302,17 +309,22 @@ func TestImageSuccessfulPersistenceStillCompletesExactCandidate(t *testing.T) {
 	if err != nil || candidate.GenerationStatus != "generated" || candidate.GenerationAttempt != 1 || candidate.MediaAssetID == nil || *candidate.MediaAssetID != f.creator.committedID {
 		t.Fatalf("success did not finalize its own candidate: %#v, %v", candidate, err)
 	}
-	var status, dispatchID, fingerprint, storageName string
+	var status, dispatchID, fingerprint, storageName, upstreamRequestID, upstreamAccountID string
 	var assetID int64
-	if err := f.approval.db.QueryRow(`SELECT status,media_asset_id,dispatch_id,provider_config_fingerprint,storage_name
+	var clientRequestIDSent bool
+	if err := f.approval.db.QueryRow(`SELECT status,media_asset_id,dispatch_id,provider_config_fingerprint,storage_name,
+			COALESCE(upstream_request_id,''),COALESCE(upstream_account_id,''),client_request_id_sent
 		FROM ai_generation_audits WHERE media_candidate_id=$1 AND generation_attempt=1`, f.candidateID).
-		Scan(&status, &assetID, &dispatchID, &fingerprint, &storageName); err != nil {
+		Scan(&status, &assetID, &dispatchID, &fingerprint, &storageName, &upstreamRequestID, &upstreamAccountID, &clientRequestIDSent); err != nil {
 		t.Fatal(err)
 	}
 	if status != "succeeded" || assetID != f.creator.committedID || len(dispatchID) != 32 ||
-		len(fingerprint) != 64 || storageName != f.store.key || f.requests.Load() != 1 || f.creator.calls != 1 {
-		t.Fatalf("incorrect success evidence: status=%s asset=%d dispatch=%q storage=%q requests=%d",
-			status, assetID, dispatchID, storageName, f.requests.Load())
+		len(fingerprint) != 64 || storageName != f.store.key ||
+		upstreamRequestID != "req-pipeline-"+strconv.FormatInt(f.candidateID, 10) ||
+		upstreamAccountID != "org-pipeline-fixture" || clientRequestIDSent ||
+		f.requests.Load() != 1 || f.creator.calls != 1 {
+		t.Fatalf("incorrect success evidence: status=%s asset=%d dispatch=%q storage=%q upstream=%q requests=%d",
+			status, assetID, dispatchID, storageName, upstreamRequestID, f.requests.Load())
 	}
 	if err := f.service.GenerateMediaCandidate(ctx, f.candidateID, f.approval.principal); !errors.Is(err, ErrApprovalConflict) || f.requests.Load() != 1 {
 		t.Fatalf("completed candidate unexpectedly generated again: %v", err)
