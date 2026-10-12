@@ -17,6 +17,14 @@ func NewGenerationAuditRepository(db *sql.DB) *GenerationAuditRepository {
 	return &GenerationAuditRepository{db: db}
 }
 
+func optionalAuditString(value string) any {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	return value
+}
+
 // RecordGenerationAudit stores no prompt, generated text, credential or binary.
 // A governed image request must confirm a new started row BEFORE dispatch. Its
 // ID and exact candidate/attempt pair permit one terminal transition only.
@@ -92,5 +100,6 @@ func (r *GenerationAuditRepository) RecordGenerationAudit(ctx context.Context, v
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
 		value.Source, value.Operation, value.TemplateVersion, value.Provider, value.Model, value.InputTokens, value.OutputTokens,
 		value.Status, value.ErrorCode, value.AgentRunID, value.WorkflowRunID, value.MediaCandidateID, value.MediaAssetID, value.GenerationAttempt,
-		value.ProviderProfileID, value.ProviderVendor, value.ProviderConfigFingerprint, value.DispatchID, value.StorageName, value.StorageURL).Scan(&value.ID)
+		value.ProviderProfileID, optionalAuditString(value.ProviderVendor), optionalAuditString(value.ProviderConfigFingerprint),
+		optionalAuditString(value.DispatchID), optionalAuditString(value.StorageName), optionalAuditString(value.StorageURL)).Scan(&value.ID)
 }
