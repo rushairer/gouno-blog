@@ -235,6 +235,10 @@ type MediaGenerationAuditEvidence struct {
 	DispatchID                string     `json:"dispatch_id,omitempty"`
 	StorageName               string     `json:"storage_name,omitempty"`
 	StorageURL                string     `json:"storage_url,omitempty"`
+	UpstreamRequestID         string     `json:"upstream_request_id,omitempty"`
+	UpstreamAccountID         string     `json:"upstream_account_id,omitempty"`
+	UpstreamWorkspaceID       string     `json:"upstream_workspace_id,omitempty"`
+	ClientRequestIDSent       bool       `json:"client_request_id_sent"`
 	CreatedAt                 time.Time  `json:"created_at"`
 }
 
@@ -305,6 +309,10 @@ type GenerationAudit struct {
 	DispatchID                string
 	StorageName               string
 	StorageURL                string
+	UpstreamRequestID         string
+	UpstreamAccountID         string
+	UpstreamWorkspaceID       string
+	ClientRequestIDSent       bool
 }
 
 // MediaCandidateSelection is the user-authored placement for one generated
