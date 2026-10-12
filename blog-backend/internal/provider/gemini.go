@@ -262,6 +262,7 @@ func (p *HTTPProvider) geminiGenerateContentImage(ctx context.Context, req Image
 	defer resp.Body.Close()
 
 	var decoded struct {
+		ResponseID string `json:"responseId"`
 		Candidates []struct {
 			Content struct {
 				Parts []struct {
@@ -286,14 +287,16 @@ func (p *HTTPProvider) geminiGenerateContentImage(ctx context.Context, req Image
 				if mime == "" {
 					mime = "image/png"
 				}
-				return ImageResult{Data: data, MIMEType: mime}, nil
+				return ImageResult{Data: data, MIMEType: mime, Evidence: RequestEvidence{RequestID: boundedEvidenceValue(decoded.ResponseID)}}, nil
 			}
 		}
 		if part.Text != "" {
 			if img, ok := parseImageDataOrBase64(part.Text); ok {
+				img.Evidence = RequestEvidence{RequestID: boundedEvidenceValue(decoded.ResponseID)}
 				return img, nil
 			}
 		}
 	}
-	return ImageResult{}, errors.New("generateContent response did not contain an image")
+	return ImageResult{Evidence: RequestEvidence{RequestID: boundedEvidenceValue(decoded.ResponseID)}},
+		errors.New("generateContent response did not contain an image")
 }

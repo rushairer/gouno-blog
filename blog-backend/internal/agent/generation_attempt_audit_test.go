@@ -104,6 +104,61 @@ func TestGovernedImageAttemptRequiresProviderEvidenceBeforeDispatch(t *testing.T
 	}
 }
 
+func TestGovernedImagePassesDispatchCorrelationAndCapturesUpstreamEvidence(t *testing.T) {
+	req := testImageAttemptRequest()
+	s := &GenerationService{repo: attemptAuditRecorderFunc(func(ctx context.Context, audit *domain.GenerationAudit) error {
+		assertBoundedAuditContext(t, ctx)
+		if audit.Status != "started" || audit.DispatchID != req.dispatchID {
+			t.Fatalf("incorrect pre-dispatch audit: %#v", audit)
+		}
+		audit.ID = 99
+		return nil
+	})}
+	generator := attemptImageGeneratorFunc(func(_ context.Context, imageReq provider.ImageRequest) (provider.ImageResult, error) {
+		if imageReq.ClientRequestID != req.dispatchID {
+			t.Fatalf("dispatch correlation not passed to provider: %#v", imageReq)
+		}
+		return provider.ImageResult{
+			Data: []byte("test"), MIMEType: "image/png",
+			Evidence: provider.RequestEvidence{
+				RequestID: "req_fixture", AccountID: "org_fixture",
+				WorkspaceID: "ws_fixture", ClientRequestIDSent: true,
+			},
+		}, nil
+	})
+	if _, err := s.requestAuditedImage(context.Background(), &req, "test", "test", generator); err != nil {
+		t.Fatal(err)
+	}
+	if req.auditID != 99 || req.upstreamRequestID != "req_fixture" ||
+		req.upstreamAccountID != "org_fixture" || req.upstreamWorkspaceID != "ws_fixture" ||
+		!req.clientRequestIDSent {
+		t.Fatalf("upstream evidence not attached to exact attempt: %#v", req)
+	}
+}
+
+func TestGovernedImagePreservesResponseEvidenceWhenDecoderReturnsError(t *testing.T) {
+	req := testImageAttemptRequest()
+	s := &GenerationService{repo: attemptAuditRecorderFunc(func(context.Context, *domain.GenerationAudit) error {
+		return nil
+	})}
+	// The recorder must return an ID for dispatch permission.
+	s.repo = attemptAuditRecorderFunc(func(_ context.Context, audit *domain.GenerationAudit) error {
+		audit.ID = 99
+		return nil
+	})
+	generator := attemptImageGeneratorFunc(func(context.Context, provider.ImageRequest) (provider.ImageResult, error) {
+		return provider.ImageResult{
+			Evidence: provider.RequestEvidence{RequestID: "req_decode_fixture", AccountID: "org_decode_fixture"},
+		}, errors.New("decode fixture")
+	})
+	if _, err := s.requestAuditedImage(context.Background(), &req, "test", "test", generator); err == nil {
+		t.Fatal("expected decode error")
+	}
+	if req.upstreamRequestID != "req_decode_fixture" || req.upstreamAccountID != "org_decode_fixture" {
+		t.Fatalf("response evidence lost on decode error: %#v", req)
+	}
+}
+
 func TestImageAttemptRequiresConfirmedStartAuditBeforeProvider(t *testing.T) {
 	for _, tc := range []struct {
 		name string

@@ -145,12 +145,13 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 			OutputTokens int64 `json:"output_tokens"`
 		} `json:"usage"`
 	}
+	evidence := p.responseEvidence(resp, false)
 	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
-		return Result{}, err
+		return Result{Evidence: evidence}, err
 	}
 	result := Result{
 		InputTokens: decoded.Usage.InputTokens, OutputTokens: decoded.Usage.OutputTokens,
-		StopReason: decoded.StopReason,
+		StopReason: decoded.StopReason, Evidence: evidence,
 	}
 	for _, block := range decoded.Content {
 		switch block.Type {
@@ -179,15 +180,15 @@ func (p *HTTPProvider) anthropicGenerateImage(ctx context.Context, req ImageRequ
 		MaxTokens:    2000,
 	})
 	if err != nil {
-		return ImageResult{}, err
+		return ImageResult{Evidence: result.Evidence}, err
 	}
 	match := imageDataURI.FindStringSubmatch(result.Text)
 	if len(match) != 3 {
-		return ImageResult{}, errors.New("Anthropic-compatible response did not contain an image data URI")
+		return ImageResult{Evidence: result.Evidence}, errors.New("Anthropic-compatible response did not contain an image data URI")
 	}
 	data, err := base64.StdEncoding.DecodeString(match[2])
 	if err != nil || len(data) == 0 {
-		return ImageResult{}, errors.New("Anthropic-compatible response did not contain a valid image")
+		return ImageResult{Evidence: result.Evidence}, errors.New("Anthropic-compatible response did not contain a valid image")
 	}
-	return ImageResult{Data: data, MIMEType: match[1]}, nil
+	return ImageResult{Data: data, MIMEType: match[1], Evidence: result.Evidence}, nil
 }

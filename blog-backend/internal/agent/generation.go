@@ -71,6 +71,10 @@ type ImageGenerationRequest struct {
 	dispatchID         string
 	storageName        string
 	storageURL         string
+	upstreamRequestID   string
+	upstreamAccountID   string
+	upstreamWorkspaceID string
+	clientRequestIDSent bool
 }
 
 func NewGenerationService(repo generationAuditRepository, management *ManagementService, mediaAssets mediaCreator, store media.Store) *GenerationService {
@@ -315,6 +319,8 @@ func (s *GenerationService) recordImageAudit(req ImageGenerationRequest, provide
 		ProviderProfileID: req.providerProfileID, ProviderVendor: req.providerVendor,
 		ProviderConfigFingerprint: req.providerConfigFingerprint, DispatchID: req.dispatchID,
 		StorageName: req.storageName, StorageURL: req.storageURL,
+		UpstreamRequestID: req.upstreamRequestID, UpstreamAccountID: req.upstreamAccountID,
+		UpstreamWorkspaceID: req.upstreamWorkspaceID, ClientRequestIDSent: req.clientRequestIDSent,
 	})
 }
 
