@@ -93,7 +93,18 @@ func (s *GenerationService) requestAuditedImage(ctx context.Context, req *ImageG
 		}
 		req.auditID = audit.ID
 	}
-	return generator.GenerateImage(ctx, provider.ImageRequest{Prompt: cleanImagePrompt(req.Prompt)})
+	result, err := generator.GenerateImage(ctx, provider.ImageRequest{
+		Prompt: cleanImagePrompt(req.Prompt), ClientRequestID: req.dispatchID,
+	})
+	evidence := result.Evidence
+	if err != nil {
+		evidence = provider.RequestEvidenceFromError(err)
+	}
+	req.upstreamRequestID = strings.TrimSpace(evidence.RequestID)
+	req.upstreamAccountID = strings.TrimSpace(evidence.AccountID)
+	req.upstreamWorkspaceID = strings.TrimSpace(evidence.WorkspaceID)
+	req.clientRequestIDSent = evidence.ClientRequestIDSent
+	return result, err
 }
 
 // confirmImageObjectLocator persists the exact planned object location before
@@ -110,6 +121,8 @@ func (s *GenerationService) confirmImageObjectLocator(ctx context.Context, req I
 		ID: req.auditID, Source: req.Source, Operation: req.Operation, Status: "started",
 		MediaCandidateID: req.MediaCandidateID, GenerationAttempt: req.GenerationAttempt,
 		StorageName: req.storageName, StorageURL: req.storageURL,
+		UpstreamRequestID: req.upstreamRequestID, UpstreamAccountID: req.upstreamAccountID,
+		UpstreamWorkspaceID: req.upstreamWorkspaceID, ClientRequestIDSent: req.clientRequestIDSent,
 	}
 	auditCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	err := s.repo.RecordGenerationAudit(auditCtx, &audit)
