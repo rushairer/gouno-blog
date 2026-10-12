@@ -508,9 +508,7 @@ func (p *HTTPProvider) openAIChatCompletionsImage(ctx context.Context, req Image
 	}
 	defer resp.Body.Close()
 	result, err := decodeOpenAIImageResponse(resp)
-	if err == nil {
-		result.Evidence = p.responseEvidence(resp, len(headers) > 0)
-	}
+	result.Evidence = p.responseEvidence(resp, len(headers) > 0)
 	return result, err
 }
 
@@ -536,9 +534,7 @@ func (p *HTTPProvider) openAIResponsesImage(ctx context.Context, req ImageReques
 	}
 	defer resp.Body.Close()
 	result, err := decodeOpenAIImageResponse(resp)
-	if err == nil {
-		result.Evidence = p.responseEvidence(resp, len(headers) > 0)
-	}
+	result.Evidence = p.responseEvidence(resp, len(headers) > 0)
 	return result, err
 }
 
