@@ -48,22 +48,34 @@ func (r *GenerationAuditRepository) RecordGenerationAudit(ctx context.Context, v
 				// Persist the exact planned object location before Put. It is an
 				// investigation locator, not proof that bytes were stored.
 				return r.db.QueryRowContext(ctx, `UPDATE ai_generation_audits
-					SET storage_name=$4,storage_url=$5
+					SET storage_name=$4,storage_url=$5,
+					    upstream_request_id=COALESCE($6,upstream_request_id),
+					    upstream_account_id=COALESCE($7,upstream_account_id),
+					    upstream_workspace_id=COALESCE($8,upstream_workspace_id),
+					    client_request_id_sent=(client_request_id_sent OR $9)
 					WHERE id=$1 AND media_candidate_id=$2 AND generation_attempt=$3
 					  AND source='agent_candidate' AND operation='media.generate_candidate' AND status='started'
 					  AND storage_name IS NULL AND storage_url IS NULL
 					RETURNING id`, value.ID, value.MediaCandidateID, value.GenerationAttempt,
-					value.StorageName, value.StorageURL).Scan(&value.ID)
+					value.StorageName, value.StorageURL, optionalAuditString(value.UpstreamRequestID),
+					optionalAuditString(value.UpstreamAccountID), optionalAuditString(value.UpstreamWorkspaceID),
+					value.ClientRequestIDSent).Scan(&value.ID)
 			}
 			if value.Status != "succeeded" && value.Status != domain.MediaGenerationOutcomeUncertainCode {
 				return errors.New("invalid terminal generation audit status")
 			}
 			return r.db.QueryRowContext(ctx, `UPDATE ai_generation_audits
-				SET status=$4,error_code=$5,media_asset_id=$6,input_tokens=$7,output_tokens=$8
+				SET status=$4,error_code=$5,media_asset_id=$6,input_tokens=$7,output_tokens=$8,
+				    upstream_request_id=COALESCE($9,upstream_request_id),
+				    upstream_account_id=COALESCE($10,upstream_account_id),
+				    upstream_workspace_id=COALESCE($11,upstream_workspace_id),
+				    client_request_id_sent=(client_request_id_sent OR $12)
 				WHERE id=$1 AND media_candidate_id=$2 AND generation_attempt=$3
 				  AND source='agent_candidate' AND operation='media.generate_candidate' AND status='started'
 				RETURNING id`, value.ID, value.MediaCandidateID, value.GenerationAttempt,
-				value.Status, value.ErrorCode, value.MediaAssetID, value.InputTokens, value.OutputTokens).Scan(&value.ID)
+				value.Status, value.ErrorCode, value.MediaAssetID, value.InputTokens, value.OutputTokens,
+				optionalAuditString(value.UpstreamRequestID), optionalAuditString(value.UpstreamAccountID),
+				optionalAuditString(value.UpstreamWorkspaceID), value.ClientRequestIDSent).Scan(&value.ID)
 		}
 	}
 	if value.ID != 0 || (value.Status == "started" && value.GenerationAttempt == nil) {
@@ -96,10 +108,13 @@ func (r *GenerationAuditRepository) RecordGenerationAudit(ctx context.Context, v
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_generation_audits
 		(source,operation,template_version,provider,model,input_tokens,output_tokens,status,error_code,
 		 agent_run_id,workflow_run_id,media_candidate_id,media_asset_id,generation_attempt,
-		 provider_profile_id,provider_vendor,provider_config_fingerprint,dispatch_id,storage_name,storage_url)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
+		 provider_profile_id,provider_vendor,provider_config_fingerprint,dispatch_id,storage_name,storage_url,
+		 upstream_request_id,upstream_account_id,upstream_workspace_id,client_request_id_sent)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24) RETURNING id`,
 		value.Source, value.Operation, value.TemplateVersion, value.Provider, value.Model, value.InputTokens, value.OutputTokens,
 		value.Status, value.ErrorCode, value.AgentRunID, value.WorkflowRunID, value.MediaCandidateID, value.MediaAssetID, value.GenerationAttempt,
 		value.ProviderProfileID, optionalAuditString(value.ProviderVendor), optionalAuditString(value.ProviderConfigFingerprint),
-		optionalAuditString(value.DispatchID), optionalAuditString(value.StorageName), optionalAuditString(value.StorageURL)).Scan(&value.ID)
+		optionalAuditString(value.DispatchID), optionalAuditString(value.StorageName), optionalAuditString(value.StorageURL),
+		optionalAuditString(value.UpstreamRequestID), optionalAuditString(value.UpstreamAccountID),
+		optionalAuditString(value.UpstreamWorkspaceID), value.ClientRequestIDSent).Scan(&value.ID)
 }
