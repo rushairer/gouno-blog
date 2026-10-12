@@ -37,7 +37,10 @@ func (r *MediaCandidateRepository) ListMediaGenerationReconciliation(ctx context
 		       a.id,COALESCE(a.status,''),COALESCE(a.error_code,''),
 		       a.media_asset_id,a.created_at,a.generation_attempt,
 		       current_a.id,COALESCE(current_a.status,''),COALESCE(current_a.error_code,''),
-		       current_a.media_asset_id,current_a.created_at
+		       current_a.media_asset_id,current_a.created_at,current_a.provider_profile_id,
+		       COALESCE(current_a.provider_vendor,''),COALESCE(current_a.provider_config_fingerprint,''),
+		       COALESCE(current_a.dispatch_id,''),COALESCE(current_a.storage_name,''),
+		       COALESCE(current_a.storage_url,'')
 		FROM needs_review c
 		LEFT JOIN LATERAL (
 			SELECT id,status,error_code,media_asset_id,created_at,generation_attempt
@@ -60,14 +63,16 @@ func (r *MediaCandidateRepository) ListMediaGenerationReconciliation(ctx context
 		var item domain.MediaGenerationReconciliation
 		var currentID sql.NullInt64
 		var currentAt sql.NullTime
-		var currentStatus, currentError string
-		var currentAssetID *int64
+		var currentStatus, currentError, currentVendor, currentFingerprint, currentDispatchID, currentStorageName, currentStorageURL string
+		var currentAssetID, currentProviderProfileID *int64
 		if err := rows.Scan(&item.CandidateID, &item.PostID, &item.SourceRunID,
 			&item.WorkflowRunID, &item.GenerationAttempt, &item.GenerationStartedAt,
 			&item.GenerationDeadlineAt, &item.MediaAssetID, &item.ErrorCode,
 			&item.LatestAuditID, &item.LatestAuditStatus, &item.LatestAuditErrorCode,
 			&item.LatestAuditMediaAssetID, &item.LatestAuditAt, &item.LatestAuditGenerationAttempt,
-			&currentID, &currentStatus, &currentError, &currentAssetID, &currentAt); err != nil {
+			&currentID, &currentStatus, &currentError, &currentAssetID, &currentAt,
+			&currentProviderProfileID, &currentVendor, &currentFingerprint, &currentDispatchID,
+			&currentStorageName, &currentStorageURL); err != nil {
 			return nil, err
 		}
 		item.LatestAuditMatchesCurrentAttempt = item.LatestAuditID != nil &&
@@ -79,7 +84,10 @@ func (r *MediaCandidateRepository) ListMediaGenerationReconciliation(ctx context
 			}
 			item.CurrentAttemptAudit = &domain.MediaGenerationAuditEvidence{
 				ID: currentID.Int64, CandidateID: item.CandidateID, GenerationAttempt: item.GenerationAttempt,
-				Status: currentStatus, ErrorCode: currentError, MediaAssetID: currentAssetID, CreatedAt: currentAt.Time,
+				Status: currentStatus, ErrorCode: currentError, MediaAssetID: currentAssetID,
+				ProviderProfileID: currentProviderProfileID, ProviderVendor: currentVendor,
+				ProviderConfigFingerprint: currentFingerprint, DispatchID: currentDispatchID,
+				StorageName: currentStorageName, StorageURL: currentStorageURL, CreatedAt: currentAt.Time,
 			}
 		}
 		items = append(items, &item)
