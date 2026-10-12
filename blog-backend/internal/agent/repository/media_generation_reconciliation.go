@@ -42,7 +42,7 @@ func (r *MediaCandidateRepository) ListMediaGenerationReconciliation(ctx context
 		       COALESCE(current_a.dispatch_id,''),COALESCE(current_a.storage_name,''),
 		       COALESCE(current_a.storage_url,''),COALESCE(current_a.upstream_request_id,''),
 		       COALESCE(current_a.upstream_account_id,''),COALESCE(current_a.upstream_workspace_id,''),
-		       current_a.client_request_id_sent
+		       COALESCE(current_a.client_request_id_sent,FALSE)
 		FROM needs_review c
 		LEFT JOIN LATERAL (
 			SELECT id,status,error_code,media_asset_id,created_at,generation_attempt
