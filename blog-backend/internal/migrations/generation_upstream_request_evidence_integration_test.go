@@ -48,9 +48,9 @@ func TestGenerationUpstreamRequestEvidenceUpgradePreservesHistoryAndConstraints(
 
 	dispatchID := strings.Repeat("a", 32)
 	if _, err := db.ExecContext(ctx, `INSERT INTO ai_generation_audits
-		(source,operation,status,provider_vendor,dispatch_id,upstream_request_id,upstream_account_id,
+		(source,operation,status,generation_attempt,provider_vendor,dispatch_id,upstream_request_id,upstream_account_id,
 		 upstream_workspace_id,client_request_id_sent)
-		VALUES ('agent_candidate','media.generate_candidate','outcome_uncertain','openai',$1,
+		VALUES ('agent_candidate','media.generate_candidate','outcome_uncertain',1,'openai',$1,
 		        'req_fixture','org_fixture','ws_fixture',TRUE)`, dispatchID); err != nil {
 		t.Fatal(err)
 	}
