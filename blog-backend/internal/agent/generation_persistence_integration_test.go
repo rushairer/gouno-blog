@@ -225,6 +225,14 @@ func (f *imagePipelineFixture) assertQuarantinedWithoutReplay(t *testing.T) {
 	if evidence == nil || evidence.CurrentAttemptAudit == nil || evidence.CurrentAttemptAudit.GenerationAttempt != 1 || evidence.CurrentAttemptAudit.Status != domain.MediaGenerationOutcomeUncertainCode || evidence.CurrentAttemptAudit.MediaAssetID != nil {
 		t.Fatalf("missing exact-attempt uncertainty evidence: %#v", evidence)
 	}
+	audit := evidence.CurrentAttemptAudit
+	if audit.ProviderProfileID == nil || *audit.ProviderProfileID != 42 || audit.ProviderVendor != "openai" ||
+		len(audit.ProviderConfigFingerprint) != 64 || len(audit.DispatchID) != 32 {
+		t.Fatalf("missing bounded provider evidence: %#v", audit)
+	}
+	if f.store.key != "" && (audit.StorageName != f.store.key || audit.StorageURL != f.store.URL(f.store.key)) {
+		t.Fatalf("object locator was not retained: audit=%#v key=%q", audit, f.store.key)
+	}
 	after, err := f.candidates.GetMediaCandidate(ctx, f.candidateID)
 	if err != nil || after.GenerationStatus != candidate.GenerationStatus || after.GenerationAttempt != candidate.GenerationAttempt || after.MediaAssetID != nil {
 		t.Fatalf("read-only reconciliation mutated candidate: %#v, %v", after, err)
@@ -294,13 +302,17 @@ func TestImageSuccessfulPersistenceStillCompletesExactCandidate(t *testing.T) {
 	if err != nil || candidate.GenerationStatus != "generated" || candidate.GenerationAttempt != 1 || candidate.MediaAssetID == nil || *candidate.MediaAssetID != f.creator.committedID {
 		t.Fatalf("success did not finalize its own candidate: %#v, %v", candidate, err)
 	}
-	var status string
+	var status, dispatchID, fingerprint, storageName string
 	var assetID int64
-	if err := f.approval.db.QueryRow(`SELECT status,media_asset_id FROM ai_generation_audits WHERE media_candidate_id=$1 AND generation_attempt=1`, f.candidateID).Scan(&status, &assetID); err != nil {
+	if err := f.approval.db.QueryRow(`SELECT status,media_asset_id,dispatch_id,provider_config_fingerprint,storage_name
+		FROM ai_generation_audits WHERE media_candidate_id=$1 AND generation_attempt=1`, f.candidateID).
+		Scan(&status, &assetID, &dispatchID, &fingerprint, &storageName); err != nil {
 		t.Fatal(err)
 	}
-	if status != "succeeded" || assetID != f.creator.committedID || f.requests.Load() != 1 || f.creator.calls != 1 {
-		t.Fatalf("incorrect success evidence: status=%s asset=%d requests=%d", status, assetID, f.requests.Load())
+	if status != "succeeded" || assetID != f.creator.committedID || len(dispatchID) != 32 ||
+		len(fingerprint) != 64 || storageName != f.store.key || f.requests.Load() != 1 || f.creator.calls != 1 {
+		t.Fatalf("incorrect success evidence: status=%s asset=%d dispatch=%q storage=%q requests=%d",
+			status, assetID, dispatchID, storageName, f.requests.Load())
 	}
 	if err := f.service.GenerateMediaCandidate(ctx, f.candidateID, f.approval.principal); !errors.Is(err, ErrApprovalConflict) || f.requests.Load() != 1 {
 		t.Fatalf("completed candidate unexpectedly generated again: %v", err)
