@@ -12,9 +12,13 @@ The repository-root `AGENTS.md` remains authoritative. These additional rules ap
 - Reconciliation remains a bounded, protected, read-only query. No lease reset, retry, automatic attachment, publication, compensation or permission escalation belongs in that query.
 - Audit evidence is not proof of provider-side idempotency, dispatch, billing, or a completed candidate link. Missing evidence is not proof that no external side effect occurred. No prompt, credentials, raw provider errors or image bytes belong in these audit records.
 - Candidate deletion must retain audit history through the existing nullable foreign key. Schema upgrades must preserve old terminal rows and tolerate old writers without fabricating correlation.
+- An ImageGenerator invocation is not inherently one HTTP request. Keep image protocol selection before dispatch, prohibit error-driven image endpoint fallback, and retain actual HTTP-server request-count regressions. Text-generation negotiation is a separate compatibility contract.
+- Keep stored image bytes on any initial `CreateMedia` error, including cancellation, zero returned ID and `sql.ErrNoRows`. The metadata INSERT may already have committed. This port does not provide the final candidate CAS's definitive-miss guarantee. Do not delete, re-generate or automatically collect possible orphans; this also applies to direct editor images.
 
 ## Regression evidence
 
 Retain the unit tests in `generation_attempt_audit_test.go`, real-database tests in `generation_attempt_audit_integration_test.go`, the migration upgrade test in `../migrations/generation_attempt_audit_integration_test.go`, and the existing media-generation fencing/reconciliation suites. Database skips are not database acceptance; run the repository's disposable PostgreSQL gate.
+
+`generation_persistence_integration_test.go` exercises the full generation entrypoint with a real local HTTP provider, migrated PostgreSQL and real local media bytes, including committed-before-ACK-loss faults. `../provider/image_no_replay_test.go` counts actual HTTP requests across protocol and failure modes. Ordinary upload parity is covered separately by `../media/controller/upload_persistence_integration_test.go`.
 
 Operational interpretation and remaining limitations: `../../../docs/quality/media-generation-attempt-audit.md`. Issue #338 remains open until provider-specific recovery and other outstanding approval boundaries are actually verified.

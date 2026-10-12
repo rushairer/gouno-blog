@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Select the OpenAI-compatible image protocol before dispatch and remove error-driven endpoint fallback. Auto/empty image protocol now uses Responses once; Chat-only gateways must explicitly select `chat_completions`. Preserve text-generation negotiation and existing image stream-mode semantics; add real HTTP request-count regressions.
+- Preserve stored bytes after any unconfirmed initial Media metadata creation in AI candidate generation, direct editor generation and ordinary uploads, including committed INSERT acknowledgements lost before an asset ID is returned. Add full generation and multipart-upload PostgreSQL/local-storage fault-injection tests without introducing automatic cleanup, replay or recovery.
 - Fail closed when a configured BFF Secret file cannot be read; optional
   historical AEAD key files remain intentionally empty on first deployment.
 - Enforce an absolute BFF session lifetime, make Redis session deletion atomic,

@@ -98,7 +98,9 @@ func (ctrl *Controller) Upload(c *gin.Context) {
 		asset.UpdatedByPrincipalID = &snapshot.Principal.ID
 	}
 	if err := ctrl.service.CreateMedia(c.Request.Context(), asset); err != nil {
-		_ = ctrl.store.Delete(c.Request.Context(), storageName)
+		// The INSERT may already be committed even without a returned asset ID.
+		// Keep uploaded bytes and any durable metadata for operator verification;
+		// a failed acknowledgement never authorizes destructive compensation.
 		controllerutil.WriteDomainError(c, err)
 		return
 	}
