@@ -475,26 +475,19 @@ func decodeOpenAIResponsesStream(resp *http.Response) (Result, error) {
 }
 
 func (p *HTTPProvider) openAIGenerateImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
-	if p.protocolMode == "chat_completions" {
+	// Select the protocol BEFORE dispatch. An error or missing image does not
+	// prove the first request was unfulfilled or unbilled. Never probe another
+	// billable endpoint as a fallback, even for 4xx/5xx or a truncated response.
+	// Auto retains its historical first choice; Chat-only gateways must select
+	// chat_completions explicitly. Text-generation negotiation is independent.
+	switch p.protocolMode {
+	case "chat_completions":
 		return p.openAIChatCompletionsImage(ctx, req)
-	}
-	if p.protocolMode == "responses" {
+	case "", "auto", "responses":
 		return p.openAIResponsesImage(ctx, req)
+	default:
+		return ImageResult{}, errors.New("unsupported image protocol mode")
 	}
-
-	// Default / auto: try responses first, then chat completions
-	res, err := p.openAIResponsesImage(ctx, req)
-	if err == nil && len(res.Data) > 0 {
-		return res, nil
-	}
-	resChat, errChat := p.openAIChatCompletionsImage(ctx, req)
-	if errChat == nil && len(resChat.Data) > 0 {
-		return resChat, nil
-	}
-	if err != nil {
-		return ImageResult{}, err
-	}
-	return ImageResult{}, errChat
 }
 
 func (p *HTTPProvider) openAIChatCompletionsImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
