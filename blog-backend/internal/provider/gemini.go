@@ -184,41 +184,22 @@ func (p *HTTPProvider) geminiGenerateImage(ctx context.Context, req ImageRequest
 		req.ImageSize = "1K"
 	}
 
-	if p.protocolMode == "predict" {
+	// Select exactly one billable image protocol before dispatch. An error,
+	// timeout, truncated response or missing image is not proof that the first
+	// request had no external effect and must never trigger another endpoint.
+	switch p.protocolMode {
+	case "predict":
 		return p.geminiPredictImage(ctx, req)
-	}
-	if p.protocolMode == "generate_content" {
+	case "generate_content":
 		return p.geminiGenerateContentImage(ctx, req)
-	}
-
-	modelLower := strings.ToLower(p.model)
-	var strategies []func(context.Context, ImageRequest) (ImageResult, error)
-
-	if strings.Contains(modelLower, "imagen") {
-		strategies = []func(context.Context, ImageRequest) (ImageResult, error){
-			p.geminiPredictImage,
-			p.geminiGenerateContentImage,
+	case "", "auto":
+		if strings.Contains(strings.ToLower(p.model), "imagen") {
+			return p.geminiPredictImage(ctx, req)
 		}
-	} else {
-		strategies = []func(context.Context, ImageRequest) (ImageResult, error){
-			p.geminiGenerateContentImage,
-			p.geminiPredictImage,
-		}
+		return p.geminiGenerateContentImage(ctx, req)
+	default:
+		return ImageResult{}, errors.New("unsupported Gemini image protocol mode")
 	}
-
-	var firstErr error
-	for i, strategy := range strategies {
-		if res, err := strategy(ctx, req); err == nil && len(res.Data) > 0 {
-			return res, nil
-		} else if err != nil && i == 0 {
-			firstErr = err
-		}
-	}
-
-	if firstErr != nil {
-		return ImageResult{}, fmt.Errorf("gemini image generation failed: %w", firstErr)
-	}
-	return ImageResult{}, errors.New("Gemini response did not contain a valid image")
 }
 
 func (p *HTTPProvider) geminiPredictImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
