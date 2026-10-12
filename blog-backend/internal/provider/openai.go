@@ -492,7 +492,8 @@ func (p *HTTPProvider) openAIGenerateImage(ctx context.Context, req ImageRequest
 
 func (p *HTTPProvider) openAIChatCompletionsImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
 	stream := p.streamMode != "never"
-	resp, err := p.do(ctx, "/v1/chat/completions", map[string]any{
+	headers := p.officialOpenAIClientRequestHeaders(req.ClientRequestID)
+	resp, err := p.doWithHeaders(ctx, "/v1/chat/completions", map[string]any{
 		"model":  p.model,
 		"stream": stream,
 		"messages": []map[string]any{
@@ -501,17 +502,22 @@ func (p *HTTPProvider) openAIChatCompletionsImage(ctx context.Context, req Image
 				"content": req.Prompt,
 			},
 		},
-	})
+	}, headers)
 	if err != nil {
 		return ImageResult{}, err
 	}
 	defer resp.Body.Close()
-	return decodeOpenAIImageResponse(resp)
+	result, err := decodeOpenAIImageResponse(resp)
+	if err == nil {
+		result.Evidence = p.responseEvidence(resp, len(headers) > 0)
+	}
+	return result, err
 }
 
 func (p *HTTPProvider) openAIResponsesImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
 	stream := p.streamMode != "never"
-	resp, err := p.do(ctx, "/v1/responses", map[string]any{
+	headers := p.officialOpenAIClientRequestHeaders(req.ClientRequestID)
+	resp, err := p.doWithHeaders(ctx, "/v1/responses", map[string]any{
 		"model":  p.model,
 		"stream": stream,
 		"input": []map[string]any{
@@ -524,12 +530,16 @@ func (p *HTTPProvider) openAIResponsesImage(ctx context.Context, req ImageReques
 		},
 		"tools":       []map[string]any{{"type": "image_generation"}},
 		"tool_choice": map[string]any{"type": "image_generation"},
-	})
+	}, headers)
 	if err != nil {
 		return ImageResult{}, err
 	}
 	defer resp.Body.Close()
-	return decodeOpenAIImageResponse(resp)
+	result, err := decodeOpenAIImageResponse(resp)
+	if err == nil {
+		result.Evidence = p.responseEvidence(resp, len(headers) > 0)
+	}
+	return result, err
 }
 
 type openAIImageResponse struct {
