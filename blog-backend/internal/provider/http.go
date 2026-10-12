@@ -25,6 +25,28 @@ type upstreamHTTPError struct {
 	Provider   string
 	StatusCode int
 	Body       string
+	Evidence   RequestEvidence
+}
+
+type upstreamTransportError struct {
+	Provider string
+	Cause    error
+	Evidence RequestEvidence
+}
+
+func (e *upstreamTransportError) Error() string { return e.Cause.Error() }
+func (e *upstreamTransportError) Unwrap() error { return e.Cause }
+
+func RequestEvidenceFromError(err error) RequestEvidence {
+	var httpErr *upstreamHTTPError
+	if errors.As(err, &httpErr) {
+		return httpErr.Evidence
+	}
+	var transportErr *upstreamTransportError
+	if errors.As(err, &transportErr) {
+		return transportErr.Evidence
+	}
+	return RequestEvidence{}
 }
 
 func (e *upstreamHTTPError) Error() string {
@@ -80,6 +102,17 @@ func NewHTTPProviderWithVendorConfig(name, vendor, baseURL, key, model, protocol
 	if name != "openai" && name != "anthropic" && name != "gemini" {
 		return nil, fmt.Errorf("unsupported provider %q", name)
 	}
+	vendor = strings.ToLower(strings.TrimSpace(vendor))
+	if vendor == "" {
+		switch name {
+		case "openai":
+			vendor = "openai"
+		case "anthropic":
+			vendor = "anthropic"
+		case "gemini":
+			vendor = "google"
+		}
+	}
 	if err := ValidateUpstreamURL(context.Background(), baseURL, allowedHosts); err != nil {
 		return nil, fmt.Errorf("%s: %w", name, err)
 	}
@@ -90,7 +123,7 @@ func NewHTTPProviderWithVendorConfig(name, vendor, baseURL, key, model, protocol
 		streamMode = "auto"
 	}
 	return &HTTPProvider{
-		name: name, vendor: strings.ToLower(strings.TrimSpace(vendor)),
+		name: name, vendor: vendor,
 		baseURL: strings.TrimRight(baseURL, "/"), key: key, model: model,
 		protocolMode: protocolMode, streamMode: streamMode,
 		client: &http.Client{
@@ -293,6 +326,44 @@ func resolveProviderTargetURL(providerName, vendor, baseURL, endpointPath string
 }
 
 func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Response, error) {
+	return p.doWithHeaders(ctx, path, body, nil)
+}
+
+func (p *HTTPProvider) responseEvidence(resp *http.Response, clientRequestIDSent bool) RequestEvidence {
+	evidence := RequestEvidence{ClientRequestIDSent: clientRequestIDSent}
+	if resp == nil {
+		return evidence
+	}
+	switch p.vendor {
+	case "openai":
+		evidence.RequestID = strings.TrimSpace(resp.Header.Get("x-request-id"))
+		evidence.AccountID = strings.TrimSpace(resp.Header.Get("openai-organization"))
+	case "anthropic":
+		evidence.RequestID = strings.TrimSpace(resp.Header.Get("request-id"))
+		evidence.AccountID = strings.TrimSpace(resp.Header.Get("anthropic-organization-id"))
+		evidence.WorkspaceID = strings.TrimSpace(resp.Header.Get("anthropic-workspace-id"))
+	}
+	return evidence
+}
+
+func (p *HTTPProvider) officialOpenAIClientRequestHeaders(clientRequestID string) map[string]string {
+	clientRequestID = strings.TrimSpace(clientRequestID)
+	if p == nil || p.vendor != "openai" || clientRequestID == "" || len(clientRequestID) > 512 {
+		return nil
+	}
+	parsed, err := url.Parse(p.baseURL)
+	if err != nil || !strings.EqualFold(parsed.Hostname(), "api.openai.com") {
+		return nil
+	}
+	for _, r := range clientRequestID {
+		if r < 0x20 || r > 0x7e {
+			return nil
+		}
+	}
+	return map[string]string{"X-Client-Request-Id": clientRequestID}
+}
+
+func (p *HTTPProvider) doWithHeaders(ctx context.Context, path string, body any, extraHeaders map[string]string) (*http.Response, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
@@ -311,15 +382,37 @@ func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Res
 		req.Header.Set("x-api-key", p.key)
 		req.Header.Set("anthropic-version", "2023-06-01")
 	}
+	for key, value := range extraHeaders {
+		if strings.TrimSpace(key) != "" && strings.TrimSpace(value) != "" {
+			req.Header.Set(key, value)
+		}
+	}
+	clientRequestIDSent := strings.TrimSpace(req.Header.Get("X-Client-Request-Id")) != ""
 	resp, err := p.client.Do(req)
 	if err != nil {
+		if clientRequestIDSent {
+			return nil, &upstreamTransportError{
+				Provider: p.name, Cause: err,
+				Evidence: RequestEvidence{ClientRequestIDSent: true},
+			}
+		}
 		return nil, err
 	}
+	evidence := p.responseEvidence(resp, clientRequestIDSent)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		defer resp.Body.Close()
 		limited, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		bodyText := strings.TrimSpace(string(limited))
+		if evidence.RequestID == "" && p.vendor == "anthropic" {
+			var decoded struct {
+				RequestID string `json:"request_id"`
+			}
+			if json.Unmarshal(limited, &decoded) == nil {
+				evidence.RequestID = strings.TrimSpace(decoded.RequestID)
+			}
+		}
 		return nil, &upstreamHTTPError{
-			Provider: p.name, StatusCode: resp.StatusCode, Body: strings.TrimSpace(string(limited)),
+			Provider: p.name, StatusCode: resp.StatusCode, Body: bodyText, Evidence: evidence,
 		}
 	}
 	return resp, nil
