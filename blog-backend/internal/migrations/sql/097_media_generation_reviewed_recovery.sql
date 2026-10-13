@@ -22,3 +22,24 @@ CREATE TABLE ai_media_generation_recovery_decisions (
 -- transition; future readers may use this index to inspect an operator's work.
 CREATE INDEX idx_ai_media_generation_recovery_reviewer
     ON ai_media_generation_recovery_decisions (reviewed_by_principal_id, reviewed_at DESC);
+
+
+-- Operator decisions are append-only under normal application DB privileges.
+-- Deliberate retention/deletion migrations require a separately reviewed
+-- schema change; a runtime UPDATE/DELETE/TRUNCATE must never erase evidence.
+CREATE FUNCTION prevent_media_generation_recovery_audit_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'media generation recovery decision history is append-only';
+END;
+$$;
+
+CREATE TRIGGER trg_media_recovery_no_update_delete
+    BEFORE UPDATE OR DELETE ON ai_media_generation_recovery_decisions
+    FOR EACH ROW EXECUTE FUNCTION prevent_media_generation_recovery_audit_mutation();
+
+CREATE TRIGGER trg_media_recovery_no_truncate
+    BEFORE TRUNCATE ON ai_media_generation_recovery_decisions
+    FOR EACH STATEMENT EXECUTE FUNCTION prevent_media_generation_recovery_audit_mutation();
