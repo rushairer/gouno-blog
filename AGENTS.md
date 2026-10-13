@@ -16,6 +16,7 @@ This document defines the **immutable architectural rules, security baselines, a
 3. **Session & Logout Lifecycle**:
    - Supports local logout, global RP-Initiated logout, and atomic back-channel logout claim handling.
    - Redis session state must strictly prevent resurrection on concurrent refresh/logout.
+   - OIDC Back-Channel Logout returns a stable, non-sensitive HTTP 400 error response for invalid tokens and failed logout, with `Cache-Control: no-store`. Never reflect or log raw token-verifier, Redis, or infrastructure error strings; classify trusted failures with `errors.Is` and retain the original cause only inside trusted Go error chains.
 4. **Agent Approval Commit Uncertainty**:
    - Once an approval has been durably claimed as `approved`, errors may occur after business effects commit. Never auto-retry that approval ID or mark an uncertain execution `failed` to enable replay.
    - Historical `failed` approvals are not eligible for automatic reviewer retry. Reconciliation must never overwrite in-flight `approved` rows.
