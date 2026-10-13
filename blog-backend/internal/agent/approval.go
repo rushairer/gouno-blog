@@ -178,10 +178,37 @@ func validateMediaCandidateSelections(available []*domain.MediaCandidate, select
 }
 
 func (s *ApprovalService) CancelMediaGeneration(ctx context.Context, id int64) error {
+	if s.mediaGeneration == nil || id <= 0 {
+		return ErrInvalid
+	}
 	if err := s.mediaGeneration.CancelMediaGeneration(ctx, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrApprovalConflict
+		}
 		return err
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_cancelled", map[string]any{})
+	return nil
+}
+
+// ReleaseMediaGenerationAfterVerifiedReview is a privileged, explicit human
+// decision. It never invokes a model, unlocks a lease automatically, or
+// replays a Provider request. An exact-attempt CAS and independent audit
+// must commit together before a future *separate* human request may generate.
+func (s *ApprovalService) ReleaseMediaGenerationAfterVerifiedReview(ctx context.Context, decision domain.MediaGenerationRecoveryDecision) error {
+	if s.mediaGeneration == nil || decision.CandidateID <= 0 || decision.GenerationAttempt <= 0 ||
+		decision.ReviewerPrincipalID <= 0 || !decision.VerifiedProviderOutcome ||
+		!decision.VerifiedObjectStorage || !decision.AcknowledgedPossibleBilling {
+		return ErrInvalid
+	}
+	if err := s.mediaGeneration.ReleaseMediaGenerationAfterVerifiedReview(ctx, &decision); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrApprovalConflict
+		}
+		return err
+	}
+	s.appendCandidateEvent(ctx, decision.CandidateID, "image_generation_manual_recovery_reviewed",
+		map[string]any{"attempt": decision.GenerationAttempt, "reviewer_principal_id": decision.ReviewerPrincipalID})
 	return nil
 }
 
