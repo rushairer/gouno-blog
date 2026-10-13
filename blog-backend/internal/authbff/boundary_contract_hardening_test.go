@@ -214,3 +214,76 @@ func TestBFFCookiesAreHostOnlySecureAndHTTPOnly(t *testing.T) {
 		})
 	}
 }
+
+
+func TestLogoutNeverReportsSuccessWhenGlobalLogoutStateCannotBeCreated(t *testing.T) {
+	client, store := testBFFClientWithStore(t)
+	ctx := context.Background()
+	handle := "logout-global-error"
+	session := Session{
+		Issuer: client.config.Issuer, Subject: "subject-1",
+		IDToken: "private-id-token", CreatedAt: time.Now(),
+		TokenExpiry: time.Now().Add(time.Hour),
+	}
+	if err := store.PutSession(ctx, handle, session, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	// A syntactically invalid endpoint exercises the same fail-closed handler
+	// decision as an unacknowledged logout-state persistence. Production OIDC
+	// discovery separately validates its endpoint before accepting it.
+	client.endSession = ":%INVALID-UPSTREAM-ENDPOINT"
+	router := gin.New()
+	client.RegisterRoutes(router)
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/logout?redirect=true", nil)
+	req.AddCookie(&http.Cookie{Name: client.config.SessionCookie, Value: handle})
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("uninitialized global logout was reported as success: %d %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "INVALID-UPSTREAM-ENDPOINT") ||
+		!strings.Contains(rec.Body.String(), "unable to initialize global logout") ||
+		rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("global logout failure leaked endpoint or lost no-store: %#v %s", rec.Header(), rec.Body.String())
+	}
+	cookies := rec.Result().Cookies()
+	if len(cookies) == 0 || cookies[0].Name != client.config.SessionCookie ||
+		cookies[0].MaxAge >= 0 || !cookies[0].Secure || !cookies[0].HttpOnly {
+		t.Fatalf("failed global logout did not clear local browser cookie: %#v", cookies)
+	}
+	if _, err := store.GetSession(ctx, handle); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("failed global logout unexpectedly retained local session: %v", err)
+	}
+}
+
+func TestCallbackErrorDoesNotReflectProviderControlledDetails(t *testing.T) {
+	client, store := testBFFClientWithStore(t)
+	ctx := context.Background()
+	handle := "provider-error-callback-flow"
+	flow := AuthorizationFlow{
+		State: "known-state", Nonce: "known-nonce", PKCEVerifier: "private-verifier",
+		Purpose: "login", ReturnTo: "/admin", CreatedAt: time.Now(),
+	}
+	if err := store.PutFlow(ctx, handle, flow, time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	router := gin.New()
+	client.RegisterRoutes(router)
+	const marker = "PRIVATE-PROVIDER-ERROR-OR-KEY"
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/auth/callback?state=known-state&error="+url.QueryEscape(marker), nil)
+	req.AddCookie(&http.Cookie{Name: client.config.FlowCookie, Value: handle})
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest || strings.Contains(rec.Body.String(), marker) ||
+		strings.Contains(rec.Body.String(), flow.PKCEVerifier) ||
+		!strings.Contains(rec.Body.String(), "login callback validation failed") {
+		t.Fatalf("unsanitized OAuth callback error: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatal("callback error is cacheable")
+	}
+	if _, err := store.TakeFlow(ctx, handle); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("provider-error flow could be replayed: %v", err)
+	}
+}
