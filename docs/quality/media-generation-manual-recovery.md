@@ -35,7 +35,7 @@ Content-Type: application/json
 
 仅 Blog 本地具备 `ManageAI` **且同时**具备 `ManageSite` 权限的人员可以操作，并继承 AAL2、近期 MFA 和敏感操作日志保护。调用者身份来自受信任的 Blog 会话，不接受自报 reviewer ID。
 
-控制器不调用 Provider。Repository 在五秒内进行一个短事务，以 `candidate_id + generation_attempt + outcome_uncertain`（或需复核的历史 `failed/cancelled`）和未存在旧决策作为谓词，原子将任务改为 `cancelled/manual_recovery_reviewed` 并插入 `ai_media_generation_recovery_decisions`。只有 `generating` 且已标记不确定、报告超期的任务可走当前生成尝试核验；普通到期但未标记不确定的在途任务不能被悄悄解除。
+控制器不调用 Provider。Repository 在五秒内进行一个短事务，以 `candidate_id + generation_attempt + outcome_uncertain`（或需复核的历史 `failed/cancelled`）和未存在旧决策作为谓词，原子将任务改为 `ready_to_generate/manual_recovery_reviewed` 并插入 `ai_media_generation_recovery_decisions`。只有 `generating` 且已标记不确定、报告超期的任务可走当前生成尝试核验；普通到期但未标记不确定的在途任务不能被悄悄解除。
 
 决策表是**独立、保留、追加写入**的事实记录：唯一 `(candidate_id,generation_attempt)`，存 reviewer、凭证引用与确认项；数据库触发器拒绝 UPDATE / DELETE / TRUNCATE。旧版本历史不补造决策，候选删除也不会级联删除这些记录。重复提交、错位尝试、并发审核人或事务提交确认丢失，不得出现第二份决策或覆盖较新的尝试；CAS 不匹配返回 409 冲突。
 
