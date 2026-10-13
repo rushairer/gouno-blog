@@ -196,9 +196,7 @@ func (s *ApprovalService) CancelMediaGeneration(ctx context.Context, id int64) e
 // replays a Provider request. An exact-attempt CAS and independent audit
 // must commit together before a future *separate* human request may generate.
 func (s *ApprovalService) ReleaseMediaGenerationAfterVerifiedReview(ctx context.Context, decision domain.MediaGenerationRecoveryDecision) error {
-	if s.mediaGeneration == nil || decision.CandidateID <= 0 || decision.GenerationAttempt <= 0 ||
-		decision.ReviewerPrincipalID <= 0 || !decision.VerifiedProviderOutcome ||
-		!decision.VerifiedObjectStorage || !decision.AcknowledgedPossibleBilling {
+	if s.mediaGeneration == nil || !domain.ValidMediaGenerationRecoveryEvidence(&decision) {
 		return ErrInvalid
 	}
 	if err := s.mediaGeneration.ReleaseMediaGenerationAfterVerifiedReview(ctx, &decision); err != nil {
