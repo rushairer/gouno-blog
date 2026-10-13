@@ -14,8 +14,9 @@ import (
 func TestBackchannelLogoutFailureNeverLeaksVerifierOrStoreErrors(t *testing.T) {
 	const marker = "private-upstream-jwt-redis-sentinel"
 	cases := []struct {
-		name, expectedDescription string
-		err                       error
+		name                string
+		err                 error
+		expectedDescription string
 	}{
 		{"untrusted-token", errors.New("verify logout token: " + marker), "invalid logout token"},
 		{"redis-claim-failed", errors.Join(ErrBackchannelStoreFailure, errors.New(marker)), "logout request could not be completed"},
