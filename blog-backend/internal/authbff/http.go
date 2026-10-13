@@ -234,10 +234,30 @@ func (c *Client) backchannelLogoutHandler(ctx *gin.Context) {
 		return
 	}
 	if err := c.BackChannelLogout(ctx.Request.Context(), logoutToken); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "error_description": err.Error()})
+		writeBackchannelLogoutFailure(ctx, err)
 		return
 	}
 	ctx.Status(http.StatusOK)
+}
+
+// OIDC Back-Channel Logout 1.0 requires HTTP 400 for invalid requests and
+// failed logout. Do not reflect JWT validation, Redis, or session errors.
+// In particular, wrapped storage errors can contain infrastructure details.
+func writeBackchannelLogoutFailure(ctx *gin.Context, err error) {
+	description := "invalid logout token"
+	if errors.Is(err, ErrBackchannelStoreFailure) || errors.Is(err, ErrBackchannelInProgress) {
+		description = "logout request could not be completed"
+		if errors.Is(err, ErrBackchannelStoreFailure) {
+			// Emit only a fixed internal event: raw wrapped errors can contain
+			// Redis endpoints or other secrets and are not safe log material.
+			log.Print("[authbff] back-channel logout persistence failure")
+		}
+	}
+	ctx.Header("Cache-Control", "no-store")
+	ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+		"error":             "invalid_request",
+		"error_description": description,
+	})
 }
 
 func (c *Client) stepUpMfaHandler(ctx *gin.Context) {
