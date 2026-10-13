@@ -92,6 +92,9 @@ func (s *mediaGenerationFailureStub) CompleteMediaGeneration(context.Context, in
 func (s *mediaGenerationFailureStub) CancelMediaGeneration(context.Context, int64) error {
 	return errors.New("unused")
 }
+func (s *mediaGenerationFailureStub) ReleaseMediaGenerationAfterVerifiedReview(context.Context, *domain.MediaGenerationRecoveryDecision) error {
+	return errors.New("unused")
+}
 func (s *mediaGenerationFailureStub) ListMediaGenerationReconciliation(context.Context, int) ([]*domain.MediaGenerationReconciliation, error) {
 	return nil, errors.New("unused")
 }
