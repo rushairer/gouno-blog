@@ -37,6 +37,46 @@ func (ctrl *Controller) ListMediaGenerationReconciliation(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
+// ReleaseUncertainImageTask records an independently reviewed resolution,
+// never retries the Provider itself. Router middleware additionally requires
+// ManageSite permission on top of AI Manage + AAL2 + recent MFA. An evidence
+// reference is an opaque ticket identifier, not raw provider/account secrets.
+func (ctrl *Controller) ReleaseUncertainImageTask(c *gin.Context) {
+	id, ok := controllerutil.ParamPositiveID(c, "id")
+	if !ok {
+		return
+	}
+	var req struct {
+		ExpectedGenerationAttempt int    `json:"expected_generation_attempt" binding:"required,min=1"`
+		EvidenceReference         string `json:"evidence_reference" binding:"required"`
+		VerifiedProviderOutcome   bool   `json:"verified_provider_outcome" binding:"required"`
+		VerifiedObjectStorage     bool   `json:"verified_object_storage" binding:"required"`
+		AcknowledgedPossibleBilling bool `json:"acknowledged_possible_billing" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid manual recovery evidence"))
+		return
+	}
+	reviewerID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
+	}
+	decision := domain.MediaGenerationRecoveryDecision{
+		CandidateID: id, GenerationAttempt: req.ExpectedGenerationAttempt,
+		ReviewerPrincipalID: reviewerID, EvidenceReference: strings.TrimSpace(req.EvidenceReference),
+		VerifiedProviderOutcome: req.VerifiedProviderOutcome,
+		VerifiedObjectStorage: req.VerifiedObjectStorage,
+		AcknowledgedPossibleBilling: req.AcknowledgedPossibleBilling,
+	}
+	if err := ctrl.approvals.ReleaseMediaGenerationAfterVerifiedReview(c.Request.Context(), decision); err != nil {
+		controllerutil.WriteDomainError(c, err)
+		return
+	}
+	ctrl.reconcileCandidateWorkflow(c, id)
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *Controller) ReviewMediaCandidate(c *gin.Context) {
 	id, ok := controllerutil.ParamPositiveID(c, "id")
 	if !ok {
