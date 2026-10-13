@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,6 +18,32 @@ type Controller struct{ service *access.Service }
 
 func New(service *access.Service) *Controller {
 	return &Controller{service: service}
+}
+
+// Access mutation errors are classified by typed domain sentinels, never by
+// relaying err.Error(). In particular, PostgreSQL or authorization audit errors
+// must not become HTTP 400/403 text with internal SQL details.
+func writeAccessMutationError(c *gin.Context, err error) {
+	status := http.StatusForbidden
+	message := "forbidden"
+	switch {
+	case errors.Is(err, access.ErrForbidden):
+	case errors.Is(err, access.ErrOwnerOnly):
+		message = "owner role changes require an owner"
+	case errors.Is(err, access.ErrSelfEscalation):
+		message = "cannot grant owner to yourself"
+	case errors.Is(err, access.ErrLastOwner):
+		message = "cannot remove the last owner"
+	case errors.Is(err, access.ErrInvalidMemberStatus), errors.Is(err, access.ErrInvalidMemberRole):
+		status, message = http.StatusBadRequest, "invalid membership request"
+	case errors.Is(err, access.ErrOwnerTargetNotActive):
+		status, message = http.StatusBadRequest, "target must be an active member"
+	default:
+		controllerutil.WriteDomainError(c, err)
+		return
+	}
+	c.JSON(status, gouno.NewErrorResponse(status, message))
+	c.Abort()
 }
 
 func (ctrl *Controller) Session(c *gin.Context) {
@@ -76,11 +103,7 @@ func (ctrl *Controller) UpdateMember(c *gin.Context) {
 		return
 	}
 	if err = ctrl.service.SetMember(c.Request.Context(), actor, principalID, req.DisplayName, req.Status, req.Roles, req.Reason, c.GetHeader("X-Request-ID"), c.ClientIP()); err != nil {
-		status := http.StatusBadRequest
-		if err == access.ErrForbidden || err == access.ErrOwnerOnly || err == access.ErrSelfEscalation || err == access.ErrLastOwner {
-			status = http.StatusForbidden
-		}
-		c.JSON(status, gouno.NewErrorResponse(status, err.Error()))
+		writeAccessMutationError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"updated": true}))
@@ -109,7 +132,7 @@ func (ctrl *Controller) TransferOwner(c *gin.Context) {
 		return
 	}
 	if err = ctrl.service.TransferOwner(c.Request.Context(), actor, principalID, req.Reason, c.GetHeader("X-Request-ID"), c.ClientIP()); err != nil {
-		c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, err.Error()))
+		writeAccessMutationError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"transferred": true}))
