@@ -141,9 +141,10 @@ func TestUncertainMediaGenerationRemainsUnclaimableAndFenced(t *testing.T) {
 		}
 	}
 	if !found { t.Fatal("uncertain attempt missing from operator report") }
-	// An explicit admin cancellation can fence off the old attempt; automatic
-	// reclamation is still forbidden. A new claim is a separate human action.
-	if err := repo.CancelMediaGeneration(ctx, id); err != nil { t.Fatal(err) }
+	// The old attempt can only be released after separate Provider/storage
+	// verification and an atomic, durable operator decision. Mere cancel is
+	// forbidden; a new claim remains a separate human action.
+	releaseGenerationAfterTestReview(t, repo, claim, f.principal)
 	second, err := repo.ClaimMediaGeneration(ctx, id)
 	if err != nil { t.Fatal(err) }
 	if second.GenerationAttempt != claim.GenerationAttempt+1 { t.Fatal("attempt did not advance") }
