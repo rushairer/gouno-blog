@@ -18,6 +18,8 @@ This document defines the **immutable architectural rules, security baselines, a
    - Never echo raw `err.Error()` from privileged membership or Owner-transfer service failures. Classify only typed, fixed safe domain errors as HTTP 400/403; unexpected storage failures remain 5xx with trusted server logging, not a fabricated 403.
 3. **Session & Logout Lifecycle**:
    - Supports local logout, global RP-Initiated logout, and atomic back-channel logout claim handling.
+   - Every RP-Initiated logout URL **must use only the exact configured, registered Blog-origin `/api/auth/logout/callback` URI**, even if a caller supplies a different Blog-local destination. Do not send relative/unregistered destinations to the identity provider, or invent server-side destination tracking that does not exist. A valid logout callback state is single-use. If logout-state setup fails, HTTP must not report that global logout succeeded; clear the local cookie and report a fixed safe error.
+   - Interactive OIDC callback failure logs must be fixed, non-sensitive events. Never include user-controlled OAuth `error` values, decoded token/verifier errors, Redis/storage cause strings, private endpoint details or credentials in HTTP bodies or callback logs.
    - Redis session state must strictly prevent resurrection on concurrent refresh/logout.
    - OIDC Back-Channel Logout returns a stable, non-sensitive HTTP 400 error response for invalid tokens and failed logout, with `Cache-Control: no-store`. Never reflect or log raw token-verifier, Redis, or infrastructure error strings; classify trusted failures with `errors.Is` and retain the original cause only inside trusted Go error chains.
 4. **Agent Approval Commit Uncertainty**:

@@ -112,7 +112,7 @@ func (c *Client) callbackHandler(ctx *gin.Context) {
 	}
 	sessionHandle, session, returnTo, err := c.Complete(ctx.Request.Context(), handle, ctx.Request.URL.Query())
 	if err != nil {
-		log.Printf("[authbff] login callback validation failed: %v", err)
+		log.Print("[authbff] login callback validation failed")
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "login callback validation failed"})
 		return
 	}
@@ -123,7 +123,7 @@ func (c *Client) callbackHandler(ctx *gin.Context) {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "recent multi-factor authentication required"})
 			return
 		}
-		log.Printf("[authbff] persist recent MFA evidence failed: %v", err)
+		log.Print("[authbff] recent MFA evidence persistence failed")
 		ctx.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "unable to establish login session"})
 		return
 	}
@@ -212,10 +212,16 @@ func (c *Client) logoutHandler(ctx *gin.Context) {
 		return
 	}
 
-	// The OP only receives the single exact, registered callback URI. Any
-	// desired Blog-local destination is stored with the logout state rather than
-	// being forwarded as an unregistered relative URI.
-	logoutURL, _ := c.LogoutURL(ctx.Request.Context(), session, "")
+	// The OP only receives the single exact, registered callback URI. A
+	// different Blog-local destination is not supported until it is bound to
+	// and consumed through separate server-side logout state.
+	logoutURL, err := c.LogoutURL(ctx.Request.Context(), session, "")
+	if err != nil {
+		// The local session has been removed, but global/RP-initiated logout
+		// could not be initialized. Never report this as a completed logout.
+		ctx.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "unable to initialize global logout"})
+		return
+	}
 	if ctx.Query("redirect") == "true" && logoutURL != "" {
 		ctx.Redirect(http.StatusFound, logoutURL)
 		return
