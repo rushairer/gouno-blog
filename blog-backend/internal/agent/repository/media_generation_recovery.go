@@ -37,7 +37,7 @@ func (r *MediaCandidateRepository) ReleaseMediaGenerationAfterVerifiedReview(ctx
 	// historical failed/cancelled attempts require the same human decision
 	// before becoming retryable, since their upstream outcome is unknown.
 	res, err := tx.ExecContext(writeCtx, `UPDATE ai_media_candidates
-		SET generation_status='cancelled', cancelled_at=NOW(),
+		SET generation_status='ready_to_generate', cancelled_at=NULL,
 		    error_code='manual_recovery_reviewed',
 		    error_message='generation released only after independent operator review'
 		WHERE id=$1 AND generation_attempt=$2 AND generation_attempt>0
