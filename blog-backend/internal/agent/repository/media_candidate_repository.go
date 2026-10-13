@@ -229,7 +229,16 @@ func (r *MediaCandidateRepository) AttachMediaAsset(ctx context.Context, candida
 func (r *MediaCandidateRepository) ClaimMediaGeneration(ctx context.Context, id int64) (*domain.MediaCandidate, error) {
 	var item domain.MediaCandidate
 	err := r.db.QueryRowContext(ctx, `UPDATE ai_media_candidates SET generation_status='generating',generation_attempt=generation_attempt+1,error_code=NULL,error_message=NULL,generation_started_at=NOW(),generation_deadline_at=NOW()+INTERVAL '15 minutes',cancelled_at=NULL
-		WHERE id=$1 AND generation_status IN ('brief_ready','ready_to_generate','failed','cancelled')
+		WHERE id=$1 AND (
+		    generation_status IN ('brief_ready','ready_to_generate')
+		    OR (generation_status IN ('failed','cancelled') AND (
+		       generation_attempt=0 OR EXISTS (
+		         SELECT 1 FROM ai_media_generation_recovery_decisions d
+		         WHERE d.candidate_id=ai_media_candidates.id
+		           AND d.generation_attempt=ai_media_candidates.generation_attempt
+		       )
+		    ))
+		)
 		RETURNING id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
 		generation_status,safety_status,copyright_status,alt_text,reviewed_by_principal_id,review_note,reviewed_at,created_at,generation_attempt,regeneration_instruction`, id).Scan(
 		&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline, &item.Brief, &item.Platform,
@@ -286,9 +295,13 @@ func (r *MediaCandidateRepository) RecordMediaGenerationError(ctx context.Contex
 	return &value, nil
 }
 
+// Direct cancellation is only safe before a generation attempt has been
+// claimed. A generating/uncertain attempt may have reached a billable Provider:
+// it must be independently reviewed and released through the audited recovery
+// path, never by this broad legacy cancellation endpoint.
 func (r *MediaCandidateRepository) CancelMediaGeneration(ctx context.Context, candidateID int64) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='cancelled',cancelled_at=NOW(),error_code='cancelled',error_message='generation cancelled by administrator'
-		WHERE id=$1 AND generation_status IN ('ready_to_generate','generating')`, candidateID)
+		WHERE id=$1 AND generation_status='ready_to_generate' AND generation_attempt=0`, candidateID)
 	if err != nil {
 		return err
 	}
