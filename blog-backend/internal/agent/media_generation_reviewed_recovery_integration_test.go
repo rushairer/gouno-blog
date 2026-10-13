@@ -92,7 +92,7 @@ func TestUncertainGenerationCannotBeCancelledOrReclaimedWithoutReviewedDecision(
 		t.Fatal(err)
 	}
 	if count != 1 || actor != f.principal || evidence != reviewedGenerationEvidenceReference ||
-		status != "cancelled" || attempt != first.GenerationAttempt {
+		status != "ready_to_generate" || attempt != first.GenerationAttempt {
 		t.Fatalf("recovery state/audit mismatch: count=%d actor=%d evidence=%q state=%s/%d",
 			count, actor, evidence, status, attempt)
 	}
