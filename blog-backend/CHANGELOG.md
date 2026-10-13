@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Require independently reviewed, exact-attempt, append-only PostgreSQL audit before AI image candidates can be retried after a claimed/uncertain generation; block ordinary cancellation of active claims, and expose site-admin/AAL2/recent-MFA protected manual resolution with bounded non-secret evidence, no Provider replay or automatic media cleanup.
 - Capture bounded upstream request/account correlation evidence for governed image attempts: OpenAI request/organization IDs, Anthropic request/organization/workspace IDs, and Gemini GenerateContent response IDs when returned. Forward the local dispatch ID as `X-Client-Request-Id` only to the official OpenAI API host; do not treat any captured identifier as a generic idempotency key or retry permission.
 - Persist bounded, non-secret Provider profile/configuration and local dispatch evidence for governed image attempts; persist an exact object locator before object-store mutation so ACK-loss cases remain independently traceable without enabling replay or cleanup.
 - Select exactly one Gemini image endpoint before dispatch and remove error-driven `predict`/GenerateContent fallback; model-based auto selection is pre-dispatch only, with real HTTP request-count regressions.
