@@ -36,6 +36,9 @@ var ErrLastOwner = errors.New("cannot remove the last owner")
 var ErrOwnerOnly = errors.New("owner role changes require an owner")
 var ErrSelfEscalation = errors.New("cannot grant owner to yourself")
 var ErrIdentityAliasConflict = errors.New("identity alias is already bound to a different principal")
+var ErrInvalidMemberStatus = errors.New("invalid membership status")
+var ErrInvalidMemberRole = errors.New("invalid role")
+var ErrOwnerTargetNotActive = errors.New("target must be an active member")
 
 type Bootstrap struct {
 	Issuer, Subject string
@@ -442,13 +445,13 @@ func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int
 		return ErrForbidden
 	}
 	if status != "active" && status != "suspended" && status != "removed" {
-		return fmt.Errorf("invalid membership status")
+		return ErrInvalidMemberStatus
 	}
 	valid := map[string]bool{RoleOwner: true, RoleAdmin: true, RoleEditor: true, RoleAuthor: true, RoleModerator: true}
 	seen := map[string]bool{}
 	for _, role := range roles {
 		if !valid[role] || seen[role] {
-			return fmt.Errorf("invalid role")
+			return ErrInvalidMemberRole
 		}
 		seen[role] = true
 	}
@@ -459,21 +462,38 @@ func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int
 	}
 	defer tx.Rollback()
 
-	// Transaction-level advisory lock to serialize authorization changes
-	_, _ = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext('blog_authorization_lock'))`)
-
-	if displayName != nil {
-		if _, err = tx.ExecContext(ctx, `UPDATE blog_principals SET display_name=$2 WHERE id=$1`, principalID, strings.TrimSpace(*displayName)); err != nil {
-			return err
-		}
+	// Serialize authorization updates. The actor snapshot is only a request-time
+	// observation: re-check the live membership/roles under the same lock.
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext('blog_authorization_lock'))`); err != nil {
+		return err
+	}
+	var actorStatus string
+	var currentActorRoles pq.StringArray
+	err = tx.QueryRowContext(ctx, `SELECT m.status,
+		COALESCE(array_agg(b.role) FILTER (WHERE b.role IS NOT NULL),'{}')
+		FROM blog_memberships m LEFT JOIN blog_role_bindings b ON b.membership_id=m.id
+		WHERE m.principal_id=$1 GROUP BY m.id`, actor.Principal.ID).
+		Scan(&actorStatus, &currentActorRoles)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrForbidden
+	}
+	if err != nil {
+		return err
+	}
+	isCurrentOwner := has([]string(currentActorRoles), RoleOwner)
+	if actorStatus != "active" || (!isCurrentOwner && !has([]string(currentActorRoles), RoleAdmin)) {
+		return ErrForbidden
 	}
 
+	// No business writes are allowed before the Owner authorization decision.
+	// A denied action may commit a denial audit, but never a display name,
+	// newly created membership or role mutation.
 	var previousRoles pq.StringArray
 	var previousStatus string
 	var membershipID int64
 	err = tx.QueryRowContext(ctx, `SELECT m.id,m.status,COALESCE(array_agg(b.role) FILTER (WHERE b.role IS NOT NULL),'{}') FROM blog_memberships m LEFT JOIN blog_role_bindings b ON b.membership_id=m.id WHERE m.principal_id=$1 GROUP BY m.id`, principalID).Scan(&membershipID, &previousStatus, &previousRoles)
-	if err == sql.ErrNoRows {
-		err = tx.QueryRowContext(ctx, `INSERT INTO blog_memberships(principal_id,status) VALUES($1,$2) RETURNING id`, principalID, status).Scan(&membershipID)
+	if errors.Is(err, sql.ErrNoRows) {
+		membershipID = 0
 		previousStatus = ""
 		previousRoles = pq.StringArray{}
 	} else if err != nil {
@@ -484,16 +504,30 @@ func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int
 	willBeOwner := has(roles, RoleOwner)
 
 	// Admin cannot modify any Owner (cannot grant, cannot revoke, cannot suspend/remove/restore an Owner)
-	if (wasOwner || willBeOwner) && !has(actor.Roles, RoleOwner) {
-		_, _ = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits(actor_principal_id,target_principal_id,action,result,reason,request_id,source_ip) VALUES($1,$2,'membership_update_denied','denied',$3,$4,$5)`, actor.Principal.ID, principalID, "owner role changes require an active owner", requestID, sourceIP)
-		_ = tx.Commit()
+	if principalID == actor.Principal.ID && willBeOwner && !isCurrentOwner {
+		return ErrSelfEscalation
+	}
+	if (wasOwner || willBeOwner) && !isCurrentOwner {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits(actor_principal_id,target_principal_id,action,result,reason,request_id,source_ip) VALUES($1,$2,'membership_update_denied','denied',$3,$4,$5)`, actor.Principal.ID, principalID, "owner role changes require an active owner", requestID, sourceIP); err != nil {
+			return err
+		}
+		if err = tx.Commit(); err != nil {
+			return err
+		}
 		return ErrOwnerOnly
 	}
 
-	if principalID == actor.Principal.ID && willBeOwner && !has(actor.Roles, RoleOwner) {
-		return ErrSelfEscalation
+	if displayName != nil {
+		if _, err = tx.ExecContext(ctx, `UPDATE blog_principals SET display_name=$2 WHERE id=$1`, principalID, strings.TrimSpace(*displayName)); err != nil {
+			return err
+		}
 	}
-
+	if membershipID == 0 {
+		err = tx.QueryRowContext(ctx, `INSERT INTO blog_memberships(principal_id,status) VALUES($1,$2) RETURNING id`, principalID, status).Scan(&membershipID)
+		if err != nil {
+			return err
+		}
+	}
 	if _, err = tx.ExecContext(ctx, `UPDATE blog_memberships SET status=$2,authorization_version=authorization_version+1,updated_at=NOW() WHERE id=$1`, membershipID, status); err != nil {
 		return err
 	}
