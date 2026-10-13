@@ -242,6 +242,21 @@ type MediaGenerationAuditEvidence struct {
 	CreatedAt                 time.Time  `json:"created_at"`
 }
 
+// MediaGenerationRecoveryDecision records a human attestation, NOT provider
+// idempotency or verified non-billing. Its immutable database record is created
+// atomically with releasing only one exact previously uncertain attempt.
+// Do not put prompts, tokens, API keys or raw provider error bodies in the
+// evidence reference; it is a short external support/incident reference.
+type MediaGenerationRecoveryDecision struct {
+	CandidateID               int64
+	GenerationAttempt         int
+	ReviewerPrincipalID       int64
+	EvidenceReference         string
+	VerifiedProviderOutcome   bool
+	VerifiedObjectStorage    bool
+	AcknowledgedPossibleBilling bool
+}
+
 type MediaCandidate struct {
 	ID                      int64                       `json:"id"`
 	PostID                  int64                       `json:"post_id"`

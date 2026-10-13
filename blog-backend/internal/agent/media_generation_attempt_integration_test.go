@@ -35,7 +35,7 @@ func TestMediaGenerationAttemptFencesStaleCompletionAndFailure(t *testing.T) {
 	first,err:=repo.ClaimMediaGeneration(ctx,candidate.ID)
 	if err!=nil { t.Fatal(err) }
 	if first.GenerationAttempt<1 { t.Fatalf("first attempt=%d",first.GenerationAttempt) }
-	if err:=repo.CancelMediaGeneration(ctx,candidate.ID);err!=nil {t.Fatal(err)}
+	releaseGenerationAfterTestReview(t, repo, first, f.principal)
 	second,err:=repo.ClaimMediaGeneration(ctx,candidate.ID)
 	if err!=nil {t.Fatal(err)}
 	if second.GenerationAttempt!=first.GenerationAttempt+1 {
