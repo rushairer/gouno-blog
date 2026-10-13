@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Fix a Blog Owner authorization transaction flaw: rejected Admin attempts to change an Owner or grant Owner no longer commit earlier display-name or membership writes along with the denial audit. Re-read live actor roles under the authorization lock, use PostgreSQL-valid row locks for Owner transfer, and refuse stale-Owner mutations after concurrent transfers. Redact privileged HTTP errors using typed domain classifications; test against real PostgreSQL.
 - Require independently reviewed, exact-attempt, append-only PostgreSQL audit before AI image candidates can be retried after a claimed/uncertain generation; block ordinary cancellation of active claims, and expose site-admin/AAL2/recent-MFA protected manual resolution with bounded non-secret evidence, no Provider replay or automatic media cleanup.
 - Capture bounded upstream request/account correlation evidence for governed image attempts: OpenAI request/organization IDs, Anthropic request/organization/workspace IDs, and Gemini GenerateContent response IDs when returned. Forward the local dispatch ID as `X-Client-Request-Id` only to the official OpenAI API host; do not treat any captured identifier as a generic idempotency key or retry permission.
 - Persist bounded, non-secret Provider profile/configuration and local dispatch evidence for governed image attempts; persist an exact object locator before object-store mutation so ACK-loss cases remain independently traceable without enabling replay or cleanup.
