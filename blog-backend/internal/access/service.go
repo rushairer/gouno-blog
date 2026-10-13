@@ -570,21 +570,43 @@ func (s *Service) TransferOwner(ctx context.Context, actor Snapshot, targetPrinc
 	}
 	defer tx.Rollback()
 
-	// Transaction-level advisory lock
-	_, _ = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext('blog_authorization_lock'))`)
+	// Advisory lock serializes owner/member updates and covers the live actor
+	// recheck. PostgreSQL cannot apply FOR UPDATE to a GROUP BY/aggregate query;
+	// lock actual membership rows first, then load their role sets separately.
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext('blog_authorization_lock'))`); err != nil {
+		return err
+	}
 
 	var targetMembership int64
-	var targetRoles pq.StringArray
-	if err = tx.QueryRowContext(ctx, `SELECT m.id, COALESCE(array_agg(b.role) FILTER (WHERE b.role IS NOT NULL),'{}') FROM blog_memberships m LEFT JOIN blog_role_bindings b ON b.membership_id=m.id WHERE m.principal_id=$1 AND m.status='active' GROUP BY m.id FOR UPDATE`, targetPrincipalID).Scan(&targetMembership, &targetRoles); err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("target must be an active member")
+	if err = tx.QueryRowContext(ctx, `SELECT id FROM blog_memberships
+		WHERE principal_id=$1 AND status='active' FOR UPDATE`, targetPrincipalID).Scan(&targetMembership); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrOwnerTargetNotActive
 		}
 		return err
 	}
-	var actorMembership int64
-	var actorRoles pq.StringArray
-	if err = tx.QueryRowContext(ctx, `SELECT m.id, COALESCE(array_agg(b.role) FILTER (WHERE b.role IS NOT NULL),'{}') FROM blog_memberships m LEFT JOIN blog_role_bindings b ON b.membership_id=m.id WHERE m.principal_id=$1 AND m.status='active' GROUP BY m.id FOR UPDATE`, actor.Principal.ID).Scan(&actorMembership, &actorRoles); err != nil {
+	var targetRoles pq.StringArray
+	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(array_agg(role),'{}')
+		FROM blog_role_bindings WHERE membership_id=$1`, targetMembership).Scan(&targetRoles); err != nil {
 		return err
+	}
+	var actorMembership int64
+	if err = tx.QueryRowContext(ctx, `SELECT id FROM blog_memberships
+		WHERE principal_id=$1 AND status='active' FOR UPDATE`, actor.Principal.ID).Scan(&actorMembership); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrOwnerOnly
+		}
+		return err
+	}
+	var actorRoles pq.StringArray
+	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(array_agg(role),'{}')
+		FROM blog_role_bindings WHERE membership_id=$1`, actorMembership).Scan(&actorRoles); err != nil {
+		return err
+	}
+	if !has([]string(actorRoles), RoleOwner) {
+		// An earlier request may have transferred ownership after this request
+		// received its snapshot. A stale Owner snapshot is never authority.
+		return ErrOwnerOnly
 	}
 
 	// Demote actor from owner and grant admin
