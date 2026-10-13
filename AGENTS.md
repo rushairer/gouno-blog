@@ -13,6 +13,9 @@ This document defines the **immutable architectural rules, security baselines, a
 2. **Identity & Authorization**:
    - Blog authorization relies strictly on locally configured owner identity (`Issuer + Subject`).
    - Provider roles/scopes do not grant implicit administrative permissions.
+   - Membership and Owner-transfer mutations must verify the actor's **current, active Blog-local roles under the same PostgreSQL advisory lock used to serialize role writes**. A middleware snapshot obtained before a concurrent Owner transfer is not authorization to act as the previous Owner. Use row-level `FOR UPDATE` only on base membership rows, never on grouped/aggregated role SELECTs.
+   - An Owner-role denial may commit an append-only `membership_update_denied` audit **only before any target business write**; it must never commit a display name, new membership, role change or authorization version. Denial audit/commit failures must not be ignored. Keep regular successful role changes transaction-atomic.
+   - Never echo raw `err.Error()` from privileged membership or Owner-transfer service failures. Classify only typed, fixed safe domain errors as HTTP 400/403; unexpected storage failures remain 5xx with trusted server logging, not a fabricated 403.
 3. **Session & Logout Lifecycle**:
    - Supports local logout, global RP-Initiated logout, and atomic back-channel logout claim handling.
    - Redis session state must strictly prevent resurrection on concurrent refresh/logout.
