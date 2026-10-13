@@ -93,9 +93,7 @@ func TestAttemptAuditReconciliationDoesNotInferLegacyOrLateWorkerIdentity(t *tes
 	if err := audits.RecordGenerationAudit(ctx, firstAudit); err != nil {
 		t.Fatal(err)
 	}
-	if err := candidates.CancelMediaGeneration(ctx, first.ID); err != nil {
-		t.Fatal(err)
-	}
+	releaseGenerationAfterTestReview(t, candidates, first, f.principal)
 	second, err := candidates.ClaimMediaGeneration(ctx, first.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -153,9 +151,7 @@ func TestLatePreflightAuditDoesNotBecomeCurrentAttemptEvidence(t *testing.T) {
 	f, candidates, first := newGenerationAuditFixture(t)
 	ctx := context.Background()
 	audits := agentrepository.NewGenerationAuditRepository(f.db)
-	if err := candidates.CancelMediaGeneration(ctx, first.ID); err != nil {
-		t.Fatal(err)
-	}
+	releaseGenerationAfterTestReview(t, candidates, first, f.principal)
 	second, err := candidates.ClaimMediaGeneration(ctx, first.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -257,9 +253,7 @@ func TestStaleCancelledOrUncertainAttemptCannotStartDispatchAudit(t *testing.T) 
 	f, candidates, first := newGenerationAuditFixture(t)
 	ctx := context.Background()
 	audits := agentrepository.NewGenerationAuditRepository(f.db)
-	if err := candidates.CancelMediaGeneration(ctx, first.ID); err != nil {
-		t.Fatal(err)
-	}
+	releaseGenerationAfterTestReview(t, candidates, first, f.principal)
 	if err := audits.RecordGenerationAudit(ctx, newStartedAttemptAudit(first)); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("cancelled attempt obtained dispatch audit: %v", err)
 	}
