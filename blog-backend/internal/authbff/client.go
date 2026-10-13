@@ -440,14 +440,17 @@ func (c *Client) LogoutURL(ctx context.Context, session Session, postLogoutRedir
 	}
 	q := endSessionURL.Query()
 	// Do NOT put id_token_hint in the URL to prevent token leakage in browser history, referer, or logs.
-	targetRedirect := c.config.PostLogoutURL
-	if postLogoutRedirect != "" {
-		if safe, err := SafeReturnTo(postLogoutRedirect); err == nil {
-			targetRedirect = safe
-		}
-	}
-	if targetRedirect != "" {
-		q.Set("post_logout_redirect_uri", targetRedirect)
+	// The OP must only receive the exact, registered Blog callback URI. The
+	// historical optional destination argument is retained for Go API
+	// compatibility, but it is NOT an approved post_logout_redirect_uri and
+	// must never replace the callback (not even with a local /admin path).
+	// A future local return destination must instead live in server-side state
+	// and be consumed only after the callback has validated its nonce.
+	_ = postLogoutRedirect
+	if c.config.PostLogoutURL != "" {
+		q.Set("post_logout_redirect_uri", c.config.PostLogoutURL)
+	} else {
+		q.Del("post_logout_redirect_uri")
 	}
 	q.Set("client_id", c.config.ClientID)
 	// Generate and store a state parameter for CSRF protection on the
