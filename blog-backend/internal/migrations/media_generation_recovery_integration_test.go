@@ -35,6 +35,15 @@ func TestManualGenerationRecoveryUpgradeAndImmutableIdentityConstraints(t *testi
 	if _, err := db.ExecContext(ctx, insert, 99999, 1, 42, "INC-20261013-0001", true, true, true); err != nil {
 		t.Fatalf("valid independent reviewed decision rejected: %v", err)
 	}
+	for _, query := range []string{
+		`UPDATE ai_media_generation_recovery_decisions SET evidence_reference='INC-20261013-CHANGED' WHERE candidate_id=99999`,
+		`DELETE FROM ai_media_generation_recovery_decisions WHERE candidate_id=99999`,
+		`TRUNCATE ai_media_generation_recovery_decisions`,
+	} {
+		if _, err := db.ExecContext(ctx, query); err == nil {
+			t.Fatalf("append-only recovery evidence was editable or deletable: %s", query)
+		}
+	}
 	for _, tc := range []struct {
 		name, ref string
 		candidateID int64
