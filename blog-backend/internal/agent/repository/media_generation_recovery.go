@@ -4,14 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
-
-var mediaRecoveryEvidenceReference = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/#-]{11,199}$`)
 
 // ReleaseMediaGenerationAfterVerifiedReview is the ONLY supported transition
 // from an uncertain, claimed generation attempt back to a human-retryable
@@ -23,11 +20,7 @@ var mediaRecoveryEvidenceReference = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9.
 // A stale attempt, repeated decision or lost commit ACK cannot release a newer
 // generation or create a second decision. No external generation is invoked.
 func (r *MediaCandidateRepository) ReleaseMediaGenerationAfterVerifiedReview(ctx context.Context, value *domain.MediaGenerationRecoveryDecision) error {
-	if r == nil || r.db == nil || value == nil ||
-		value.CandidateID <= 0 || value.GenerationAttempt <= 0 || value.ReviewerPrincipalID <= 0 ||
-		!value.VerifiedProviderOutcome || !value.VerifiedObjectStorage ||
-		!value.AcknowledgedPossibleBilling ||
-		!mediaRecoveryEvidenceReference.MatchString(strings.TrimSpace(value.EvidenceReference)) {
+	if r == nil || r.db == nil || !domain.ValidMediaGenerationRecoveryEvidence(value) {
 		return errors.New("invalid media generation recovery evidence")
 	}
 	// No Provider/object-store/network operations under the row lock.
