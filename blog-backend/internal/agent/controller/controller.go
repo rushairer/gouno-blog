@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
@@ -198,15 +197,20 @@ func (ctrl *Controller) ExportProviders(c *gin.Context) {
 	c.JSON(http.StatusOK, exportList)
 }
 
+const maxProviderImportBody = 1 << 20
+
 func (ctrl *Controller) ImportProviders(c *gin.Context) {
+	// Imports can include API keys. Bound the payload, and never echo decoder
+	// errors, attacker-controlled fields, or credentials to the caller.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxProviderImportBody)
 	raw, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "failed to read request body"))
+		controllerutil.WriteJSONBindingError(c, err, "provider import payload exceeds 1 MiB")
 		return
 	}
 	items, err := parseProviderImportPayload(raw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if len(items) == 0 {
@@ -329,7 +333,7 @@ func (ctrl *Controller) UpdateProvider(c *gin.Context) {
 func (ctrl *Controller) saveProvider(c *gin.Context, id int64) {
 	var req providerRequest
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	profile := &providerdomain.ProviderProfile{
@@ -423,7 +427,7 @@ func (ctrl *Controller) saveSkill(c *gin.Context, id int64) {
 	var value domain.AgentSkill
 	if err := bindHumanTemplateJSON(c, &value); err != nil {
 		if !c.IsAborted() {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			controllerutil.WriteJSONBindingError(c, err, "")
 		}
 		return
 	}
@@ -481,7 +485,7 @@ func (ctrl *Controller) ExportSkill(c *gin.Context) {
 func (ctrl *Controller) ImportSkill(c *gin.Context) {
 	var item domain.AgentSkill
 	if err := bindAgentJSON(c, &item); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	raw, exists := c.Get("blog_principal_id")
@@ -508,7 +512,7 @@ func (ctrl *Controller) CopySkill(c *gin.Context) {
 	}
 	if c.Request.ContentLength > 0 {
 		if err := bindAgentJSON(c, &req); err != nil {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			controllerutil.WriteJSONBindingError(c, err, "")
 			return
 		}
 	}
@@ -554,7 +558,7 @@ func (ctrl *Controller) saveAgent(c *gin.Context, id int64) {
 	var value domain.Agent
 	if err := bindHumanTemplateJSON(c, &value); err != nil {
 		if !c.IsAborted() {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			controllerutil.WriteJSONBindingError(c, err, "")
 		}
 		return
 	}
@@ -627,7 +631,7 @@ func (ctrl *Controller) RunAgent(c *gin.Context) {
 			Input json.RawMessage `json:"input"`
 		}
 		if err := bindAgentJSON(c, &request); err != nil {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			controllerutil.WriteJSONBindingError(c, err, "")
 			return
 		}
 		input = request.Input
@@ -725,7 +729,7 @@ func (ctrl *Controller) reviewApproval(c *gin.Context, approve bool) {
 	var req approvalReviewRequest
 	if c.Request.ContentLength > 0 {
 		if err := bindAgentJSON(c, &req); err != nil {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			controllerutil.WriteJSONBindingError(c, err, "")
 			return
 		}
 	}
@@ -780,12 +784,7 @@ func bindAgentJSON(c *gin.Context, value any) error {
 func bindWorkflowJSON(c *gin.Context, value any) bool {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWorkflowJSONBody)
 	if err := bindAgentJSON(c, value); err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			c.JSON(http.StatusRequestEntityTooLarge, gouno.NewErrorResponse(http.StatusRequestEntityTooLarge, "workflow request body exceeds 256 KiB"))
-		} else {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		}
+		controllerutil.WriteJSONBindingError(c, err, "workflow request body exceeds 256 KiB")
 		return false
 	}
 	return true
