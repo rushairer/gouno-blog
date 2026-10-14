@@ -122,6 +122,17 @@ func (ctrl *Controller) DraftWorkflowAgents(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"drafts": clean, "provider": profile.Name, "model": profile.Model}))
 }
 
+// Preserve the editor's specific default-Provider conflict contract while
+// never exposing an arbitrary wrapped Provider/Redis/SQL error to the browser.
+func writeEditorGenerationError(c *gin.Context, err error) {
+	if errors.Is(err, agentservice.ErrDefaultWritingProviderRequired) {
+		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default AI provider is required"))
+		c.Abort()
+		return
+	}
+	controllerutil.WriteDomainError(c, err)
+}
+
 func (ctrl *Controller) DraftAssist(c *gin.Context) {
 	var req draftAssistRequest
 	if err := bindAgentJSON(c, &req); err != nil {
@@ -147,13 +158,7 @@ func (ctrl *Controller) DraftAssist(c *gin.Context) {
 		Task: req.Task, Title: req.Title, Summary: req.Summary, Content: req.Content, Prompt: req.Prompt, Categories: req.Categories,
 	})
 	if err != nil {
-		// Preserve the public editor contract, but recognize the exact typed
-		// condition rather than substring-matching a wrapped provider error.
-		if errors.Is(err, agentservice.ErrDefaultWritingProviderRequired) {
-			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default AI provider is required"))
-			return
-		}
-		controllerutil.WriteDomainError(c, err)
+		writeEditorGenerationError(c, err)
 		return
 	}
 	if req.Task == "content" {
