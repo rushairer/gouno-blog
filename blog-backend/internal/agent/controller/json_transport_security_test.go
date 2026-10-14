@@ -1,12 +1,15 @@
 package controller
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	agentservice "github.com/rushairer/blog-backend/internal/agent"
 )
 
 func TestAIOperationsControllersDoNotReflectJSONFieldsOrPromptSecrets(t *testing.T) {
@@ -124,6 +127,38 @@ func TestAIAgentAndWorkflowPayloadLimitsKeep413WithoutEchoingInput(t *testing.T)
 				!strings.Contains(rec.Body.String(), tc.wantText) ||
 				strings.Contains(rec.Body.String(), "http: request body too large") {
 				t.Fatalf("oversized request response changed: %d %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestEditorGenerationErrorsPreserveTypedConflictButRedactProviderFailures(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const marker = "PRIVATE_PROVIDER_RESPONSE_OR_SQL_DETAILS"
+	if !errors.Is(agentservice.ErrDefaultWritingProviderRequired, agentservice.ErrInvalid) {
+		t.Fatal("typed default writing Provider error lost backwards-compatible ErrInvalid identity")
+	}
+	for _, tc := range []struct {
+		name string
+		err error
+		status int
+		message string
+	}{
+		{"missing_writing_default", fmt.Errorf("%s: %w", marker, agentservice.ErrDefaultWritingProviderRequired),
+			http.StatusConflict, "an enabled default AI provider is required"},
+		{"other_invalid_agent_configuration", fmt.Errorf("%s: %w", marker, agentservice.ErrInvalid),
+			http.StatusBadRequest, "invalid request"},
+		{"external_provider_failure", fmt.Errorf("%s", marker),
+			http.StatusInternalServerError, "internal server error"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, "/api/admin/ai/draft-assist", nil)
+			writeEditorGenerationError(c, tc.err)
+			if rec.Code != tc.status || !strings.Contains(rec.Body.String(), tc.message) ||
+				strings.Contains(rec.Body.String(), marker) {
+				t.Fatalf("unsafe editor error mapping: status=%d body=%s", rec.Code, rec.Body.String())
 			}
 		})
 	}
