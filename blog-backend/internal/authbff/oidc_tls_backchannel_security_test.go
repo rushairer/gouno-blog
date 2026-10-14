@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func signedLogoutClaims(issuer, subject, sid, jti string, now time.Time) map[string]any {
@@ -126,13 +128,12 @@ func TestBackchannelLogoutDoesNotLieAboutRedisPersistenceFailure(t *testing.T) {
 	if !errors.Is(err, ErrBackchannelStoreFailure) {
 		t.Fatalf("unavailable Redis was not classified as a secure persistence failure: %v", err)
 	}
-	router := http.NewServeMux()
 	// Both authentication and token verification are performed by the Client;
-	// the public response remains a bounded error even if the internal cause
-	// contains infrastructure details.
-	_ = router
+	// public responses remain bounded even if the internal cause contains
+	// infrastructure details.
 	writeToken := url.Values{"logout_token": {raw}}
-	ginRouter := newBackchannelTestRouter(client)
+	ginRouter := gin.New()
+	client.RegisterRoutes(ginRouter)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/backchannel-logout",
 		strings.NewReader(writeToken.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
