@@ -87,7 +87,7 @@ func (ctrl *Controller) ReviewMediaCandidate(c *gin.Context) {
 		Note   string `json:"note"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	reviewerPrincipalID, ok := interactionPrincipalID(c)
@@ -120,7 +120,7 @@ func (ctrl *Controller) AttachMediaAsset(c *gin.Context) {
 		MediaAssetID int64 `json:"media_asset_id" binding:"required"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.approvals.AttachMediaAsset(c.Request.Context(), id, req.MediaAssetID); err != nil {
@@ -140,7 +140,7 @@ func (ctrl *Controller) GenerateMediaCandidate(c *gin.Context) {
 	}
 	if c.Request.ContentLength > 0 {
 		if err := bindAgentJSON(c, &req); err != nil {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			controllerutil.WriteJSONBindingError(c, err, "")
 			return
 		}
 		if err := ctrl.approvals.SetMediaGenerationInstruction(c.Request.Context(), id, req.Instruction); err != nil {
@@ -186,7 +186,7 @@ func (ctrl *Controller) SelectImageTask(c *gin.Context) {
 		Anchor    string `json:"anchor"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.approvals.SelectMediaCandidate(c.Request.Context(), id, req.Placement, req.Anchor); err != nil {
@@ -206,7 +206,7 @@ func (ctrl *Controller) SelectWorkflowImageTasks(c *gin.Context) {
 		Selections []domain.MediaCandidateSelection `json:"selections" binding:"required"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.approvals.SelectMediaCandidates(c.Request.Context(), runID, req.Selections); err != nil {
@@ -229,7 +229,7 @@ func (ctrl *Controller) ApplyWorkflowImageTasks(c *gin.Context) {
 		CandidateIDs []int64 `json:"candidate_ids" binding:"required"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	post, err := ctrl.approvals.ApplyMediaCandidates(c.Request.Context(), runID, req.CandidateIDs)
@@ -253,7 +253,7 @@ func (ctrl *Controller) RejectWorkflowImageTasks(c *gin.Context) {
 		CandidateIDs []int64 `json:"candidate_ids" binding:"required"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.approvals.RejectMediaCandidates(c.Request.Context(), runID, req.CandidateIDs); err != nil {
@@ -326,7 +326,7 @@ func (ctrl *Controller) GenerateImage(c *gin.Context) {
 		AltText string `json:"alt_text"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	prompt := strings.TrimSpace(req.Prompt)
@@ -341,7 +341,9 @@ func (ctrl *Controller) GenerateImage(c *gin.Context) {
 	}
 	asset, err := ctrl.approvals.GenerateDirectImage(c.Request.Context(), prompt, req.AltText, creatorPrincipalID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		// A provider, storage or database failure is NOT an invalid JSON
+		// request. Translate only typed domain errors, redact unknown causes.
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
