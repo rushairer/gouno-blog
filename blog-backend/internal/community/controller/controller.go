@@ -215,7 +215,7 @@ func (ctrl *CommunityController) ReportComment(c *gin.Context) {
 	}
 	var req reportCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.svc.ReportComment(c.Request.Context(), id, actor, req.Reason); err != nil {
@@ -288,7 +288,7 @@ type batchDeleteNotificationsRequest struct {
 func (ctrl *CommunityController) BatchDeleteNotifications(c *gin.Context) {
 	var req batchDeleteNotificationsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.svc.DeleteNotifications(c.Request.Context(), principalID(c), req.IDs); err != nil {
@@ -330,7 +330,7 @@ func (ctrl *CommunityController) ModerateComment(c *gin.Context) {
 	}
 	var req moderateCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.svc.ModerateComment(c.Request.Context(), id, req.Status); err != nil {
