@@ -76,7 +76,7 @@ func (ctrl *Controller) IgnoreSuggestion(c *gin.Context) {
 		Reason string `json:"reason" binding:"required"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.service.IgnoreSuggestion(c.Request.Context(), id, req.Reason); err != nil {
@@ -116,7 +116,7 @@ func (ctrl *Controller) UpdateEditorialTaskStatus(c *gin.Context) {
 		Status string `json:"status" binding:"required"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.service.UpdateEditorialTaskStatus(c.Request.Context(), id, req.Status); err != nil {
@@ -144,7 +144,7 @@ func (ctrl *Controller) SelectCandidate(c *gin.Context) {
 		CandidateID int64 `json:"candidate_id" binding:"required"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.service.SelectCandidate(c.Request.Context(), id, req.CandidateID); err != nil {
@@ -157,7 +157,7 @@ func (ctrl *Controller) SelectCandidate(c *gin.Context) {
 func (ctrl *Controller) SaveFeedback(c *gin.Context) {
 	var value opsdomain.AIFeedback
 	if err := bindJSON(c, &value); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	id, ok := principalID(c)

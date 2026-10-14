@@ -10,17 +10,21 @@ import (
 	"testing"
 )
 
-// A structural regression guard for the two AI capabilities that process
-// prompts, Provider credentials, external webhook headers and recovery input.
-// It catches direct err.Error() serialization nested anywhere in a Gin HTTP
-// response, including inside NewErrorResponse, fmt.Sprintf or a map literal.
+// A structural regression guard for five explicitly audited capabilities:
+// Agent, Workflow, Knowledge, Operations and Community. It catches direct
+// Error() serialization nested anywhere in a Gin HTTP response (including
+// NewErrorResponse, fmt.Sprintf or a map literal).
 //
-// Deliberately scoped: other capability controllers require their own
-// audit/contract and must not be mass-migrated through this test.
-func TestSensitiveAIControllerResponsesNeverSerializeRawErrorMethods(t *testing.T) {
+// Deliberately scoped: Media/Site/Taxonomy and other controllers require
+// separate business-contract review. This guard is not a taint analyzer and
+// cannot prove the absence of indirect leaks.
+func TestAuditedControllerResponsesNeverSerializeRawErrorMethods(t *testing.T) {
 	for _, dir := range []string{
 		filepath.Join("..", "agent", "controller"),
 		filepath.Join("..", "workflow", "controller"),
+		filepath.Join("..", "knowledge", "controller"),
+		filepath.Join("..", "operations", "controller"),
+		filepath.Join("..", "community", "controller"),
 	} {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
