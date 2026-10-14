@@ -82,7 +82,7 @@ jobs:
           # upward. They will be raised to the A+ targets as focused tests land.
           check_package_coverage ./internal/secretbox 85 85
           check_package_coverage ./internal/provider 60 75
-          check_package_coverage ./internal/authbff 55 80
+          check_package_coverage ./internal/authbff 80 80
 
       - name: Race detector
         run: go test -race ./...
