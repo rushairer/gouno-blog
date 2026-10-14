@@ -61,7 +61,7 @@ func (ctrl *Controller) CreateCategory(c *gin.Context) {
 	item, err := ctrl.svc.CreateCategory(c.Request.Context(), &req)
 	if err != nil {
 		if errors.Is(err, taxonomyservice.ErrCategoryNameRequired) {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, taxonomyValidationMessage(err)))
 			return
 		}
 		controllerutil.WriteDomainError(c, err)
@@ -87,7 +87,7 @@ func (ctrl *Controller) UpdateCategory(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, taxonomyservice.ErrCategoryNameRequired) || errors.Is(err, taxonomyservice.ErrInvalidCategoryID) {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, taxonomyValidationMessage(err)))
 			return
 		}
 		controllerutil.WriteDomainError(c, err)
@@ -108,7 +108,7 @@ func (ctrl *Controller) DeleteCategory(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, taxonomyservice.ErrInvalidCategoryID) {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, taxonomyValidationMessage(err)))
 			return
 		}
 		controllerutil.WriteDomainError(c, err)
@@ -170,4 +170,18 @@ func (ctrl *Controller) MergeTags(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+
+// Preserve the existing localized 400 messages only for trusted taxonomy
+// sentinels. The wrapped cause (database, private data) never reaches HTTP.
+func taxonomyValidationMessage(err error) string {
+	switch {
+	case errors.Is(err, taxonomyservice.ErrCategoryNameRequired):
+		return taxonomyservice.ErrCategoryNameRequired.Error()
+	case errors.Is(err, taxonomyservice.ErrInvalidCategoryID):
+		return taxonomyservice.ErrInvalidCategoryID.Error()
+	default:
+		return "invalid taxonomy request"
+	}
 }
