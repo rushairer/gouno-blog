@@ -24,6 +24,9 @@ var (
 	ErrConflict      = errors.New("agent configuration conflict")
 	ErrNotFound      = errors.New("agent resource not found")
 	ErrProviderInUse = errors.New("provider profile is in use")
+	// Keep the existing wrapped ErrInvalid semantics while making the editor's
+	// missing-default mapping independent of error text and nested causes.
+	ErrDefaultWritingProviderRequired = fmt.Errorf("%w: an enabled default writing Provider is required", ErrInvalid)
 )
 
 type ManagementService struct {
@@ -64,7 +67,7 @@ func (s *ManagementService) DefaultWritingClient(ctx context.Context) (*provider
 			return profile, client, err
 		}
 	}
-	return nil, nil, fmt.Errorf("%w: an enabled default writing Provider is required", ErrInvalid)
+	return nil, nil, ErrDefaultWritingProviderRequired
 }
 
 func (s *ManagementService) Notify(ctx context.Context, recipientPrincipalID int64, eventType, title, body, href, key string) error {
