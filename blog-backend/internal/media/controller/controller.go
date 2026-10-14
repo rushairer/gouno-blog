@@ -66,7 +66,12 @@ func (ctrl *Controller) Upload(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxMediaSize+(1<<20))
 	header, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "image file is required"))
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			c.JSON(http.StatusRequestEntityTooLarge, gouno.NewErrorResponse(http.StatusRequestEntityTooLarge, "image upload request exceeds 11 MiB"))
+		} else {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "image file is required"))
+		}
 		return
 	}
 	contentType, extension, err := validateMedia(header)
