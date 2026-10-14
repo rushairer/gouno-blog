@@ -2,13 +2,14 @@ package controller
 
 import (
 	"encoding/json"
-	"github.com/rushairer/blog-backend/internal/controllerutil"
+	"errors"
 	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	"github.com/rushairer/blog-backend/internal/controllerutil"
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/workflowplan"
 	"github.com/rushairer/gouno"
@@ -121,10 +122,21 @@ func (ctrl *Controller) DraftWorkflowAgents(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"drafts": clean, "provider": profile.Name, "model": profile.Model}))
 }
 
+// Preserve the editor's specific default-Provider conflict contract while
+// never exposing an arbitrary wrapped Provider/Redis/SQL error to the browser.
+func writeEditorGenerationError(c *gin.Context, err error) {
+	if errors.Is(err, agentservice.ErrDefaultWritingProviderRequired) {
+		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default AI provider is required"))
+		c.Abort()
+		return
+	}
+	controllerutil.WriteDomainError(c, err)
+}
+
 func (ctrl *Controller) DraftAssist(c *gin.Context) {
 	var req draftAssistRequest
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	req.Task = strings.TrimSpace(req.Task)
@@ -146,12 +158,7 @@ func (ctrl *Controller) DraftAssist(c *gin.Context) {
 		Task: req.Task, Title: req.Title, Summary: req.Summary, Content: req.Content, Prompt: req.Prompt, Categories: req.Categories,
 	})
 	if err != nil {
-		// Preserve the historical editor contract for a missing writing default.
-		if strings.Contains(err.Error(), "default writing Provider is required") {
-			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default AI provider is required"))
-			return
-		}
-		controllerutil.WriteDomainError(c, err)
+		writeEditorGenerationError(c, err)
 		return
 	}
 	if req.Task == "content" {
