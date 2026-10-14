@@ -80,12 +80,7 @@ func bindJSON(c *gin.Context, value any) error {
 func bindWorkflowJSON(c *gin.Context, value any) bool {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWorkflowJSONBody)
 	if err := bindJSON(c, value); err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			c.JSON(http.StatusRequestEntityTooLarge, gouno.NewErrorResponse(http.StatusRequestEntityTooLarge, "workflow request body exceeds 256 KiB"))
-		} else {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		}
+		controllerutil.WriteJSONBindingError(c, err, "workflow request body exceeds 256 KiB")
 		return false
 	}
 	return true
@@ -191,12 +186,7 @@ func (ctrl *Controller) saveWorkflow(c *gin.Context, id int64) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWorkflowJSONBody)
 	if err := bindHumanWorkflowJSON(c, &value); err != nil {
 		if !c.IsAborted() {
-			status := http.StatusBadRequest
-			var tooLarge *http.MaxBytesError
-			if errors.As(err, &tooLarge) {
-				status = http.StatusRequestEntityTooLarge
-			}
-			c.JSON(status, gouno.NewErrorResponse(status, err.Error()))
+			controllerutil.WriteJSONBindingError(c, err, "workflow request body exceeds 256 KiB")
 		}
 		return
 	}
@@ -234,7 +224,7 @@ func (ctrl *Controller) RollbackWorkflow(c *gin.Context) {
 		Version int `json:"version" binding:"required"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.workflows.Rollback(c.Request.Context(), id, req.Version); err != nil {
@@ -297,7 +287,7 @@ func (ctrl *Controller) RetryWorkflowRun(c *gin.Context) {
 		Iterations []int  `json:"iterations"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	raw, exists := c.Get("blog_principal_id")
@@ -346,7 +336,7 @@ func (ctrl *Controller) EmitWorkflowEvent(c *gin.Context) {
 		Payload  json.RawMessage `json:"payload" binding:"required"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	principalID, ok := interactionPrincipalID(c)
@@ -362,7 +352,11 @@ func (ctrl *Controller) EmitWorkflowEvent(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(gin.H{"accepted": true, "queued": queued}))
 }
 
-var idempotencyKeyRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-\.]{1,128}$`)
+var (
+	idempotencyKeyRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-\.]{1,128}$`)
+	errWebhookTimestamp = errors.New("missing or invalid webhook timestamp")
+	errWebhookSignature = errors.New("missing webhook signature")
+)
 
 func validateIdempotencyKey(key string) bool {
 	return idempotencyKeyRegex.MatchString(key)
@@ -404,10 +398,10 @@ func parseWebhookHeaders(sigHeader, tsHeader string) (int64, string, error) {
 	}
 
 	if timestamp == 0 {
-		return 0, "", fmt.Errorf("missing or invalid webhook timestamp")
+		return 0, "", errWebhookTimestamp
 	}
 	if signatureHex == "" {
-		return 0, "", fmt.Errorf("missing webhook signature")
+		return 0, "", errWebhookSignature
 	}
 
 	return timestamp, signatureHex, nil
@@ -453,7 +447,16 @@ func (ctrl *Controller) ReceiveWorkflowWebhook(c *gin.Context) {
 
 	timestamp, providedSigHex, err := parseWebhookHeaders(c.GetHeader("X-Gouno-Signature"), c.GetHeader("X-Gouno-Timestamp"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		// Preserve existing public webhook failure codes without ever
+		// reflecting attacker-controlled header content.
+		message := "invalid webhook signature"
+		switch {
+		case errors.Is(err, errWebhookTimestamp):
+			message = "missing or invalid webhook timestamp"
+		case errors.Is(err, errWebhookSignature):
+			message = "missing webhook signature"
+		}
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, message))
 		return
 	}
 
@@ -621,7 +624,7 @@ func (ctrl *Controller) ResolveInteraction(c *gin.Context) {
 		Response    json.RawMessage `json:"response"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if len(req.Response) == 0 {
@@ -649,7 +652,7 @@ func (ctrl *Controller) CancelInteraction(c *gin.Context) {
 		ResumeToken string `json:"resume_token"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	principalID, ok := interactionPrincipalID(c)
