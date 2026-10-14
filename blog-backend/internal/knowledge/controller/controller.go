@@ -73,7 +73,7 @@ func (ctrl *Controller) UpdateEmbeddingProfile(c *gin.Context) {
 func (ctrl *Controller) saveEmbeddingProfile(c *gin.Context, id int64) {
 	var req embeddingProfileRequest
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	value := &knowledgedomain.EmbeddingProfile{ID: id, Name: req.Name, BaseURL: req.BaseURL,
@@ -191,7 +191,7 @@ func (ctrl *Controller) ReplaceIndexEvaluation(c *gin.Context) {
 		Cases []knowledge.EvaluationCase `json:"cases" binding:"required"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.service.ReplaceEvaluationCases(c.Request.Context(), req.Cases); err != nil {
