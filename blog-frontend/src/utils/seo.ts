@@ -59,14 +59,13 @@ function setMeta(selector: string, attributes: Record<string, string>) {
 
 export function useArticleSEO(article: ArticleSEO | null, brand?: string) {
   const [siteBrand, setSiteBrand] = useState(
-    () => brand || cachedBrand || DEFAULT_SITE_SETTINGS.site_title,
+    () => cachedBrand || DEFAULT_SITE_SETTINGS.site_title,
   );
 
+  // Site-settings updates must remain observable even while an explicit
+  // brand override is in effect. If the override is later removed, the
+  // latest site title (not the stale title from mount) becomes authoritative.
   useEffect(() => {
-    if (brand) {
-      setSiteBrand(brand);
-      return;
-    }
     const handleUpdate = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.site_title) setSiteBrand(detail.site_title);
@@ -75,12 +74,13 @@ export function useArticleSEO(article: ArticleSEO | null, brand?: string) {
     return () => {
       window.removeEventListener(SITE_SETTINGS_UPDATED_EVENT, handleUpdate);
     };
-  }, [brand]);
+  }, []);
+
+  const currentBrand =
+    brand || siteBrand || cachedBrand || DEFAULT_SITE_SETTINGS.site_title;
 
   useEffect(() => {
     if (!article) return;
-    const currentBrand =
-      brand || siteBrand || cachedBrand || DEFAULT_SITE_SETTINGS.site_title;
     const canonicalURL = new URL(
       `/articles/${article.slug}`,
       window.location.origin,
@@ -149,5 +149,5 @@ export function useArticleSEO(article: ArticleSEO | null, brand?: string) {
         canonical?.removeAttribute("href");
       else canonical?.setAttribute("href", previousCanonical);
     };
-  }, [article, brand]);
+  }, [article, currentBrand]);
 }
