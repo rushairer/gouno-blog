@@ -5,7 +5,8 @@ This is the fourth targeted Controller/service reliability and confidentiality p
 ## Source-confirmed defects
 
 1. `internal/page/service/page_service.go` previously converted **every** error from `GetByID`, `GetBySlug` or `GetPublishedBySlug` into `ErrPageNotFound`. A canceled SQL read, unavailable PostgreSQL connection or other serious repository failure was irreversibly misclassified as a user-visible Page 404. The Controller also returned 404 for every direct `GetPageBySlug` / `GetPage` error. This masked outages, made monitoring unreliable and could preserve a misleading cached not-found response in clients.
-2. `internal/post/controller/post_controller.go` correctly falls back from numeric ID to a numeric-looking Slug after `postservice.ErrPostNotFound`, but a normal repository `sql.ErrNoRows` result was treated as an immediate error and skipped that Slug fallback. Non-not-found SQL/transport failures must still **stop** before fallback.
+2. A **real PostgreSQL** negative test discovered another edge: `pages.id` is `SERIAL` (signed 32-bit), while HTTP accepts `int64` route IDs. A value above the SERIAL range produces PostgreSQL `22003` (integer out of range), not a genuine missing row. Page Service now validates this range **before** Get, Update and Delete SQL; impossible IDs map to the existing not-found sentinel. Genuine SQL no-row tests use an ID within the database's valid range.
+3. `internal/post/controller/post_controller.go` correctly falls back from numeric ID to a numeric-looking Slug after `postservice.ErrPostNotFound`, but a normal repository `sql.ErrNoRows` result was treated as an immediate error and skipped that Slug fallback. Non-not-found SQL/transport failures must still **stop** before fallback.
 
 These paths already called the shared domain response writer in other branches and did **not** directly reflect raw SQL strings. The issue was primarily **error classification, availability and operational observability**, not proof of an exposed DB password.
 
@@ -18,7 +19,7 @@ These paths already called the shared domain response writer in other branches a
 
 ## Regression evidence
 
-- `page/service/page_lookup_error_test.go`: typed/no-result not found vs wrapped SQL errors, cancellation and deadline; trusted original causes remain available.
+- `page/service/page_lookup_error_test.go`: typed/no-result not found vs wrapped SQL errors, cancellation and deadline; plus 32-bit SERIAL ID bounds on Get/Update/Delete using a nil repository to prove no SQL dispatch; trusted original causes remain available.
 - `page/service/page_lookup_error_integration_test.go`: **real disposable PostgreSQL** canceled read vs truly missing row for GetPage, GetPageBySlug and GetPublishedPageBySlug; automatically discovered as required by `scripts/check-db-integration.py`, never silently skipped.
 - `page/controller/page_lookup_security_test.go`: public/admin exact 404 vs safe 500, unexpected nil response, published Page, hidden draft, and error marker redaction.
 - `post/controller/post_lookup_security_test.go`: numeric Slug with both raw/wrapped `sql.ErrNoRows`, domain not-found, SQL outage, cancellation and failed second Slug lookup; verify call counts and preservation of unpublished draft privacy.
