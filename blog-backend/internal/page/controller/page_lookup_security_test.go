@@ -36,7 +36,7 @@ func TestPageReadHTTPDistinguishesConfirmedMissingFromPrivateDatabaseOutage(t *t
 	gin.SetMode(gin.TestMode)
 	const marker = "PRIVATE_POSTGRES_URL_AND_PAGE_CONTENT_NEVER_REFLECT"
 	published := &domain.Page{ID: 37, Slug: "public-page", Status: domain.PageStatusPublished, Title: "Public"}
-	draft := &domain.Page{ID: 38, Slug: "private-draft", Status: domain.PageStatusDraft, Content: marker}
+	draft := &domain.Page{ID: 38, Slug: "private-draft", Title: "PRIVATE_DRAFT_TITLE", Status: domain.PageStatusDraft, Content: marker}
 	for _, tc := range []struct {
 		name string
 		page *domain.Page
