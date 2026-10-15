@@ -53,7 +53,14 @@ func validateStaticSVG(reader io.Reader) error {
 			break
 		}
 		if err != nil {
-			return errors.New("invalid SVG document")
+			// Malformed client XML remains a fixed 400 validation result.
+			// Unexpected underlying reader/I/O faults are not client errors;
+			// retain the real cause server-side for a redacted HTTP 5xx.
+			var syntaxErr *xml.SyntaxError
+			if errors.As(err, &syntaxErr) {
+				return errSVGInvalid
+			}
+			return err
 		}
 
 		switch value := token.(type) {
@@ -61,31 +68,31 @@ func validateStaticSVG(reader io.Reader) error {
 			name := strings.ToLower(value.Name.Local)
 			if depth == 0 {
 				if rootSeen || rootClosed || name != "svg" {
-					return errors.New("invalid SVG document")
+					return errSVGInvalid
 				}
 				rootSeen = true
 			}
 			if _, forbidden := forbiddenSVGElements[name]; forbidden {
-				return errors.New("SVG contains active content")
+				return errSVGActive
 			}
 			for _, attribute := range value.Attr {
 				attributeName := strings.ToLower(attribute.Name.Local)
 				if strings.HasPrefix(attributeName, "on") && len(attributeName) > 2 {
-					return errors.New("SVG event handlers are not allowed")
+					return errSVGHandlers
 				}
 				if attribute.Name.Space == xmlNamespace && attributeName == "base" {
-					return errors.New("SVG xml:base is not allowed")
+					return errSVGBase
 				}
 				if attributeName == "href" || attributeName == "src" {
 					if !safeSVGReference(name, attribute.Value) {
-						return errors.New("SVG external references are not allowed")
+						return errSVGExternal
 					}
 				}
 				if unsafeSVGAttributeValue(attribute.Value) {
-					return errors.New("SVG attribute contains active or external content")
+					return errSVGAttribute
 				}
 				if attributeName == "style" && unsafeSVGStyle(attribute.Value) {
-					return errors.New("SVG style contains active or external content")
+					return errSVGStyle
 				}
 			}
 			depth++
@@ -95,7 +102,7 @@ func validateStaticSVG(reader io.Reader) error {
 
 		case xml.EndElement:
 			if depth <= 0 {
-				return errors.New("invalid SVG document")
+				return errSVGInvalid
 			}
 			if strings.EqualFold(value.Name.Local, "style") && styleDepth > 0 {
 				styleDepth--
@@ -107,24 +114,24 @@ func validateStaticSVG(reader io.Reader) error {
 
 		case xml.CharData:
 			if depth == 0 && strings.TrimSpace(string(value)) != "" {
-				return errors.New("invalid SVG document")
+				return errSVGInvalid
 			}
 			if styleDepth > 0 && unsafeSVGStyle(string(value)) {
-				return errors.New("SVG style contains active or external content")
+				return errSVGStyle
 			}
 
 		case xml.Directive:
-			return errors.New("SVG XML directives are not allowed")
+			return errSVGDirectives
 
 		case xml.ProcInst:
 			if !strings.EqualFold(value.Target, "xml") {
-				return errors.New("SVG processing instructions are not allowed")
+				return errSVGInstructions
 			}
 		}
 	}
 
 	if !rootSeen || !rootClosed || depth != 0 {
-		return errors.New("invalid SVG document")
+		return errSVGInvalid
 	}
 	return nil
 }

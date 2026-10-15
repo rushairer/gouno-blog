@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -66,12 +67,23 @@ func (ctrl *Controller) Upload(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxMediaSize+(1<<20))
 	header, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "image file is required"))
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			c.JSON(http.StatusRequestEntityTooLarge, gouno.NewErrorResponse(http.StatusRequestEntityTooLarge, "image upload request exceeds 11 MiB"))
+		} else {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "image file is required"))
+		}
 		return
 	}
 	contentType, extension, err := validateMedia(header)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		if message, known := mediaValidationPublicMessage(err); known {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, message))
+			return
+		}
+		// A multipart file.Open/read error can contain filesystem or storage
+		// internals; it is not automatically a user validation failure.
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 	storageName, err := randomMediaName(extension)
@@ -172,7 +184,10 @@ func (ctrl *Controller) Delete(c *gin.Context) {
 	asset, err := ctrl.service.DeleteMedia(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, mediaservice.ErrMediaInUse) {
-			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, err.Error()))
+			// The wrapped DB error may contain private details, but this
+			// trusted sentinel has a stable existing client-facing message.
+			message := mediaservice.ErrMediaInUse.Error()
+			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, message))
 			return
 		}
 		controllerutil.WriteDomainError(c, err)
@@ -197,22 +212,21 @@ func (ctrl *Controller) References(c *gin.Context) {
 
 func validateMedia(header *multipart.FileHeader) (string, string, error) {
 	if header.Size <= 0 || header.Size > maxMediaSize {
-		return "", "", errors.New("image must be no larger than 10 MB")
+		return "", "", errMediaSize
 	}
 	file, err := header.Open()
 	if err != nil {
 		return "", "", err
 	}
 	defer file.Close()
-	buffer := make([]byte, 512)
-	n, err := file.Read(buffer)
+	sample, err := readMediaSample(file)
 	if err != nil {
-		return "", "", errors.New("could not read image")
+		return "", "", err
 	}
-	contentType := detectMediaContentType(header.Filename, buffer[:n])
+	contentType := detectMediaContentType(header.Filename, sample)
 	extension, ok := allowedMediaTypes[contentType]
 	if !ok {
-		return "", "", errors.New("only JPEG, PNG, WebP, GIF, SVG, ICO, AVIF and BMP images are supported")
+		return "", "", errMediaUnsupported
 	}
 	if contentType == "image/svg+xml" {
 		if err := validateStaticSVGUpload(header); err != nil {
@@ -220,6 +234,21 @@ func validateMedia(header *multipart.FileHeader) (string, string, error) {
 		}
 	}
 	return contentType, extension, nil
+}
+
+// A short final read may legitimately return both bytes and io.EOF.
+// Preserve unexpected filesystem/read failures as internal errors; they are
+// never trusted user-validation errors and must not reach the HTTP response.
+func readMediaSample(file io.Reader) ([]byte, error) {
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
+	if n == 0 {
+		return nil, errMediaRead
+	}
+	return buffer[:n], nil
 }
 
 func detectMediaContentType(filename string, sample []byte) string {

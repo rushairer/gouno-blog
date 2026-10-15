@@ -36,18 +36,31 @@ func (ctrl *Controller) UpdateSiteSettings(c *gin.Context) {
 	}
 	settings, err := ctrl.svc.UpdateSiteSettings(c.Request.Context(), requested)
 	if err != nil {
-		switch {
-		case errors.Is(err, siteservice.ErrSettingValueTooLong),
-			errors.Is(err, siteservice.ErrSiteTitleEmpty),
-			errors.Is(err, siteservice.ErrInvalidRSSURL),
-			errors.Is(err, siteservice.ErrInvalidGithubURL),
-			errors.Is(err, siteservice.ErrInvalidFaviconURL):
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-			return
-		default:
-			controllerutil.WriteDomainError(c, err)
+		if message, ok := publicSiteSettingsError(err); ok {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, message))
 			return
 		}
+		controllerutil.WriteDomainError(c, err)
+		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(settings))
+}
+
+
+// Existing localized validation messages are a public API contract, but only
+// a recognized typed sentinel may select them. Wrapped errors can carry
+// private DB or configuration details; their text must never be serialized.
+func publicSiteSettingsError(err error) (string, bool) {
+	for _, known := range []error{
+		siteservice.ErrSettingValueTooLong,
+		siteservice.ErrSiteTitleEmpty,
+		siteservice.ErrInvalidRSSURL,
+		siteservice.ErrInvalidGithubURL,
+		siteservice.ErrInvalidFaviconURL,
+	} {
+		if errors.Is(err, known) {
+			return known.Error(), true
+		}
+	}
+	return "", false
 }
