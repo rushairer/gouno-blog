@@ -10,14 +10,14 @@ import (
 	"testing"
 )
 
-// A structural regression guard for five explicitly audited capabilities:
-// Agent, Workflow, Knowledge, Operations and Community. It catches direct
-// Error() serialization nested anywhere in a Gin HTTP response (including
-// NewErrorResponse, fmt.Sprintf or a map literal).
+// Structural regression guard for eight independently reviewed capabilities:
+// Agent, Workflow, Knowledge, Operations, Community, Media, Site and Taxonomy.
+// It catches direct Error() serialization nested within a Gin HTTP response,
+// including NewErrorResponse, fmt.Sprintf or a map literal.
 //
-// Deliberately scoped: Media/Site/Taxonomy and other controllers require
-// separate business-contract review. This guard is not a taint analyzer and
-// cannot prove the absence of indirect leaks.
+// This is intentionally narrower than a dataflow/taint analyzer: fixed
+// sentinel messages are classified outside the HTTP call site, and indirect
+// leaks in other capabilities require their own audited contracts.
 func TestAuditedControllerResponsesNeverSerializeRawErrorMethods(t *testing.T) {
 	for _, dir := range []string{
 		filepath.Join("..", "agent", "controller"),
@@ -25,6 +25,9 @@ func TestAuditedControllerResponsesNeverSerializeRawErrorMethods(t *testing.T) {
 		filepath.Join("..", "knowledge", "controller"),
 		filepath.Join("..", "operations", "controller"),
 		filepath.Join("..", "community", "controller"),
+		filepath.Join("..", "media", "controller"),
+		filepath.Join("..", "site", "controller"),
+		filepath.Join("..", "taxonomy", "controller"),
 	} {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
