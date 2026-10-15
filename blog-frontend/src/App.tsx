@@ -28,15 +28,20 @@ if (typeof window !== "undefined") {
 }
 import PublicShell from "./layouts/PublicShell";
 import AdminShell from "./layouts/AdminShell";
-import Home from "./pages/Home";
-import ArticleIndex from "./pages/ArticleIndex";
-import PostDetail from "./pages/PostDetail";
-import Categories from "./pages/Categories";
-import Tags from "./pages/Tags";
-import Archive from "./pages/Archive";
-import About from "./pages/About";
-import NotFound from "./pages/NotFound";
 import { useSiteMetadata } from "./hooks/useSiteMetadata";
+
+// Public pages are separate navigation destinations, not part of the auth,
+// shell, or bootstrap critical path. Keep PublicShell mounted while the
+// existing Public Suspense fallback loads the selected page's code.
+const Home = React.lazy(() => import("./pages/Home"));
+const ArticleIndex = React.lazy(() => import("./pages/ArticleIndex"));
+const PostDetail = React.lazy(() => import("./pages/PostDetail"));
+const Categories = React.lazy(() => import("./pages/Categories"));
+const Tags = React.lazy(() => import("./pages/Tags"));
+const Archive = React.lazy(() => import("./pages/Archive"));
+const About = React.lazy(() => import("./pages/About"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
+const CustomPageView = React.lazy(() => import("./pages/CustomPageView"));
 const Settings = React.lazy(() => import("./pages/Settings"));
 const Dashboard = React.lazy(() => import("./pages/admin/Dashboard"));
 const AdminPosts = React.lazy(() => import("./pages/admin/Posts"));
@@ -59,7 +64,6 @@ const AdminNotifications = React.lazy(
 const AccountNotifications = React.lazy(
   () => import("./pages/AccountNotifications"),
 );
-import CustomPageView from "./pages/CustomPageView";
 import { AppFeedbackProvider } from "./components/feedback/AppFeedbackProvider";
 
 function Public({ children }: { children: React.ReactNode }) {
