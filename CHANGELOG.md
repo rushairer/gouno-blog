@@ -40,6 +40,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Split nine independent public Blog routes (`Home`, `ArticleIndex`, `PostDetail`, `Categories`, `Tags`, `Archive`, `About`, `NotFound`, `CustomPageView`) into lazy-loaded modules while retaining PublicShell/Suspense loading. Enforce a real 500 kB maximum for **every** emitted JavaScript chunk at build time, with false-green tests for missing output and oversized renamed/vendor chunks. Keep security and permissions, certified page composition and Connector hold unchanged.
 - Pin the isolated Playwright browser-acceptance dependency at 1.63.0 with a committed lockfile, run it through `npm ci`, and audit its complete dependency graph in CI.
 - Verify Go module contents during backend and seed CI and pin the govulncheck tool to its v1.6.0 commit for reproducible supply-chain checks.
 - Resolve token revocation through the OIDC discovery `revocation_endpoint` and require the endpoint to share the configured issuer HTTPS origin.
