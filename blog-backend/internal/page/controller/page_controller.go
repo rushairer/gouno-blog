@@ -2,15 +2,31 @@ package controller
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
 	"github.com/rushairer/blog-backend/internal/page/domain"
+	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 )
+
+// Page existence is public only after a confirmed service/repository miss.
+// Do not reclassify a SQL outage, timeout or wrapped infrastructure failure as
+// 404. The public 404 wording stays exactly compatible, while unexpected
+// errors go through the shared redacted 5xx transport and trusted diagnostics.
+func writePageLookupError(c *gin.Context, err error) {
+	if err == nil || errors.Is(err, pageservice.ErrPageNotFound) || errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "page not found"))
+		c.Abort()
+		return
+	}
+	controllerutil.WriteDomainError(c, err)
+}
 
 type PageServiceInterface interface {
 	CreatePage(ctx context.Context, page *domain.Page) error
@@ -56,7 +72,7 @@ func (ctrl *PageController) GetPublicBySlug(c *gin.Context) {
 
 	page, err := ctrl.svc.GetPageBySlug(c.Request.Context(), slug)
 	if err != nil || page == nil {
-		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "page not found"))
+		writePageLookupError(c, err)
 		return
 	}
 
@@ -103,8 +119,8 @@ func (ctrl *PageController) GetAdmin(c *gin.Context) {
 	}
 
 	page, err := ctrl.svc.GetPage(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "page not found"))
+	if err != nil || page == nil {
+		writePageLookupError(c, err)
 		return
 	}
 
