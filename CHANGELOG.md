@@ -5,6 +5,10 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **React Hook correctness**: preserve the latest committed Provider/Embedding/Agent form draft for Step-Up MFA redirection without writing refs during render; update article browser title and SEO metadata when global site branding changes, including when an explicit brand override is later removed. Add rerender, key isolation, disabled form, canonical head cleanup and event regression tests. No certified Page/Connector source changes.
+
 ### Security
 
 - Fix a Page read reliability/security misclassification and reject Page SERIAL/int64 identifier overflow before Get/Update/Delete SQL: confirmed no-row results retain the existing public/admin 404 and hidden-draft policy, while unknown PostgreSQL errors or canceled reads are no longer silently converted into “page not found” and instead return a redacted 5xx. Restore Article numeric-looking Slug fallback after a real missing ID (`sql.ErrNoRows`), but never retry the Slug on SQL failure. Add real PostgreSQL, HTTP secrecy and call-count regressions, and expand the direct HTTP-error AST guard to ten audited capability controllers.
