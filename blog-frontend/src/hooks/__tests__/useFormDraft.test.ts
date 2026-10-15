@@ -111,7 +111,9 @@ describe("useFormDraft", () => {
     expect(getFormDraft("provider-one")).toEqual(changed);
     expect(getFormDraft("provider-two")).toEqual(second);
 
-    act(() => result.current.saveDraft({ title: "Explicit", api_key: "manual" }));
+    act(() => {
+      result.current.saveDraft({ title: "Explicit", api_key: "manual" });
+    });
     expect(getFormDraft("provider-two")).toEqual({
       title: "Explicit",
       api_key: "manual",
@@ -145,5 +147,4 @@ describe("useFormDraft", () => {
     act(() => window.dispatchEvent(new Event(STEP_UP_MFA_REQUIRED_EVENT)));
     expect(getFormDraft("disabled-credential")).toBeNull();
   });
-
 });
