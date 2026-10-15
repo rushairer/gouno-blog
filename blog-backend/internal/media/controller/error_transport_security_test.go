@@ -167,3 +167,44 @@ func TestMediaUploadMultipartPayloadOver11MiBReturnsSafe413(t *testing.T) {
 			rec.Code, rec.Body.String())
 	}
 }
+
+
+type failingMediaReader struct{ err error }
+func (r failingMediaReader) Read([]byte) (int, error) { return 0, r.err }
+
+type finalMediaReader struct { data []byte }
+func (r finalMediaReader) Read(out []byte) (int, error) {
+	return copy(out, r.data), io.EOF
+}
+
+func TestMediaSniffPreservesUnexpectedReadFailuresButAcceptsFinalShortRead(t *testing.T) {
+	const marker = "PRIVATE_MEDIA_TMP_FILE_OR_DISK_FAILURE"
+	if _, err := readMediaSample(failingMediaReader{errors.New(marker)}); err == nil ||
+		err.Error() != marker {
+		t.Fatalf("unexpected media I/O failure was discarded before internal logging: %v", err)
+	} else if _, safe := mediaValidationPublicMessage(err); safe {
+		t.Fatal("unexpected storage read error was classified as safe 400 text")
+	}
+	if _, err := readMediaSample(finalMediaReader{}); !errors.Is(err, errMediaRead) {
+		t.Fatalf("empty data was not a recognized validation error: %v", err)
+	}
+	data, err := readMediaSample(finalMediaReader{[]byte("a short final chunk")})
+	if err != nil || string(data) != "a short final chunk" {
+		t.Fatalf("final read with both bytes and EOF was improperly rejected: data=%q err=%v", data, err)
+	}
+}
+
+func TestSVGParserDistinguishesMalformedXMLFromUnexpectedReadIO(t *testing.T) {
+	const marker = "PRIVATE_XML_TEMP_DISK_ERROR"
+	malformed := validateStaticSVG(strings.NewReader("<svg><path></svg>"))
+	if !errors.Is(malformed, errSVGInvalid) {
+		t.Fatalf("invalid user SVG syntax should retain the fixed bad-request sentinel: %v", malformed)
+	}
+	err := validateStaticSVG(failingMediaReader{errors.New(marker)})
+	if err == nil || err.Error() != marker {
+		t.Fatalf("unexpected streaming XML I/O error lost its server-side cause: %v", err)
+	}
+	if message, ok := mediaValidationPublicMessage(err); ok || message != "" {
+		t.Fatalf("unsafe XML stream failure was exposed as client validation: %q", message)
+	}
+}
