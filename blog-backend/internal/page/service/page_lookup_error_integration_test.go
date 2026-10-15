@@ -55,7 +55,7 @@ func TestPageReadConfirmedMissingRowsRemainDomainNotFound(t *testing.T) {
 		read func(context.Context) error
 	}{
 		{"id", func(ctx context.Context) error {
-			_, err := svc.GetPage(ctx, 9223372036854775807)
+			_, err := svc.GetPage(ctx, 2147483647)
 			return err
 		}},
 		{"slug", func(ctx context.Context) error {
