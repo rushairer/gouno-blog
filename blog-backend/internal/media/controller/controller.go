@@ -185,7 +185,8 @@ func (ctrl *Controller) Delete(c *gin.Context) {
 		if errors.Is(err, mediaservice.ErrMediaInUse) {
 			// The wrapped DB error may contain private details, but this
 			// trusted sentinel has a stable existing client-facing message.
-			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, mediaservice.ErrMediaInUse.Error()))
+			message := mediaservice.ErrMediaInUse.Error()
+			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, message))
 			return
 		}
 		controllerutil.WriteDomainError(c, err)
