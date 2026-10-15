@@ -46,6 +46,15 @@ var reservedSlugs = map[string]bool{
 	"swagger":       true,
 }
 
+// The pages.id primary key is PostgreSQL SERIAL (signed int32), not BIGINT.
+// Prevent impossible int64 route/approval IDs from reaching SQL numeric
+// casts, which would otherwise turn a missing Page into SQLSTATE 22003.
+const maxPageID int64 = 1<<31 - 1
+
+func validPageID(id int64) bool {
+	return id > 0 && id <= maxPageID
+}
+
 type PageService struct {
 	repo *repository.PageRepository
 }
@@ -109,7 +118,7 @@ func (s *PageService) CreatePage(ctx context.Context, page *domain.Page) error {
 }
 
 func (s *PageService) UpdatePage(ctx context.Context, page *domain.Page) error {
-	if page == nil || page.ID <= 0 {
+	if page == nil || !validPageID(page.ID) {
 		return ErrPageNotFound
 	}
 	if err := s.validatePageWrite(ctx, page, s.repo.GetBySlug); err != nil {
@@ -129,7 +138,7 @@ func pageSaveError(err error) error {
 }
 
 func (s *PageService) DeletePage(ctx context.Context, id int64) error {
-	if id <= 0 {
+	if !validPageID(id) {
 		return ErrPageNotFound
 	}
 	return s.repo.Delete(ctx, id)
@@ -150,7 +159,7 @@ func pageLookupResult(p *domain.Page, err error) (*domain.Page, error) {
 }
 
 func (s *PageService) GetPage(ctx context.Context, id int64) (*domain.Page, error) {
-	if id <= 0 {
+	if !validPageID(id) {
 		return nil, ErrPageNotFound
 	}
 	p, err := s.repo.GetByID(ctx, id)
