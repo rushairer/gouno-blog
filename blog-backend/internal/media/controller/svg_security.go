@@ -53,7 +53,14 @@ func validateStaticSVG(reader io.Reader) error {
 			break
 		}
 		if err != nil {
-			return errSVGInvalid
+			// Malformed client XML remains a fixed 400 validation result.
+			// Unexpected underlying reader/I/O faults are not client errors;
+			// retain the real cause server-side for a redacted HTTP 5xx.
+			var syntaxErr *xml.SyntaxError
+			if errors.As(err, &syntaxErr) {
+				return errSVGInvalid
+			}
+			return err
 		}
 
 		switch value := token.(type) {
