@@ -20,11 +20,10 @@ func (p *HTTPProvider) openAIGenerate(ctx context.Context, req Request) (Result,
 	if errResp == nil {
 		return resResp, nil
 	}
-	res, err := p.openAIChatCompletions(ctx, req)
-	if err == nil {
-		return res, nil
+	if !shouldFallbackOpenAITextProtocol(errResp) {
+		return Result{}, errResp
 	}
-	return Result{}, errResp
+	return p.openAIChatCompletions(ctx, req)
 }
 
 func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (Result, error) {
@@ -79,28 +78,14 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 			body["tool_choice"] = "auto"
 		}
 	}
-	if p.streamMode == "always" {
-		body["stream"] = true
-		resp, err := p.do(ctx, "/v1/chat/completions", body)
-		if err != nil {
-			return Result{}, err
-		}
-		defer resp.Body.Close()
-		return decodeOpenAIChatStream(resp)
-	}
-	resp, err := p.do(ctx, "/v1/chat/completions", body)
+	resp, streaming, err := p.openAITextRequest(ctx, "/v1/chat/completions", body)
 	if err != nil {
-		if p.streamMode != "never" && requiresStreamingFallback(err) {
-			body["stream"] = true
-			streamResp, streamErr := p.do(ctx, "/v1/chat/completions", body)
-			if streamErr == nil {
-				defer streamResp.Body.Close()
-				return decodeOpenAIChatStream(streamResp)
-			}
-		}
 		return Result{}, err
 	}
 	defer resp.Body.Close()
+	if streaming {
+		return decodeOpenAIChatStream(resp)
+	}
 
 	var decoded struct {
 		Choices []struct {
@@ -285,28 +270,14 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 			body["tool_choice"] = "auto"
 		}
 	}
-	if p.streamMode == "always" {
-		body["stream"] = true
-		resp, err := p.do(ctx, "/v1/responses", body)
-		if err != nil {
-			return Result{}, err
-		}
-		defer resp.Body.Close()
-		return decodeOpenAIResponsesStream(resp)
-	}
-	resp, err := p.do(ctx, "/v1/responses", body)
+	resp, streaming, err := p.openAITextRequest(ctx, "/v1/responses", body)
 	if err != nil {
-		if p.streamMode != "never" && requiresStreamingFallback(err) {
-			body["stream"] = true
-			streamResp, streamErr := p.do(ctx, "/v1/responses", body)
-			if streamErr == nil {
-				defer streamResp.Body.Close()
-				return decodeOpenAIResponsesStream(streamResp)
-			}
-		}
 		return Result{}, err
 	}
 	defer resp.Body.Close()
+	if streaming {
+		return decodeOpenAIResponsesStream(resp)
+	}
 	var decoded struct {
 		Output []struct {
 			Type      string          `json:"type"`

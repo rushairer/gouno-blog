@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve the actual OpenAI text streaming-fallback failure and its typed cause/request evidence instead of returning an obsolete `Stream must be set to true` error. Share negotiation across Responses/Chat, explicitly serialize always/never stream settings, report required-stream configuration conflicts, and limit automatic protocol discovery to initial HTTP 404/405. Add failure-path HTTP-count regressions alongside existing successful streaming/tool tests; keep image-generation no-replay unchanged. See `../docs/quality/openai-text-negotiation-2026-10-15.md`.
+
 ### Security
 
 - Fix a Page read reliability/security misclassification and reject Page SERIAL/int64 identifier overflow before Get/Update/Delete SQL: confirmed no-row results retain the existing public/admin 404 and hidden-draft policy, while unknown PostgreSQL errors or canceled reads are no longer silently converted into “page not found” and instead return a redacted 5xx. Restore Article numeric-looking Slug fallback after a real missing ID (`sql.ErrNoRows`), but never retry the Slug on SQL failure. Add real PostgreSQL, HTTP secrecy and call-count regressions, and expand the direct HTTP-error AST guard to ten audited capability controllers.
