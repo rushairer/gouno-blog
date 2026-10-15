@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -218,12 +219,11 @@ func validateMedia(header *multipart.FileHeader) (string, string, error) {
 		return "", "", err
 	}
 	defer file.Close()
-	buffer := make([]byte, 512)
-	n, err := file.Read(buffer)
+	sample, err := readMediaSample(file)
 	if err != nil {
-		return "", "", errMediaRead
+		return "", "", err
 	}
-	contentType := detectMediaContentType(header.Filename, buffer[:n])
+	contentType := detectMediaContentType(header.Filename, sample)
 	extension, ok := allowedMediaTypes[contentType]
 	if !ok {
 		return "", "", errMediaUnsupported
@@ -234,6 +234,21 @@ func validateMedia(header *multipart.FileHeader) (string, string, error) {
 		}
 	}
 	return contentType, extension, nil
+}
+
+// A short final read may legitimately return both bytes and io.EOF.
+// Preserve unexpected filesystem/read failures as internal errors; they are
+// never trusted user-validation errors and must not reach the HTTP response.
+func readMediaSample(file io.Reader) ([]byte, error) {
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
+	if n == 0 {
+		return nil, errMediaRead
+	}
+	return buffer[:n], nil
 }
 
 func detectMediaContentType(filename string, sample []byte) string {
