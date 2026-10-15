@@ -1,21 +1,15 @@
 import { spawnSync } from "node:child_process";
-import {
-  mkdtempSync,
-  mkdirSync,
-  rmSync,
-  writeFileSync,
-  readFileSync,
-} from "node:fs";
+import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const appSource = readFileSync(resolve("src/App.tsx"), "utf8");
-const budgetCheck = resolve("scripts/check-bundle-chunk-budget.mjs");
+const app = fs.readFileSync(resolve("src/App.tsx"), "utf8");
+const budgetScript = resolve("scripts/check-bundle-chunk-budget.mjs");
 
-describe("public route lazy-loading boundary", () => {
-  it("keeps public pages out of the eagerly downloaded App entry", () => {
-    for (const name of [
+describe("public route code splitting", () => {
+  it("loads public pages only for the requested route", () => {
+    const pages = [
       "Home",
       "ArticleIndex",
       "PostDetail",
@@ -25,69 +19,64 @@ describe("public route lazy-loading boundary", () => {
       "About",
       "NotFound",
       "CustomPageView",
-    ]) {
-      expect(appSource).toContain(
-        `const ${name} = React.lazy(() => import("./pages/${name}"));`,
-      );
-      expect(appSource).not.toContain(
-        `import ${name} from "./pages/${name}";`,
-      );
+    ];
+    for (const name of pages) {
+      const lazyImport = `React.lazy(() => import("./pages/${name}"))`;
+      expect(app).toContain(lazyImport);
+      expect(app).not.toContain(`import ${name} from "./pages/${name}";`);
     }
   });
 
-  it("preserves the PublicShell and existing spinner fallback under Suspense", () => {
-    expect(appSource).toContain("<PublicShell>");
-    expect(appSource).toContain("<React.Suspense");
-    expect(appSource).toContain('role="status"');
-    expect(appSource).toContain('path="/articles/:slug"');
-    expect(appSource).toContain('path="/:slug"');
-    expect(appSource).toContain('path="/admin/ai-ops"');
-    expect(appSource).toContain('path="/admin/ai-settings"');
-    expect(appSource).toContain("<RequireAuth");
+  it("keeps the original loading shell and login boundaries", () => {
+    expect(app).toContain("<PublicShell>");
+    expect(app).toContain("<React.Suspense");
+    expect(app).toContain('role="status"');
+    expect(app).toContain('path="/articles/:slug"');
+    expect(app).toContain('path="/:slug"');
+    expect(app).toContain('path="/admin/ai-ops"');
+    expect(app).toContain('path="/admin/ai-settings"');
+    expect(app).toContain("<RequireAuth");
   });
 });
 
-describe("emitted JavaScript chunk-size gate", () => {
-  function runWithChunks(sizes: Record<string, number>) {
-    const tmp = mkdtempSync(join(tmpdir(), "gouno-blog-chunk-budget-"));
-    try {
-      const assets = join(tmp, "dist", "assets");
-      mkdirSync(assets, { recursive: true });
-      for (const [name, bytes] of Object.entries(sizes)) {
-        writeFileSync(join(assets, name), Buffer.alloc(bytes, 0x61));
-      }
-      return spawnSync(process.execPath, [budgetCheck], {
-        cwd: tmp,
-        encoding: "utf8",
-        timeout: 5_000,
-      });
-    } finally {
-      rmSync(tmp, { recursive: true, force: true });
+function checkBudget(sizes: Record<string, number>) {
+  const temp = fs.mkdtempSync(join(tmpdir(), "gouno-chunks-"));
+  try {
+    const assets = join(temp, "dist", "assets");
+    fs.mkdirSync(assets, { recursive: true });
+    for (const [name, bytes] of Object.entries(sizes)) {
+      fs.writeFileSync(join(assets, name), Buffer.alloc(bytes));
     }
+    return spawnSync(process.execPath, [budgetScript], {
+      cwd: temp,
+      encoding: "utf8",
+      timeout: 5_000,
+    });
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
   }
+}
 
-  it("rejects missing build output rather than false-passing", () => {
-    const result = runWithChunks({});
+describe("emitted Vite chunk budget", () => {
+  it("fails when the build has no JS output", () => {
+    const result = checkBudget({});
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("no JavaScript chunks");
   });
 
-  it("accepts emitted chunks at the exact established 500 kB boundary", () => {
-    const result = runWithChunks({
-      "index-test.js": 500_000,
-      "editor-test.js": 32_000,
-    });
+  it("accepts the exact 500 kB boundary", () => {
+    const result = checkBudget({ "index.js": 500_000, "route.js": 12_000 });
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("2 JavaScript chunks <= 500 kB");
   });
 
-  it("rejects oversized renamed/vendor chunks, not just index.js", () => {
-    const result = runWithChunks({
-      "index-ok.js": 12_000,
-      "vendor-oversized.js": 500_001,
+  it("rejects oversized chunks even when renamed to vendor", () => {
+    const result = checkBudget({
+      "index.js": 12_000,
+      "vendor.js": 500_001,
     });
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("vendor-oversized.js");
+    expect(result.stderr).toContain("vendor.js");
     expect(result.stderr).toContain("chunk budget exceeded");
   });
 });
