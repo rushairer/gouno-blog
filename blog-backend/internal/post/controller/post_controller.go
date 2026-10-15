@@ -2,15 +2,15 @@ package controller
 
 import (
 	"context"
+	"database/sql"
 	"errors"
-	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
-
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
@@ -268,7 +268,10 @@ func (ctrl *PostController) Get(c *gin.Context) {
 	var post *postdomain.Post
 	if err == nil && id > 0 {
 		post, err = ctrl.svc.GetAdminPost(c.Request.Context(), id)
-		if err != nil && !errors.Is(err, postservice.ErrPostNotFound) {
+		// Repository no-row responses can be direct sql.ErrNoRows or mapped
+		// ErrPostNotFound. Both are genuine misses and may fall back to a
+		// numeric-looking Slug. All other errors fail closed before fallback.
+		if err != nil && !errors.Is(err, postservice.ErrPostNotFound) && !errors.Is(err, sql.ErrNoRows) {
 			WriteDomainError(c, err)
 			return
 		}
