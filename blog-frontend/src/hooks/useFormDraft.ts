@@ -43,19 +43,18 @@ export function useFormDraft<T>(
   options: UseFormDraftOptions<T> = {},
 ) {
   const { enabled = true, autoRestore = true, onRestored } = options;
-  const valueRef = useRef(value);
-  valueRef.current = value;
   const hasRestoredRef = useRef(false);
 
+  // Capture the latest committed form value in the save callback rather than
+  // mutating a ref during render. Concurrent or abandoned renders must not
+  // alter the draft that a Step-Up MFA event can persist. The listener below
+  // follows this callback and therefore observes the newest committed value.
   const save = useCallback(
     (customValue?: T) => {
       if (!enabled) return;
-      setFormDraft(
-        key,
-        customValue !== undefined ? customValue : valueRef.current,
-      );
+      setFormDraft(key, customValue !== undefined ? customValue : value);
     },
-    [enabled, key],
+    [enabled, key, value],
   );
 
   const clear = useCallback(() => {
