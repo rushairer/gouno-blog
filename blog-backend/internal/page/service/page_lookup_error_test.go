@@ -52,3 +52,39 @@ func TestPageLookupResultDistinguishesMissingRowsAndStorageFailures(t *testing.T
 		})
 	}
 }
+
+
+func TestPageSERIALIDBoundsRejectImpossibleRouteAndApprovalValuesBeforeSQL(t *testing.T) {
+	service := NewPageService(nil) // Any SQL access would panic: it must not occur.
+	for _, tc := range []struct {
+		name string
+		id int64
+		valid bool
+	}{
+		{"zero", 0, false},
+		{"negative", -1, false},
+		{"max_int32", maxPageID, true},
+		{"first_overflow", maxPageID + 1, false},
+		{"max_int64", 9223372036854775807, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if validPageID(tc.id) != tc.valid {
+				t.Fatalf("Page ID %d SERIAL bound validation = %t; want %t",
+					tc.id, validPageID(tc.id), tc.valid)
+			}
+			if tc.valid {
+				return
+			}
+			ctx := context.Background()
+			if p, err := service.GetPage(ctx, tc.id); p != nil || !errors.Is(err, ErrPageNotFound) {
+				t.Fatalf("out-of-range read tried SQL or returned non-not-found: page=%#v err=%v", p, err)
+			}
+			if err := service.DeletePage(ctx, tc.id); !errors.Is(err, ErrPageNotFound) {
+				t.Fatalf("out-of-range delete tried SQL or failed to reject: %v", err)
+			}
+			if err := service.UpdatePage(ctx, &domain.Page{ID: tc.id}); !errors.Is(err, ErrPageNotFound) {
+				t.Fatalf("out-of-range update tried SQL or failed to reject: %v", err)
+			}
+		})
+	}
+}
