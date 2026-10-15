@@ -46,6 +46,15 @@ var reservedSlugs = map[string]bool{
 	"swagger":       true,
 }
 
+// The pages.id primary key is PostgreSQL SERIAL (signed int32), not BIGINT.
+// Prevent impossible int64 route/approval IDs from reaching SQL numeric
+// casts, which would otherwise turn a missing Page into SQLSTATE 22003.
+const maxPageID int64 = 1<<31 - 1
+
+func validPageID(id int64) bool {
+	return id > 0 && id <= maxPageID
+}
+
 type PageService struct {
 	repo *repository.PageRepository
 }
@@ -109,7 +118,7 @@ func (s *PageService) CreatePage(ctx context.Context, page *domain.Page) error {
 }
 
 func (s *PageService) UpdatePage(ctx context.Context, page *domain.Page) error {
-	if page == nil || page.ID <= 0 {
+	if page == nil || !validPageID(page.ID) {
 		return ErrPageNotFound
 	}
 	if err := s.validatePageWrite(ctx, page, s.repo.GetBySlug); err != nil {
@@ -129,39 +138,44 @@ func pageSaveError(err error) error {
 }
 
 func (s *PageService) DeletePage(ctx context.Context, id int64) error {
-	if id <= 0 {
+	if !validPageID(id) {
 		return ErrPageNotFound
 	}
 	return s.repo.Delete(ctx, id)
 }
 
+// pageLookupResult translates a confirmed repository miss into the Page
+// domain's public not-found identity. Unexpected PostgreSQL/transport errors
+// must survive with their original Go cause, so controllers can return a safe
+// 5xx and operators can diagnose an outage instead of logging a false 404.
+func pageLookupResult(p *domain.Page, err error) (*domain.Page, error) {
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && p == nil) {
+		return nil, ErrPageNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
 func (s *PageService) GetPage(ctx context.Context, id int64) (*domain.Page, error) {
-	if id <= 0 {
+	if !validPageID(id) {
 		return nil, ErrPageNotFound
 	}
 	p, err := s.repo.GetByID(ctx, id)
-	if err != nil {
-		return nil, ErrPageNotFound
-	}
-	return p, nil
+	return pageLookupResult(p, err)
 }
 
 func (s *PageService) GetPageBySlug(ctx context.Context, slug string) (*domain.Page, error) {
 	slug = NormalizeSlug(slug)
 	p, err := s.repo.GetBySlug(ctx, slug)
-	if err != nil {
-		return nil, ErrPageNotFound
-	}
-	return p, nil
+	return pageLookupResult(p, err)
 }
 
 func (s *PageService) GetPublishedPageBySlug(ctx context.Context, slug string) (*domain.Page, error) {
 	slug = NormalizeSlug(slug)
 	p, err := s.repo.GetPublishedBySlug(ctx, slug)
-	if err != nil {
-		return nil, ErrPageNotFound
-	}
-	return p, nil
+	return pageLookupResult(p, err)
 }
 
 func (s *PageService) ListPublishedNavPages(ctx context.Context) ([]*domain.Page, error) {

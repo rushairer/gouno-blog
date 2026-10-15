@@ -10,8 +10,9 @@ import (
 	"testing"
 )
 
-// Structural regression guard for eight independently reviewed capabilities:
-// Agent, Workflow, Knowledge, Operations, Community, Media, Site and Taxonomy.
+// Structural regression guard for ten independently reviewed capability controllers:
+// Agent, Workflow, Knowledge, Operations, Community, Media, Site, Taxonomy,
+// Post and Page.
 // It catches direct Error() serialization nested within a Gin HTTP response,
 // including NewErrorResponse, fmt.Sprintf or a map literal.
 //
@@ -28,6 +29,8 @@ func TestAuditedControllerResponsesNeverSerializeRawErrorMethods(t *testing.T) {
 		filepath.Join("..", "media", "controller"),
 		filepath.Join("..", "site", "controller"),
 		filepath.Join("..", "taxonomy", "controller"),
+		filepath.Join("..", "post", "controller"),
+		filepath.Join("..", "page", "controller"),
 	} {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
