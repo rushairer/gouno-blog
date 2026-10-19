@@ -1128,7 +1128,7 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 						totalInput += agentRun.InputTokens
 						totalOutput += agentRun.OutputTokens
 						if agentRun.Status == domain.AgentRunFailed || agentRun.Status == domain.AgentRunCancelled {
-							err = fmt.Errorf("%w: Agent run %d %s", ErrInvalid, agentRun.ID, agentRun.Status)
+							err = agentRunExecutionError(agentRun)
 						} else {
 							awaiting = awaiting || agentRun.Status == domain.AgentRunAwaitingApproval
 						}

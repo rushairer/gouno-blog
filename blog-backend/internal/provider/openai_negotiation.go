@@ -24,7 +24,7 @@ func (e *openAITextRequestError) Error() string {
 		return fmt.Sprintf("openai %s requires stream=true, but stream_mode=never disables streaming", e.endpoint)
 	}
 	if e.negotiated {
-		return fmt.Sprintf("openai %s streaming fallback (stream=true) failed: %v", e.endpoint, e.cause)
+		return fmt.Sprintf("openai %s request failed: %v (stream=true; after streaming negotiation)", e.endpoint, e.cause)
 	}
 	return fmt.Sprintf("openai %s request (stream=%t) failed: %v", e.endpoint, e.stream, e.cause)
 }

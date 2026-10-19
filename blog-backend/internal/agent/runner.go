@@ -161,8 +161,7 @@ func (r *Runner) ExecutePreview(ctx context.Context, runID int64) {
 
 func (r *Runner) executeAndFinish(ctx context.Context, runID int64, dryRun bool) {
 	if err := r.execute(ctx, runID, dryRun); err != nil {
-		code := "agent_run_failed"
-		message := safeError(err)
+		code, message := runFailureDetails(err)
 		_ = r.lifecycle.FinishRun(ctx, runID, domain.AgentRunFailed, "", 0, 0, &code, &message)
 		r.notifyRunFailure(ctx, runID, message)
 	}

@@ -10,6 +10,20 @@ import (
 )
 
 func (p *HTTPProvider) openAIGenerate(ctx context.Context, req Request) (Result, error) {
+	mapped, originals, err := mapOpenAIToolNames(req)
+	if err != nil {
+		return Result{}, err
+	}
+	result, err := p.openAIGenerateText(ctx, mapped)
+	for index := range result.ToolCalls {
+		if original, exists := originals[result.ToolCalls[index].Name]; exists {
+			result.ToolCalls[index].Name = original
+		}
+	}
+	return result, err
+}
+
+func (p *HTTPProvider) openAIGenerateText(ctx context.Context, req Request) (Result, error) {
 	if p.protocolMode == "responses" {
 		return p.openAIResponses(ctx, req)
 	}

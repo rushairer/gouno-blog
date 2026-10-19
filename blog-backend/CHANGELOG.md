@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Distinguish Agent execution failures from invalid Workflow definitions. Carry typed OpenAI text failure codes into Agent runs and show fixed, non-secret cause summaries in Workflow step/run errors and failure notifications instead of only `invalid workflow: Agent run N failed`. Put the final upstream cause before streaming-negotiation context in Provider errors; do not copy raw Provider bodies into Workflow summaries or rewrite historical failures.
+- Map namespaced Agent tools to bounded, collision-checked OpenAI wire names for Responses and Chat Completions, including streaming, forced tool choice and assistant history. Restore exact internal tool names before dispatch without changing stored capabilities or authorization; fix workflows rejected with `Invalid 'tools[0].name'` despite successful text-only connection tests.
 - Preserve the actual OpenAI text streaming-fallback failure and its typed cause/request evidence instead of returning an obsolete `Stream must be set to true` error. Share negotiation across Responses/Chat, explicitly serialize always/never stream settings, report required-stream configuration conflicts, and limit automatic protocol discovery to initial HTTP 404/405. Add failure-path HTTP-count regressions alongside existing successful streaming/tool tests; keep image-generation no-replay unchanged. See `../docs/quality/openai-text-negotiation-2026-10-15.md`.
 
 ### Security
