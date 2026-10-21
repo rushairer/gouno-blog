@@ -18,9 +18,9 @@ class ImageSecurityContractTest(unittest.TestCase):
         seed = (REPO_ROOT / "seed" / "Dockerfile").read_text(encoding="utf-8")
         frontend = (REPO_ROOT / "blog-frontend" / "Dockerfile").read_text(encoding="utf-8")
 
-        self.assertIn("ca-certificates=20260909-r0", backend)
+        self.assertIn("ca-certificates=20261020-r0", backend)
         self.assertIn("tzdata=2026e-r0", backend)
-        self.assertIn("ca-certificates=20260909-r0", seed)
+        self.assertIn("ca-certificates=20261020-r0", seed)
         self.assertIn("zlib=1.3.2-r1", backend)
         self.assertIn("zlib=1.3.2-r1", seed)
         self.assertIn("libexpat=2.8.5-r0", frontend)
@@ -29,7 +29,7 @@ class ImageSecurityContractTest(unittest.TestCase):
         self.assertIn("nghttp2-libs=1.70.0-r0", frontend)
         self.assertIn("libpng=1.6.59-r0", frontend)
         self.assertNotIn("apk add --no-cache ca-certificates tzdata", backend)
-        self.assertNotIn("apk --no-cache add ca-certificates \\\\", seed)
+        self.assertNotRegex(seed, r"apk --no-cache add ca-certificates(?:\s|$)")
 
     def test_pull_request_images_run_both_scanners(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "images.yml").read_text(
