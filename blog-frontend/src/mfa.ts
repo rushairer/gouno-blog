@@ -97,9 +97,43 @@ export function checkAndHandleStepUpPopupCallback(): boolean {
   return true;
 }
 
+const STEP_UP_STORAGE_KEY = "gouno_step_up_event";
+const SUDO_ACTIVATED_STORAGE_KEY = "gouno:sudo_activated_at";
+
+function completionTimestamp(data: unknown): number | null {
+  try {
+    if (!data || typeof data !== "object") return null;
+    const { type, timestamp } = data as { type?: unknown; timestamp?: unknown };
+    return type === STEP_UP_MESSAGE_TYPE &&
+      typeof timestamp === "number" &&
+      Number.isSafeInteger(timestamp) &&
+      timestamp > 0
+      ? timestamp
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function storedCompletionTimestamp(key: string | null, raw: string | null) {
+  if (!raw) return null;
+  if (key === SUDO_ACTIVATED_STORAGE_KEY) {
+    const timestamp = /^\d+$/.test(raw) ? Number(raw) : NaN;
+    return Number.isSafeInteger(timestamp) && timestamp > 0 ? timestamp : null;
+  }
+  if (key === STEP_UP_STORAGE_KEY) {
+    try {
+      return completionTimestamp(JSON.parse(raw));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 /**
- * Opens a popup window to complete MFA step-up verification seamlessly
- * without reloading or leaving the current application page.
+ * Opens the existing BFF step-up flow without leaving the application page.
+ * Completion messages are UI hints, never proof of server-side authorization.
  */
 export function openStepUpPopup(
   returnTo = `/admin?${STEP_UP_POPUP_PARAM}=1`,
@@ -112,6 +146,20 @@ export function openStepUpPopup(
   const height = 680;
   const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
   const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2);
+
+  const startedAt = Date.now();
+  const initialTimestamps = new Set<number>();
+  for (const key of [SUDO_ACTIVATED_STORAGE_KEY, STEP_UP_STORAGE_KEY]) {
+    try {
+      const timestamp = storedCompletionTimestamp(
+        key,
+        localStorage.getItem(key),
+      );
+      if (timestamp !== null) initialTimestamps.add(timestamp);
+    } catch {
+      // Storage may be unavailable; the other transports still work.
+    }
+  }
 
   const url = `/api/auth/mfa/step-up?return_to=${encodeURIComponent(returnTo)}`;
   let popup: Window | null = null;
@@ -130,33 +178,36 @@ export function openStepUpPopup(
   }
 
   let timer: ReturnType<typeof setInterval> | null = null;
+  let closeTimeout: ReturnType<typeof setTimeout> | null = null;
   let broadcastChannel: BroadcastChannel | null = null;
   let completed = false;
 
-  const triggerSuccess = () => {
-    if (completed) return;
-    completed = true;
-    cleanup();
-    try {
-      localStorage.setItem("gouno:sudo_activated_at", Date.now().toString());
-    } catch {
-      // Ignore
-    }
-    try {
-      if (popup && !popup.closed) {
-        popup.close();
+  const isFresh = (timestamp: number | null) =>
+    timestamp !== null &&
+    timestamp >= startedAt &&
+    timestamp <= Date.now() &&
+    !initialTimestamps.has(timestamp);
+
+  const hasFreshStoredCompletion = () => {
+    for (const key of [SUDO_ACTIVATED_STORAGE_KEY, STEP_UP_STORAGE_KEY]) {
+      try {
+        if (
+          isFresh(storedCompletionTimestamp(key, localStorage.getItem(key)))
+        ) {
+          return true;
+        }
+      } catch {
+        // Inspect each key independently; malformed data is not success.
       }
-    } catch {
-      // Ignore close error
     }
-    window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
-    onSuccess?.();
+    return false;
   };
 
   const cleanup = () => {
     window.removeEventListener("message", messageListener);
     window.removeEventListener("storage", storageListener);
     if (broadcastChannel) {
+      broadcastChannel.onmessage = null;
       try {
         broadcastChannel.close();
       } catch {
@@ -164,105 +215,95 @@ export function openStepUpPopup(
       }
       broadcastChannel = null;
     }
-    if (timer) {
+    if (timer !== null) {
       clearInterval(timer);
       timer = null;
     }
+    if (closeTimeout !== null) {
+      clearTimeout(closeTimeout);
+      closeTimeout = null;
+    }
+  };
+
+  const triggerSuccess = () => {
+    if (completed) return;
+    completed = true;
+    cleanup();
+    try {
+      localStorage.setItem(SUDO_ACTIVATED_STORAGE_KEY, Date.now().toString());
+    } catch {
+      // Ignore
+    }
+    try {
+      if (popup && !popup.closed) popup.close();
+    } catch {
+      // Ignore close error
+    }
+    window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
+    onSuccess?.();
+  };
+
+  const triggerCancel = () => {
+    if (completed) return;
+    completed = true;
+    cleanup();
+    onCancel?.();
   };
 
   const messageListener = (event: MessageEvent) => {
     if (
       event.origin === window.location.origin &&
-      event.data?.type === STEP_UP_MESSAGE_TYPE
+      event.source === popup &&
+      isFresh(completionTimestamp(event.data))
     ) {
       triggerSuccess();
     }
   };
 
   const storageListener = (event: StorageEvent) => {
-    if (
-      (event.key === "gouno_step_up_event" ||
-        event.key === "gouno:sudo_activated_at") &&
-      event.newValue
-    ) {
-      triggerSuccess();
+    let fresh = false;
+    try {
+      fresh =
+        event.storageArea === localStorage &&
+        isFresh(storedCompletionTimestamp(event.key, event.newValue));
+    } catch {
+      // Ignore inaccessible storage.
     }
+    if (fresh) triggerSuccess();
   };
 
-  // 1. Listen for window.postMessage
   window.addEventListener("message", messageListener);
-
-  // 2. Listen for Storage events (cross-window on same origin)
   window.addEventListener("storage", storageListener);
 
-  // 3. Listen for BroadcastChannel messages (robust modern standard)
+  // These same-origin transports still work when COOP severs window.opener.
   try {
     if (typeof BroadcastChannel !== "undefined") {
       broadcastChannel = new BroadcastChannel("gouno_mfa_step_up");
       broadcastChannel.onmessage = (event) => {
-        if (event.data?.type === STEP_UP_MESSAGE_TYPE) {
-          triggerSuccess();
-        }
+        if (isFresh(completionTimestamp(event.data))) triggerSuccess();
       };
     }
   } catch {
-    // Ignore BroadcastChannel errors
+    // Ignore BroadcastChannel errors.
   }
 
-  // 4. Poll for popup closed state with recent auth detection
   timer = setInterval(() => {
-    if (!popup || popup.closed) {
-      if (!completed) {
-        let recentAuth = false;
-        try {
-          const sudoTime = localStorage.getItem("gouno:sudo_activated_at");
-          if (
-            sudoTime &&
-            Math.abs(Date.now() - parseInt(sudoTime, 10)) < 15000
-          ) {
-            recentAuth = true;
-          }
-          const stepUpEvent = localStorage.getItem("gouno_step_up_event");
-          if (stepUpEvent) {
-            const data = JSON.parse(stepUpEvent);
-            if (
-              data?.timestamp &&
-              Math.abs(Date.now() - data.timestamp) < 15000
-            ) {
-              recentAuth = true;
-            }
-          }
-        } catch {
-          // Ignore
-        }
-
-        if (recentAuth) {
-          triggerSuccess();
-        } else {
-          // Wait briefly in case storage/broadcast events are still propagating
-          setTimeout(() => {
-            if (!completed) {
-              try {
-                const sudoTime = localStorage.getItem(
-                  "gouno:sudo_activated_at",
-                );
-                if (
-                  sudoTime &&
-                  Math.abs(Date.now() - parseInt(sudoTime, 10)) < 15000
-                ) {
-                  triggerSuccess();
-                  return;
-                }
-              } catch {
-                // Ignore
-              }
-              cleanup();
-              onCancel?.();
-            }
-          }, 400);
-        }
-      }
+    if (!popup || !popup.closed || completed) return;
+    if (timer !== null) {
+      clearInterval(timer);
+      timer = null;
     }
+    if (hasFreshStoredCompletion()) {
+      triggerSuccess();
+      return;
+    }
+    // Exactly one grace period; keep listeners until it expires or succeeds.
+    closeTimeout = setTimeout(() => {
+      closeTimeout = null;
+      if (completed) return;
+      if (hasFreshStoredCompletion()) triggerSuccess();
+      else triggerCancel();
+    }, 400);
   }, 300);
 
   return true;
