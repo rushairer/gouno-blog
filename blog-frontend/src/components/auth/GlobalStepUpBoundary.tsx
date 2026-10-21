@@ -10,14 +10,27 @@ import {
 import { StepUpMfaModal } from "./StepUpMfaModal";
 import { useAppFeedback } from "../feedback/AppFeedbackProvider";
 
-function rejectionMessage(reason: unknown): string {
-  if (reason instanceof Error && reason.message.trim()) return reason.message;
-  if (typeof reason === "string" && reason.trim()) return reason;
-  return "操作未完成，请稍后重试。";
+function isStepUpRejection(reason: unknown): boolean {
+  try {
+    // Do not coerce arbitrary objects or trust their message-shaped fields.
+    return (
+      (typeof reason === "string" || reason instanceof Error) &&
+      isMfaError(reason)
+    );
+  } catch {
+    // Error getters and proxies can throw while being inspected.
+    return false;
+  }
 }
 
 export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
-  const [stepUpOpen, setStepUpOpen] = useState(false);
+  const [stepUpOpen, setStepUpOpen] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get(
+        STEP_UP_MFA_QUERY_PARAM,
+      ) === "1",
+  );
   const { notify } = useAppFeedback();
 
   useEffect(() => {
@@ -33,20 +46,19 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
         window.location.hash
       }`,
     );
-    setStepUpOpen(true);
   }, []);
 
   useEffect(() => {
     const requestStepUp = () => setStepUpOpen(true);
     const handleCompleted = () => setStepUpOpen(false);
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      if (isMfaError(event.reason)) {
+      event.preventDefault();
+      if (isStepUpRejection(event.reason)) {
         setStepUpOpen(true);
-        event.preventDefault();
         return;
       }
-      notify(rejectionMessage(event.reason), "error");
-      event.preventDefault();
+      // Unknown failures are not an approved public error-message contract.
+      notify("操作未完成，请稍后重试。", "error");
     };
 
     window.addEventListener(STEP_UP_MFA_REQUIRED_EVENT, requestStepUp);
