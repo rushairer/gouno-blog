@@ -20,6 +20,7 @@ FROM nginx:stable-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed4307
 
 RUN apk add --no-cache libexpat=2.8.5-r0 pcre2=10.49-r0 \
     zlib=1.3.2-r1 nghttp2-libs=1.70.0-r0 libpng=1.6.59-r0 tiff=4.7.2-r0 \
+    libxml2=2.15.4-r0 \
     && mkdir -p /etc/nginx/snippets \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
     && touch /var/run/nginx.pid \

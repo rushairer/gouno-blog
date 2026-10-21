@@ -28,6 +28,7 @@ class ImageSecurityContractTest(unittest.TestCase):
         self.assertIn("zlib=1.3.2-r1", frontend)
         self.assertIn("nghttp2-libs=1.70.0-r0", frontend)
         self.assertIn("libpng=1.6.59-r0", frontend)
+        self.assertIn("libxml2=2.15.4-r0", frontend)
         self.assertNotIn("apk add --no-cache ca-certificates tzdata", backend)
         self.assertNotRegex(seed, r"apk --no-cache add ca-certificates(?:\s|$)")
 
@@ -40,6 +41,7 @@ class ImageSecurityContractTest(unittest.TestCase):
         self.assertIn("severity: HIGH,CRITICAL", workflow)
         self.assertIn("severity-cutoff: high", workflow)
         self.assertIn("local/gouno-blog-${{ matrix.name }}:${{ github.sha }}", workflow)
+        self.assertIn("    strategy:\n      fail-fast: false\n", workflow)
 
     def test_published_images_are_scanned_by_immutable_digest(self) -> None:
         workflow = (
