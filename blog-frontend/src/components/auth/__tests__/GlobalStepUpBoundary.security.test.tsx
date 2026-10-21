@@ -87,7 +87,7 @@ describe("GlobalStepUpBoundary confidentiality and lifecycle", () => {
     expect(document.body.textContent).not.toContain(secret);
   });
 
-  it("does not derive an MFA prompt from an object's string coercion", async () => {
+  it("does not derive an MFA prompt from object coercion", async () => {
     const toString = vi.fn(() => "recent_mfa_required");
     render(boundary());
     dispatchRejection({ toString });
@@ -112,7 +112,7 @@ describe("GlobalStepUpBoundary confidentiality and lifecycle", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("contains a revoked proxy without a second unhandled error", async () => {
+  it("contains a revoked proxy", async () => {
     const { proxy, revoke } = Proxy.revocable({}, {});
     revoke();
     render(boundary());
@@ -125,25 +125,28 @@ describe("GlobalStepUpBoundary confidentiality and lifecycle", () => {
   it.each([
     ["Error", new Error(`recent_mfa_required: ${secret}`)],
     ["string", `recent_mfa_required: ${secret}`],
-  ])("keeps the existing %s MFA prompt separate from error feedback", async (_kind, reason) => {
-    render(boundary());
-    const event = dispatchRejection(reason);
+  ])(
+    "keeps the existing %s MFA prompt separate from error feedback",
+    async (_kind, reason) => {
+      render(boundary());
+      const event = dispatchRejection(reason);
 
-    expect(await screen.findByText("高权限安全验证")).toBeInTheDocument();
-    expect(screen.queryByText(safeMessage)).not.toBeInTheDocument();
-    expect(document.body.textContent).not.toContain(secret);
-    expect(event.defaultPrevented).toBe(true);
-    expect(stepUpMfa).not.toHaveBeenCalled();
+      expect(await screen.findByText("高权限安全验证")).toBeInTheDocument();
+      expect(screen.queryByText(safeMessage)).not.toBeInTheDocument();
+      expect(document.body.textContent).not.toContain(secret);
+      expect(event.defaultPrevented).toBe(true);
+      expect(stepUpMfa).not.toHaveBeenCalled();
 
-    act(() => {
-      window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
-    });
-    await waitFor(() => {
-      expect(screen.queryByText("高权限安全验证")).not.toBeInTheDocument();
-    });
-  });
+      act(() => {
+        window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
+      });
+      await waitFor(() => {
+        expect(screen.queryByText("高权限安全验证")).not.toBeInTheDocument();
+      });
+    },
+  );
 
-  it("consumes the one-shot flag under StrictMode without losing navigation state", async () => {
+  it("preserves one-shot navigation state under StrictMode", async () => {
     const historyState = { editor: "draft-7" };
     window.history.replaceState(
       historyState,
@@ -178,7 +181,7 @@ describe("GlobalStepUpBoundary confidentiality and lifecycle", () => {
     },
   );
 
-  it("keeps one rejection listener across StrictMode and rerenders", async () => {
+  it("keeps one listener across StrictMode and rerenders", async () => {
     const view = render(boundary(), { wrapper: StrictMode });
     view.rerender(boundary());
     dispatchRejection(new Error(secret));
@@ -187,7 +190,7 @@ describe("GlobalStepUpBoundary confidentiality and lifecycle", () => {
     expect(document.body.textContent).not.toContain(secret);
   });
 
-  it("removes its rejection listener when only the boundary unmounts", () => {
+  it("removes its listener when only the boundary unmounts", () => {
     const view = render(boundary());
     view.rerender(boundary(false));
     const event = dispatchRejection(new Error(secret));

@@ -14,7 +14,7 @@ def check():
         directive = re.search(r"(?m)^go (\d+)\.(\d+)\.(\d+)$", mod)
         assert directive, f"{component}: go.mod must pin a Go patch release"
         version = tuple(map(int, directive.groups()))
-        assert version >= (1, 27, 2), f"{component}: requires Go 1.27.2+ security baseline"
+        assert version >= (1, 27, 3), f"{component}: requires Go 1.27.3+ security baseline"
         dockerfile = (root / component / "Dockerfile").read_text()
         builder = re.search(
             r"(?m)^FROM --platform=\$BUILDPLATFORM golang:(\d+\.\d+\.\d+)-alpine@sha256:([0-9a-f]{64}) AS builder$",
