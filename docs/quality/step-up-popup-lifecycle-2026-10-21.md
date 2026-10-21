@@ -16,7 +16,7 @@
 
 成功与取消共用一次性终态；先标记终态并释放资源，再通知调用方。首次发现关闭即停止轮询，只保留一个 400ms 宽限窗口；窗口中到达有效完成信号仍可成功。两个 Storage 键在立即检测和最终宽限检测中均被检查。
 
-所有接收路径使用安全整数时间戳；拒绝早于本次打开、来自未来以及打开前已存在的时间标记，包含同毫秒的旧记录。JSON 标记必须匹配既有 type；旧标量键只接受完整十进制时间值，不使用容忍尾随垃圾的 parseInt。postMessage 同时检查同源与本次 popup source；Storage 仅接受 localStorage，而非 sessionStorage。
+所有接收路径使用安全整数时间戳；拒绝早于本次打开、来自未来以及打开前已存在的时间标记，包含同毫秒的旧记录。保留原有小于 15 秒的信号新鲜度边界；本轮复核发现首个候选补丁遗漏此上界，已补回并增加过期信号与长时间打开后新鲜信号的相反回归。JSON 标记必须匹配既有 type；旧标量键只接受完整十进制时间值，不使用容忍尾随垃圾的 parseInt。postMessage 同时检查同源与本次 popup source；Storage 仅接受 localStorage，而非 sessionStorage。
 
 保留 BFF 入口、return_to 编码、弹窗尺寸/名称、callback sender、事件名、Storage 键和 BroadcastChannel 名称。opener 丢失时继续保留同源 Storage/BroadcastChannel 通道；存储或 BroadcastChannel 不可用时保留有效 postMessage 路径。不新增自动重试，不改变业务动作或服务端权限判断。
 
@@ -24,10 +24,12 @@
 
 ## 验证与收口规则
 
-本地 Node 22 仅运行了实际 TypeScript helper 的 17 项确定性定时/事件验证，并完成浏览器测试脚本语法检查；无法解析 github.com 拉取全仓库，因此不宣称在本地完成 Node 24、Vitest、Go、Docker 或 Chromium 全套验证。
+本地 Node 22 运行了实际 TypeScript helper 的 19 项确定性定时/事件验证，并完成浏览器测试脚本语法检查；无法解析 github.com 拉取全仓库，因此不宣称在本地完成 Node 24、Vitest、Go、Docker 或 Chromium 全套验证。
 
-新增 Vitest 覆盖完成/取消竞态、延迟信号、历史/异常时间、Storage 类型、来源约束、不可用通道、回调异常后的资源释放，以及真实 useSudoMode 的 Promise/activating 行为。新增三个 Chromium 测试使用真实弹窗与同源传输，但明确拦截 BFF 请求；它们不是实际 OIDC/MFA 验证演练。测试加入既有 Playwright testMatch，不移除原有测试。
+新增 Vitest 覆盖完成/取消竞态、延迟信号、历史/异常时间、Storage 类型、来源约束、不可用通道、回调异常后的资源释放，以及真实 useSudoMode 的 Promise/activating 行为。首轮 CI `39581283469` / job `119159242405` 中 15 项测试在 StorageEvent 构造阶段失败：共享 setup 将 localStorage 替换为普通 mock，不具有 JSDOM Storage 的 WebIDL 标识。后续只修正测试事件构造，并直接在实际 mock 上注入存储失败；不删除测试、不放松生产 storageArea 检查。首轮不是通过的验收记录。
 
-最终以同一 PR head 的完整 CI、实际 PostgreSQL 必跑证据、三张镜像与双扫描、BFF 兼容、Showcase Parity 和全部 Chromium 测试结果验收，并将精确 run/artifact 记录在 PR。不得以改阈值、跳过、删除测试或修改认证状态换取通过。
+新增三个 Chromium 测试使用真实弹窗与同源传输，但明确拦截 BFF 请求；它们不是实际 OIDC/MFA 验证演练。测试加入既有 Playwright testMatch，不移除原有测试。
+
+最终以同一 PR head 的完整 CI、实际 PostgreSQL 必跑证据、三张镜像与双扫描、Showcase Parity 和全部 Chromium 测试结果验收，并将精确 run/artifact 记录在 PR。BFF compatibility 现有 paths 不匹配本批前端-only 改动，因此没有本批新增 BFF run；上一批已验收的 BFF 结果只作为未修改服务端的历史基线，不冒充本批成功。不得以改阈值、跳过、删除测试或修改认证状态换取通过。
 
 #359、#338 继续保持开放；本批不替代剩余 React/HTTP 审计、授权操作员恢复演练、最终发布审计或生产部署。

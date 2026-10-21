@@ -46,13 +46,11 @@ function sendMessage(
 }
 
 function sendStorage(key: string, value: string, area = localStorage) {
-  window.dispatchEvent(
-    new StorageEvent("storage", {
-      key,
-      newValue: value,
-      storageArea: area,
-    }),
-  );
+  const event = new StorageEvent("storage", { key, newValue: value });
+  // The shared setup installs a plain storage mock, not a JSDOM Storage.
+  // Preserve identity checks without passing that mock to WebIDL conversion.
+  Object.defineProperty(event, "storageArea", { value: area });
+  window.dispatchEvent(event);
 }
 
 function closeAndDrain() {
@@ -241,6 +239,31 @@ describe("Step-Up popup completion hints", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects a post-open hint once its original freshness window expires", () => {
+    open();
+    vi.advanceTimersByTime(1);
+    const data = message();
+    localStorage.setItem(eventKey, JSON.stringify(data));
+    vi.advanceTimersByTime(15_000);
+    TestBroadcastChannel.instances[0].emit(data);
+    sendMessage(data);
+    sendStorage(eventKey, JSON.stringify(data));
+    closeAndDrain();
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onCompleted).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts a fresh hint after the popup has been open for a long time", () => {
+    open();
+    vi.advanceTimersByTime(20_000);
+    TestBroadcastChannel.instances[0].emit(message());
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onCompleted).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("contains a throwing timestamp getter without coercing its value", () => {
     open();
     const data = Object.defineProperty(
@@ -326,10 +349,10 @@ describe("Step-Up popup completion hints", () => {
 
   it("keeps postMessage usable without storage or BroadcastChannel", () => {
     vi.stubGlobal("BroadcastChannel", undefined);
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    vi.spyOn(localStorage, "getItem").mockImplementation(() => {
       throw new Error("storage disabled");
     });
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(localStorage, "setItem").mockImplementation(() => {
       throw new Error("storage disabled");
     });
     expect(open()).toBe(true);

@@ -182,11 +182,16 @@ export function openStepUpPopup(
   let broadcastChannel: BroadcastChannel | null = null;
   let completed = false;
 
-  const isFresh = (timestamp: number | null) =>
-    timestamp !== null &&
-    timestamp >= startedAt &&
-    timestamp <= Date.now() &&
-    !initialTimestamps.has(timestamp);
+  const isFresh = (timestamp: number | null) => {
+    const now = Date.now();
+    return (
+      timestamp !== null &&
+      timestamp >= startedAt &&
+      timestamp <= now &&
+      now - timestamp < 15_000 &&
+      !initialTimestamps.has(timestamp)
+    );
+  };
 
   const hasFreshStoredCompletion = () => {
     for (const key of [SUDO_ACTIVATED_STORAGE_KEY, STEP_UP_STORAGE_KEY]) {
