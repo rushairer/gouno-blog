@@ -15,11 +15,10 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Runtime stage
-FROM nginx:stable-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
+# Static serving does not use the full image's XML, njs or image-filter modules.
+FROM nginx:stable-alpine-slim@sha256:3028fc1419f99b95c1c69f844bbaf49dc1b881750c51b497fc721ac4f02a14e6
 
-RUN apk add --no-cache libexpat=2.8.5-r0 pcre2=10.49-r0 \
-    zlib=1.3.2-r1 nghttp2-libs=1.70.0-r0 libpng=1.6.59-r0 tiff=4.7.2-r0 \
+RUN apk add --no-cache pcre2=10.49-r0 zlib=1.3.2-r1 \
     && mkdir -p /etc/nginx/snippets \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
     && touch /var/run/nginx.pid \
@@ -30,6 +29,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/snippets/security-headers.conf
 
 USER nginx
+
+RUN nginx -t
 
 EXPOSE 8081
 

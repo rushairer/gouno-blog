@@ -18,18 +18,23 @@ class ImageSecurityContractTest(unittest.TestCase):
         seed = (REPO_ROOT / "seed" / "Dockerfile").read_text(encoding="utf-8")
         frontend = (REPO_ROOT / "blog-frontend" / "Dockerfile").read_text(encoding="utf-8")
 
-        self.assertIn("ca-certificates=20260909-r0", backend)
+        self.assertIn("ca-certificates=20261020-r0", backend)
         self.assertIn("tzdata=2026e-r0", backend)
-        self.assertIn("ca-certificates=20260909-r0", seed)
+        self.assertIn("ca-certificates=20261020-r0", seed)
         self.assertIn("zlib=1.3.2-r1", backend)
         self.assertIn("zlib=1.3.2-r1", seed)
-        self.assertIn("libexpat=2.8.5-r0", frontend)
         self.assertIn("pcre2=10.49-r0", frontend)
         self.assertIn("zlib=1.3.2-r1", frontend)
-        self.assertIn("nghttp2-libs=1.70.0-r0", frontend)
-        self.assertIn("libpng=1.6.59-r0", frontend)
         self.assertNotIn("apk add --no-cache ca-certificates tzdata", backend)
-        self.assertNotIn("apk --no-cache add ca-certificates \\\\", seed)
+        self.assertNotRegex(seed, r"apk --no-cache add ca-certificates(?:\s|$)")
+
+    def test_static_frontend_uses_immutable_minimal_runtime(self) -> None:
+        frontend = (REPO_ROOT / "blog-frontend" / "Dockerfile").read_text(encoding="utf-8")
+        self.assertRegex(frontend, r"(?m)^FROM nginx:stable-alpine-slim@sha256:[0-9a-f]{64}$")
+        self.assertIn("USER nginx\n\nRUN nginx -t", frontend)
+        # Actual package absence and HTTP behavior are tested against the built image.
+        for package in ("libxml2", "libxslt", "libexpat", "libpng", "tiff", "nghttp2-libs"):
+            self.assertNotIn(f"{package}=", frontend)
 
     def test_pull_request_images_run_both_scanners(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "images.yml").read_text(
@@ -40,6 +45,8 @@ class ImageSecurityContractTest(unittest.TestCase):
         self.assertIn("severity: HIGH,CRITICAL", workflow)
         self.assertIn("severity-cutoff: high", workflow)
         self.assertIn("local/gouno-blog-${{ matrix.name }}:${{ github.sha }}", workflow)
+        self.assertIn("    strategy:\n      fail-fast: false\n", workflow)
+        self.assertIn("bash .github/scripts/test_frontend_image_runtime.sh", workflow)
 
     def test_published_images_are_scanned_by_immutable_digest(self) -> None:
         workflow = (
