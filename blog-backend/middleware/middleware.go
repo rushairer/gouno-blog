@@ -1,14 +1,9 @@
 package middleware
 
 import (
-	"fmt"
-	"net/http"
-	"runtime/debug"
 	"time"
 
-	"github.com/gin-contrib/timeout"
 	"github.com/gin-gonic/gin"
-	"github.com/rushairer/gouno"
 	gounoMiddleware "github.com/rushairer/gouno/middleware"
 )
 
@@ -29,24 +24,8 @@ func TimeoutMiddlewareWithOverrides(requestTimeout time.Duration, overrides map[
 		if value, ok := overrides[route]; ok && value > 0 {
 			deadline = value
 		}
-		timeout.New(timeout.WithTimeout(deadline), timeout.WithResponse(func(ctx *gin.Context) {
-			ctx.JSON(http.StatusRequestTimeout, gouno.NewRequestTimeoutResponse())
-		}))(ctx)
+		runRequestWithTimeout(ctx, deadline)
 	}
-}
-
-func RecoveryMiddleware() gin.HandlerFunc {
-	return gin.CustomRecovery(
-		func(ctx *gin.Context, err any) {
-			// Log the panic with stack trace for debugging
-			stack := string(debug.Stack())
-			ctx.Error(&gin.Error{
-				Err:  fmt.Errorf("panic recovered: %v\n%s", err, stack),
-				Type: gin.ErrorTypePrivate,
-			})
-			ctx.JSON(http.StatusInternalServerError, gouno.NewInternalServerErrorResponse())
-		},
-	)
 }
 
 // SecurityHeadersMiddleware sets application-level headers that are not owned

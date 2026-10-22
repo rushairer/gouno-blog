@@ -162,48 +162,60 @@ func (w *recoveryWriteRecorder) Write(data []byte) (int, error) {
 
 func TestRecoveryDisconnectedRequest(t *testing.T) {
 	for _, mode := range []string{gin.ReleaseMode, gin.DebugMode} {
-		for _, tc := range []struct {
-			name  string
-			value error
-		}{
-			{"pipe", syscall.EPIPE},
-			{"wrapped-pipe", fmt.Errorf("secret-panic-value: %w", syscall.EPIPE)},
-			{"reset", syscall.ECONNRESET},
-			{"wrapped-reset", fmt.Errorf("secret-panic-value: %w", syscall.ECONNRESET)},
-			{"abort", http.ErrAbortHandler},
-			{"joined-abort", errors.Join(errors.New("secret-panic-value"), http.ErrAbortHandler)},
-		} {
-			t.Run(mode+"/"+tc.name, func(t *testing.T) {
-				defaultLog := recoveryTestDiagnostics(t, mode)
-				core, logs := observer.New(zapcore.DebugLevel)
-				engine := gin.New()
-				var contextErrors string
-				var aborted, reachedNext bool
-				engine.Use(func(c *gin.Context) {
-					c.Set("logger", zap.New(core))
-					c.Next()
-					contextErrors, aborted = c.Errors.String(), c.IsAborted()
-				}, RecoveryMiddleware())
-				engine.GET("/panic/:id", func(c *gin.Context) { panic(tc.value) }, func(c *gin.Context) { reachedNext = true })
-				req := httptest.NewRequest(http.MethodGet, "/panic/secret-path-value?code=secret-query-code", nil)
-				req.Header.Set("Cookie", "session=secret-cookie-value")
-				w := &recoveryWriteRecorder{ResponseRecorder: httptest.NewRecorder()}
-				engine.ServeHTTP(w, req)
-				if w.writes != 0 || w.Body.Len() != 0 || !aborted || reachedNext {
-					t.Errorf("disconnected request was written to or continued: writes=%d aborted=%t next=%t", w.writes, aborted, reachedNext)
-				}
-				assertRecoveryRedacted(t, contextErrors+defaultLog.String()+w.Body.String())
-				entries := logs.All()
-				if len(entries) != 1 || entries[0].Level != zapcore.WarnLevel {
-					t.Fatalf("want one disconnect warning, got %+v", entries)
-				}
-				fields := entries[0].ContextMap()
-				if _, exists := fields["stack"]; exists {
-					t.Error("disconnect should not produce a panic stack")
-				}
-				data, _ := json.Marshal(fields)
-				assertRecoveryRedacted(t, entries[0].Message+string(data))
-			})
+		for _, withTimeout := range []bool{false, true} {
+			for _, tc := range []struct {
+				name  string
+				value error
+			}{
+				{"pipe", syscall.EPIPE},
+				{"wrapped-pipe", fmt.Errorf("secret-panic-value: %w", syscall.EPIPE)},
+				{"reset", syscall.ECONNRESET},
+				{"wrapped-reset", fmt.Errorf("secret-panic-value: %w", syscall.ECONNRESET)},
+				{"abort", http.ErrAbortHandler},
+				{"joined-abort", errors.Join(errors.New("secret-panic-value"), http.ErrAbortHandler)},
+			} {
+				t.Run(fmt.Sprintf("%s/timeout=%t/%s", mode, withTimeout, tc.name), func(t *testing.T) {
+					defaultLog := recoveryTestDiagnostics(t, mode)
+					core, logs := observer.New(zapcore.DebugLevel)
+					engine := gin.New()
+					var contextErrors string
+					var aborted, reachedNext bool
+					engine.Use(func(c *gin.Context) {
+						c.Set("logger", zap.New(core))
+						defer func() { contextErrors, aborted = c.Errors.String(), c.IsAborted() }()
+						c.Next()
+					}, RecoveryMiddleware())
+					if withTimeout {
+						engine.Use(TimeoutMiddleware(time.Second))
+					}
+					engine.GET("/panic/:id", func(c *gin.Context) { panic(tc.value) }, func(c *gin.Context) { reachedNext = true })
+					req := httptest.NewRequest(http.MethodGet, "/panic/secret-path-value?code=secret-query-code", nil)
+					req.Header.Set("Cookie", "session=secret-cookie-value")
+					w := &recoveryWriteRecorder{ResponseRecorder: httptest.NewRecorder()}
+					func() {
+						defer func() {
+							if value := recover(); value != http.ErrAbortHandler {
+								t.Errorf("want only the safe transport abort sentinel, got %T", value)
+							}
+						}()
+						engine.ServeHTTP(w, req)
+					}()
+					if w.writes != 0 || w.Body.Len() != 0 || !aborted || reachedNext {
+						t.Errorf("disconnected request was written to or continued: writes=%d aborted=%t next=%t", w.writes, aborted, reachedNext)
+					}
+					assertRecoveryRedacted(t, contextErrors+defaultLog.String()+w.Body.String())
+					entries := logs.All()
+					if len(entries) != 1 || entries[0].Level != zapcore.WarnLevel {
+						t.Fatalf("want one disconnect warning, got %+v", entries)
+					}
+					fields := entries[0].ContextMap()
+					if _, exists := fields["stack"]; exists {
+						t.Error("disconnect should not produce a panic stack")
+					}
+					data, _ := json.Marshal(fields)
+					assertRecoveryRedacted(t, entries[0].Message+string(data))
+				})
+			}
 		}
 	}
 }
