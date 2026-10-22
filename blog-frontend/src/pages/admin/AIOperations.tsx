@@ -115,6 +115,43 @@ function AgentConsoleContent() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const inspectedAgentRunFromURL = useRef(false);
+  const detailEpoch = useRef(0);
+  const detailTarget = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      detailEpoch.current += 1;
+      detailTarget.current = null;
+      inspectedAgentRunFromURL.current = false;
+    };
+  }, []);
+
+  const abandonRunDetail = () => {
+    detailEpoch.current += 1;
+    detailTarget.current = null;
+    inspectedAgentRunFromURL.current = false;
+    setSelectedRun(null);
+  };
+
+  const inspectRun = useCallback(
+    async (run: Pick<AgentRun, "id">, quiet = false) => {
+      // One intent token for both URL and list requests. Transport cancellation
+      // alone cannot fence a response that has already completed.
+      const epoch = ++detailEpoch.current;
+      detailTarget.current = run.id;
+      setSelectedRun(null);
+      try {
+        const detail = await agentApi.getAgentRunDetail(String(run.id));
+        if (epoch === detailEpoch.current) setSelectedRun(detail);
+      } catch (reason) {
+        if (epoch !== detailEpoch.current || quiet) return;
+        setError(
+          reason instanceof Error ? reason.message : t("agent.requestFailed"),
+        );
+      }
+    },
+    [t],
+  );
 
   useEffect(() => {
     if (
@@ -137,18 +174,16 @@ function AgentConsoleContent() {
     if (!requested) {
       if (runs.length > 0) {
         inspectedAgentRunFromURL.current = true;
-        agentApi
-          .getAgentRunDetail(String(requestedID))
-          .then(setSelectedRun)
-          .catch(() => {});
+        void inspectRun({ id: requestedID }, true);
       }
       return;
     }
     inspectedAgentRunFromURL.current = true;
     void inspectRun(requested);
-  }, [tab, recordType, runs]);
+  }, [tab, recordType, runs, inspectRun]);
 
   const selectTab = (nextTab: ConsoleTab) => {
+    if (nextTab !== tab) abandonRunDetail();
     setTab(nextTab);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", nextTab);
@@ -156,9 +191,9 @@ function AgentConsoleContent() {
   };
 
   const selectRecordType = (next: "workflow" | "agent") => {
+    if (next === recordType) return;
+    abandonRunDetail();
     setRecordType(next);
-    setSelectedRun(null);
-    inspectedAgentRunFromURL.current = false;
     const url = new URL(window.location.href);
     url.searchParams.set("record", next);
     url.searchParams.delete("run");
@@ -166,9 +201,8 @@ function AgentConsoleContent() {
   };
 
   const openWorkflowRecords = (workflowID: number, runID?: number) => {
+    abandonRunDetail();
     setRecordType("workflow");
-    setSelectedRun(null);
-    inspectedAgentRunFromURL.current = false;
     setTab("records");
     const url = new URL(window.location.href);
     url.searchParams.set("tab", "records");
@@ -331,17 +365,6 @@ function AgentConsoleContent() {
     input: Record<string, unknown>,
   ) => workflowApi.preflight(workflowID, input, dryRun);
 
-  const inspectRun = async (run: AgentRun) => {
-    try {
-      const detail = await agentApi.getAgentRunDetail(String(run.id));
-      setSelectedRun(detail);
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
-  };
-
   const review = async (approval: AgentApproval, approved: boolean) => {
     try {
       await mutate(() => agentApi.reviewApproval(approval.id, approved));
@@ -352,6 +375,7 @@ function AgentConsoleContent() {
         url.searchParams.set("record", "workflow");
         url.searchParams.set("run", String(sourceRun.workflow_run_id));
         window.history.replaceState(null, "", url);
+        abandonRunDetail();
         setRecordType("workflow");
         setTab("records");
         setNotice(
@@ -375,7 +399,7 @@ function AgentConsoleContent() {
     setDeletingRun(true);
     try {
       await mutate(() => agentApi.deleteAgentRun(String(run.id)));
-      setSelectedRun(null);
+      if (detailTarget.current === run.id) abandonRunDetail();
       setDeleteRunTarget(null);
       setNotice(locale === "zh" ? "运行记录已清理。" : "Run record deleted.");
     } catch (reason) {
