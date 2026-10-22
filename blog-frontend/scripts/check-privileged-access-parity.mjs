@@ -11,9 +11,15 @@ const requireText = (source, relativePath, expected, reason) => {
     failures.push(`${relativePath}: ${reason}`);
   }
 };
+const requirePattern = (source, relativePath, expected, reason) => {
+  if (!expected.test(source)) {
+    failures.push(`${relativePath}: ${reason}`);
+  }
+};
 
 const gatePath = "components/auth/SudoGate.tsx";
 const sudoPath = "hooks/useSudoMode.ts";
+const sudoStorePath = "hooks/sudo-session-store.ts";
 const stepUpPath = "components/auth/StepUpMfaModal.tsx";
 const apiPath = "api/client.ts";
 const usersPath = "pages/admin/Users.tsx";
@@ -22,6 +28,7 @@ const advancedPath = "components/agent/AdvancedWorkspace.tsx";
 const knowledgePath = "components/agent/KnowledgeWorkspace.tsx";
 const gate = await read(gatePath);
 const sudo = await read(sudoPath);
+const sudoStore = await read(sudoStorePath);
 const stepUp = await read(stepUpPath);
 const api = await read(apiPath);
 const users = await read(usersPath);
@@ -40,11 +47,31 @@ for (const [text, reason] of [
   requireText(gate, gatePath, text, reason);
 }
 
-requireText(
+// Listener ownership moved to the shared store. Check both sides of that
+// binding instead of accepting a stale-event name in an unrelated hook comment.
+requirePattern(
   sudo,
   sudoPath,
-  "SUDO_SESSION_STALE_EVENT",
-  "must subscribe to backend-confirmed stale sudo state",
+  /import\s*\{[^}]*\bsubscribeSudo\b[^}]*\}\s*from\s*["']\.\/sudo-session-store["']/,
+  "must bind the canonical shared sudo store",
+);
+requirePattern(
+  sudo,
+  sudoPath,
+  /\buseSyncExternalStore\s*\(\s*subscribeSudo\s*,\s*getSudoSnapshot\s*,\s*getServerSudoSnapshot\s*,?\s*\)/,
+  "must subscribe to the shared sudo snapshot",
+);
+requireText(
+  sudoStore,
+  sudoStorePath,
+  "window.addEventListener(SUDO_SESSION_STALE_EVENT, markStale);",
+  "must subscribe to the backend-rejection presentation event",
+);
+requireText(
+  sudoStore,
+  sudoStorePath,
+  "window.removeEventListener(SUDO_SESSION_STALE_EVENT, markStale);",
+  "must release the shared stale-state listener",
 );
 requireText(
   sudo,

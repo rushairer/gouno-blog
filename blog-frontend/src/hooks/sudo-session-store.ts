@@ -147,7 +147,7 @@ export function subscribeSudo(listener: () => void) {
 }
 
 // Cached immutable snapshots: no storage reads, time reads, or mutation during
-// React render. subscribe refreshes the browser snapshot before paint.
+// React render. The subscription refreshes the browser snapshot on attachment.
 export function getSudoSnapshot(): SudoSnapshot {
   return snapshot;
 }

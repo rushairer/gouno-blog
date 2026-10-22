@@ -23,3 +23,16 @@ Local verification is TypeScript syntax transpilation plus 21 standalone checks 
 Stale/failure fences are in-memory and apply to observations made by this document while subscribed; they are not durable server state or a cross-device revocation mechanism. Full reload, user-modified storage/clock and fabricated same-origin completion events are not authentication boundaries. A clear resets the presentation hint, not the backend session, and does not cancel an already open popup. The unchanged server must reject unauthorized privileged requests regardless of the UI. This patch neither certifies all React warnings nor resolves operator recovery issue #338 or overall A+ issue #359.
 
 Canonical component source and the parity certification ledger are untouched. Passing automated browser/parity checks is not a new manual visual certification.
+
+## Structural guard relocation
+
+The existing privileged-access parity script required the stale-event token to
+appear in the hook itself. Moving the listener into the shared store exposed
+that stale source-location assumption. The guard now checks both the hook's
+external-store binding and the store's actual stale-event registration/cleanup;
+all canonical UI, API replay and policy-copy checks remain unchanged. Five
+additional fixture-based tests run the actual guard: the healthy tree passes,
+and removing the hook subscription, store import, stale listener or cleanup
+must each fail. This changes the guard's source mapping, not its acceptance
+threshold or any visual certification. The intermediate formatting and guard
+failures are not final acceptance evidence.
