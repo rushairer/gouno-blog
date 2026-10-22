@@ -68,6 +68,17 @@ async function fail(item: Pending, message: string) {
   });
 }
 
+async function select(id: number) {
+  const button = await screen.findByRole("button", {
+    name: `Inspect Run #${id}`,
+  });
+  await userEvent.setup().click(button);
+}
+
+function heading(id: number) {
+  return screen.queryByRole("heading", { name: new RegExp(`Run #${id}`) });
+}
+
 function renderConsole(strict = false) {
   const app = (
     <I18nProvider>
@@ -108,114 +119,79 @@ describe("AI Operations latest Agent detail intent", () => {
     });
   });
 
-  it("keeps the latest selected detail when the initial request finishes last", async () => {
-    const user = userEvent.setup();
+  it("keeps the latest selection when the initial request finishes last", async () => {
     renderConsole();
     const first = await request(1);
-    await user.click(
-      await screen.findByRole("button", { name: "Inspect Run #2" }),
-    );
-    const second = await request(2);
-    await finish(second, 2, "Current detail");
-    expect(
-      await screen.findByRole("heading", { name: /Run #2/ }),
-    ).toBeInTheDocument();
+    await select(2);
+    await finish(await request(2), 2, "Current detail");
+    await waitFor(() => expect(heading(2)).toBeInTheDocument());
     await finish(first, 1, "Obsolete detail");
-    expect(
-      screen.getByRole("heading", { name: /Run #2/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: /Run #1/ }),
-    ).not.toBeInTheDocument();
+    expect(heading(2)).toBeInTheDocument();
+    expect(heading(1)).not.toBeInTheDocument();
   });
 
-  it("does not report a failure belonging to an obsolete selection", async () => {
-    const user = userEvent.setup();
+  it("ignores failure from an obsolete selection", async () => {
     renderConsole();
     const first = await request(1);
-    await user.click(
-      await screen.findByRole("button", { name: "Inspect Run #2" }),
-    );
+    await select(2);
     await finish(await request(2), 2, "Current detail");
     await fail(first, "Obsolete detail failure");
-    expect(
-      screen.queryByText("Obsolete detail failure"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: /Run #2/ }),
-    ).toBeInTheDocument();
+    const notice = screen.queryByText("Obsolete detail failure");
+    expect(notice).not.toBeInTheDocument();
+    expect(heading(2)).toBeInTheDocument();
   });
 
-  it("allows the latest failure to be retried by an explicit new selection", async () => {
-    const user = userEvent.setup();
+  it("allows explicit retry after the current request fails", async () => {
     renderConsole();
-    const first = await request(1);
-    await fail(first, "Current detail unavailable");
-    expect(
-      await screen.findByText("Current detail unavailable"),
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Inspect Run #1" }));
+    await fail(await request(1), "Current detail unavailable");
+    const notice = await screen.findByText("Current detail unavailable");
+    expect(notice).toBeInTheDocument();
+    await select(1);
     await finish(await request(1, 1), 1, "Explicit retry result");
-    expect(
-      await screen.findByRole("heading", { name: /Run #1/ }),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(heading(1)).toBeInTheDocument());
     expect(pending.get(1)).toHaveLength(2);
   });
 
-  it("fences a URL-only lookup against a subsequent list selection", async () => {
+  it("fences URL-only lookup against later list selection", async () => {
     window.history.replaceState(
       null,
       "",
       "/admin/ai-ops?tab=records&record=agent&run=99",
     );
-    const user = userEvent.setup();
     renderConsole();
     const deepLink = await request(99);
-    await user.click(
-      await screen.findByRole("button", { name: "Inspect Run #2" }),
-    );
+    await select(2);
     await finish(await request(2), 2, "Current detail");
     await finish(deepLink, 99, "Obsolete URL detail");
-    expect(
-      screen.getByRole("heading", { name: /Run #2/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: /Run #99/ }),
-    ).not.toBeInTheDocument();
+    expect(heading(2)).toBeInTheDocument();
+    expect(heading(99)).not.toBeInTheDocument();
   });
 
-  it("does not surface a pending detail failure after switching record type", async () => {
-    const user = userEvent.setup();
+  it("ignores pending failures after switching record type", async () => {
     renderConsole();
     const first = await request(1);
-    await user.click(screen.getByRole("button", { name: "Workflow tasks" }));
+    const button = screen.getByRole("button", { name: "Workflow tasks" });
+    await userEvent.setup().click(button);
     await fail(first, "Inactive Agent failure");
-    expect(
-      screen.queryByText("Inactive Agent failure"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: /Run #1/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Inactive Agent failure")).toBeNull();
+    expect(heading(1)).not.toBeInTheDocument();
   });
 
-  it("does not surface a pending detail failure after leaving the run center", async () => {
-    const user = userEvent.setup();
+  it("ignores pending failures after leaving the run center", async () => {
     renderConsole();
     const first = await request(1);
-    await user.click(screen.getByRole("tab", { name: "Overview" }));
+    const tab = screen.getByRole("tab", { name: "Overview" });
+    await userEvent.setup().click(tab);
     await fail(first, "Inactive tab failure");
-    expect(
-      screen.queryByText("Inactive tab failure"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Inactive tab failure")).toBeNull();
   });
 
   it("retains working initial selection under StrictMode", async () => {
     renderConsole(true);
     await request(1);
-    for (const item of pending.get(1)!)
+    for (const item of pending.get(1)!) {
       await finish(item, 1, "StrictMode detail");
-    expect(
-      await screen.findByRole("heading", { name: /Run #1/ }),
-    ).toBeInTheDocument();
+    }
+    await waitFor(() => expect(heading(1)).toBeInTheDocument());
   });
 });
