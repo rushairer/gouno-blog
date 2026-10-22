@@ -12,14 +12,13 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "needs-manual-recertification",
-      "reason": "PR #382 changes the certified AI Operations request lifecycle. Prior refs and artifacts below are historical; fresh manual/browser review is tracked in docs/ui-redesign/ai-run-selection-review-2026-10-23.md.",
+      "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-10-06",
-      "manualReview": "docs/ui-redesign/blog-admin-csa-a007-recertification.md",
+      "reviewDate": "2026-10-23",
+      "manualReview": "docs/ui-redesign/ai-run-selection-review-2026-10-23.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
-        "blog": "547e514e6c26f5799e264b53bc0f65c5f4ccf837",
+        "blog": "7df9170e1810253c6156114fa2e250cec9b8f0e1",
         "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
       },
       "gounoUiPackageVersion": "0.4.9",
@@ -51,45 +50,35 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 37438125889,
+            "id": 39871316909,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 37438126076,
+            "id": 39871316926,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 37438126060,
+            "id": 39871316896,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 37438126077,
-            "result": "success"
-          },
-          {
-            "name": "Gouno UI Blog Consumer Parity",
-            "id": 37441697599,
+            "id": 39871316706,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 11399943359,
-            "name": "blog-showcase-parity-37438125889",
-            "sha256": "51d2d4355081b7e76438c064d9348f4cf65a9c6c0fdf6c9c3452c3aed8e24d13"
+            "id": 12466582406,
+            "name": "blog-showcase-parity-39871316909",
+            "sha256": "6c471a78d9968db018c0666dd4d06938f57c075f18389218e683e14954d9739a"
           },
           {
-            "id": 11400641062,
-            "name": "blog-browser-acceptance-37438126076",
-            "sha256": "a8dcae5ecb8083984066336fef380d50c814d11837401e0ecdb382d645e36874"
-          },
-          {
-            "id": 11402376851,
-            "name": "gouno-ui-blog-consumer-parity-37441697599",
-            "sha256": "f360c72a2210080616cc7039b21f6a88ac82dc33a7cd11bf90174b6021edbc3a"
+            "id": 12467057035,
+            "name": "blog-browser-acceptance-39871316926",
+            "sha256": "10190787770b555fe6a3cc855726b64765e55f5d0e2777d50988dfcd6eb8eb43"
           }
         ]
       },
@@ -110,8 +99,8 @@
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a007-pending-recertification.md",
-      "recertificationReason": "CSA-A007 Connector Product fidelity correction is merged, manually reviewed, covered by fresh Blog exact-head evidence, and reciprocally accepted by Gouno UI Blog Consumer Parity. Gouno UI main now records the Blog consumer impact as recertified."
+      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a007-recertification.md",
+      "recertificationReason": "Manual-first delta review of Agent detail request ownership against unchanged Canonical source: fresh paired screenshots, full Product browser evidence and actual out-of-order response regressions inspected. Unaffected AI-family source and prior state coverage are retained, not newly claimed as a full manual re-audit."
     },
     {
       "id": "blog-admin-core-support",

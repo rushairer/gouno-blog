@@ -57,7 +57,8 @@ async function screenshot(page, testInfo, name) {
     document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   )).toBe(false);
   const path = testInfo.outputPath(`${name}.png`);
-  await page.screenshot({ path, fullPage: true });
+  // Complete finite CSS transitions rather than certifying an intermediate tint.
+  await page.screenshot({ path, fullPage: true, animations: "disabled" });
   await testInfo.attach(name, { path, contentType: "image/png" });
 }
 
@@ -72,6 +73,8 @@ for (const [name, width, theme] of [["desktop", 1440, "light"], ["mobile", 390, 
     await expect(page.getByRole("heading", { name: /Run #102/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Run #101/ })).toHaveCount(0);
     await expect(page.locator(".agent-output")).toHaveText("Current selected detail");
+    await expect(page.getByRole("button", { name: "Inspect Run #101" })).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("button", { name: "Inspect Run #102" })).toHaveAttribute("aria-pressed", "true");
     expect(new URL(page.url()).searchParams.get("run")).toBe("102");
     state.healthy();
     await screenshot(page, testInfo, `agent-detail-order-${name}`);
@@ -86,10 +89,13 @@ test("a new pending selection hides previous actionable detail", async ({ page }
   await expect.poll(() => state.pending.get(102)?.length || 0).toBe(1);
   await expect(page.getByRole("heading", { name: /Run #101/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete record", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Inspect Run #101" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Inspect Run #102" })).toHaveAttribute("aria-pressed", "false");
   await screenshot(page, testInfo, "agent-detail-pending");
   await state.response(102, "Fresh selected detail");
   await page.getByRole("button", { name: "Agent runs", exact: true }).click();
   await expect(page.getByRole("heading", { name: /Run #102/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Inspect Run #102" })).toHaveAttribute("aria-pressed", "true");
   expect(state.pending.get(102)).toHaveLength(1);
   state.healthy();
 });
