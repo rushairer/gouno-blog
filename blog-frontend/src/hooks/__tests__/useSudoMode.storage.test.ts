@@ -165,9 +165,11 @@ describe("Sudo presentation state boundaries", () => {
     localStorage.setItem(KEY, String(NOW));
     const first = renderHook(() => useSudoMode());
     const second = renderHook(() => useSudoMode());
-    const remove = vi.spyOn(localStorage, "removeItem").mockImplementation(() => {
-      throw new Error("storage unavailable");
-    });
+    const remove = vi
+      .spyOn(localStorage, "removeItem")
+      .mockImplementation(() => {
+        throw new Error("storage unavailable");
+      });
     act(() => first.result.current.clearSudo());
     expect(remove).toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(3000));
