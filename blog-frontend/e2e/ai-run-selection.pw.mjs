@@ -73,8 +73,9 @@ for (const [name, width, theme] of [["desktop", 1440, "light"], ["mobile", 390, 
     await expect(page.getByRole("heading", { name: /Run #102/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Run #101/ })).toHaveCount(0);
     await expect(page.locator(".agent-output")).toHaveText("Current selected detail");
-    await expect(page.getByRole("button", { name: "Inspect Run #101" })).toHaveAttribute("aria-pressed", "false");
-    await expect(page.getByRole("button", { name: "Inspect Run #102" })).toHaveAttribute("aria-pressed", "true");
+    // The mobile detail pane intentionally hides, but does not unmount, its rail.
+    await expect(page.getByRole("button", { name: "Inspect Run #101", includeHidden: true })).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("button", { name: "Inspect Run #102", includeHidden: true })).toHaveAttribute("aria-pressed", "true");
     expect(new URL(page.url()).searchParams.get("run")).toBe("102");
     state.healthy();
     await screenshot(page, testInfo, `agent-detail-order-${name}`);
