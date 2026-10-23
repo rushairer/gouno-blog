@@ -12,7 +12,8 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "verified",
+      "status": "needs-manual-recertification",
+      "reason": "PR #383 changes full-refresh lifecycle ownership in AI Operations. Prior refs and artifacts remain historical until fresh delta review and browser evidence are recorded in docs/ui-redesign/ai-refresh-review-2026-10-23.md.",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-23",
       "manualReview": "docs/ui-redesign/ai-run-selection-review-2026-10-23.md",

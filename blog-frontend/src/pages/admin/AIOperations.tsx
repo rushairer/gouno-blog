@@ -114,6 +114,8 @@ function AgentConsoleContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const loadEpoch = useRef(0);
+  const loadMounted = useRef(false);
   const inspectedAgentRunFromURL = useRef(false);
   const detailEpoch = useRef(0);
   const detailTarget = useRef<number | null>(null);
@@ -213,7 +215,7 @@ function AgentConsoleContent() {
     window.history.replaceState(null, "", url);
   };
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (epoch: number) => {
     const loadWorkflowRuns = async () => {
       try {
         return await workflowApi.getRuns();
@@ -255,6 +257,9 @@ function AgentConsoleContent() {
       operationsApi.getMediaCandidates(),
       operationsApi.getEditorialTasks(),
     ]);
+    // Initial, manual and post-mutation reads share one snapshot owner.
+    // Keep the parallel batch intact; no stale member may reach the UI.
+    if (!loadMounted.current || epoch !== loadEpoch.current) return;
     setAgents(agentData);
     setRuns(runData || []);
     setApprovals(approvalData || []);
@@ -276,17 +281,21 @@ function AgentConsoleContent() {
   }, []);
 
   useEffect(() => {
-    let ignore = false;
+    loadMounted.current = true;
+    const epoch = ++loadEpoch.current;
     setLoading(true);
-    load()
+    load(epoch)
       .catch((reason: Error) => {
-        if (!ignore) setError(reason.message);
+        if (loadMounted.current && epoch === loadEpoch.current)
+          setError(reason.message);
       })
       .finally(() => {
-        if (!ignore) setLoading(false);
+        if (loadMounted.current && epoch === loadEpoch.current)
+          setLoading(false);
       });
     return () => {
-      ignore = true;
+      loadMounted.current = false;
+      loadEpoch.current += 1;
     };
   }, [load]);
 
@@ -317,13 +326,21 @@ function AgentConsoleContent() {
     editorialTasks.filter((item) => item.status === "open").length;
 
   const refresh = async () => {
+    // A completed mutation may call back after this page has unmounted.
+    if (!loadMounted.current) return;
+    const epoch = ++loadEpoch.current;
     setError("");
     try {
-      await load();
+      await load(epoch);
     } catch (reason) {
+      if (!loadMounted.current || epoch !== loadEpoch.current) return;
       setError(
         reason instanceof Error ? reason.message : t("agent.requestFailed"),
       );
+    } finally {
+      // The latest refresh may supersede the still-pending initial load.
+      if (loadMounted.current && epoch === loadEpoch.current)
+        setLoading(false);
     }
   };
 
