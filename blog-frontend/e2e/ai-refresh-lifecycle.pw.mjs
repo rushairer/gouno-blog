@@ -37,7 +37,9 @@ async function openControlledWorkspace(page, width, theme) {
     waitUntil: "domcontentloaded",
   });
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect.poll(() => pending.length).toBe(1);
+  // main.tsx wraps the Vite development entry in StrictMode: keep the retired
+  // setup's read (0) and the current setup's read (1) under explicit control.
+  await expect.poll(() => pending.length).toBe(2);
 
   async function finish(index, ids) {
     await expect.poll(() => pending.length).toBeGreaterThan(index);
@@ -75,14 +77,16 @@ for (const [name, width, theme] of [["desktop", 1440, "light"], ["mobile", 390, 
     const state = await openControlledWorkspace(page, width, theme);
     const loading = page.getByRole("status", { name: /Loading AI Agent workspace/ });
     await expect(loading).toBeVisible();
-    await state.refresh(2);
-    await state.finish(1, [202]);
+    await state.refresh(3);
+    await state.finish(2, [202]);
     await expect(loading).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Inspect Run #202", exact: true })).toBeVisible();
-    // The initial read is still pending: the new refresh must unblock the UI itself.
+    // Both initial reads remain pending: the new refresh must unblock the UI itself.
     await screenshot(page, testInfo, `refresh-initial-superseded-${name}`);
-    await state.finish(0, [101]);
+    await state.finish(1, [101]);
+    await state.finish(0, [901]);
     await expect(page.getByRole("button", { name: "Inspect Run #101", includeHidden: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Inspect Run #901", includeHidden: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Inspect Run #202", exact: true }).click();
     await expect(page.getByRole("heading", { name: /Run #202/ })).toBeVisible();
     await expect(page.locator(".agent-output")).toHaveText("Snapshot 202");
@@ -92,14 +96,16 @@ for (const [name, width, theme] of [["desktop", 1440, "light"], ["mobile", 390, 
 
   test(`${name}: late workspace refresh cannot overwrite the latest collection`, async ({ page }, testInfo) => {
     const state = await openControlledWorkspace(page, width, theme);
-    await state.finish(0, [101]);
+    await state.finish(1, [101]);
     await expect(page.getByRole("button", { name: "Inspect Run #101", exact: true })).toBeVisible();
-    await state.refresh(2);
+    await state.finish(0, [901]);
+    await expect(page.getByRole("button", { name: "Inspect Run #901", includeHidden: true })).toHaveCount(0);
     await state.refresh(3);
+    await state.refresh(4);
     // Retain the selected record while the surrounding collection changes.
-    await state.finish(2, [101, 303]);
+    await state.finish(3, [101, 303]);
     await expect(page.getByRole("button", { name: "Inspect Run #303", exact: true })).toBeVisible();
-    await state.finish(1, [101, 202]);
+    await state.finish(2, [101, 202]);
     await expect(page.getByRole("button", { name: "Inspect Run #303", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Inspect Run #202", includeHidden: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Inspect Run #303", exact: true }).click();
