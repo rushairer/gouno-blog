@@ -206,9 +206,8 @@ describe("AI Operations refresh ownership", () => {
     await expectRow(1);
     await refresh();
     await fail(1, "Current refresh unavailable");
-    expect(
-      screen.getByText("Current refresh unavailable"),
-    ).toBeInTheDocument();
+    const notice = screen.getByText("Current refresh unavailable");
+    expect(notice).toBeInTheDocument();
     expect(pending).toHaveLength(2);
     await refresh();
     await finish(2, 3);
@@ -245,9 +244,8 @@ describe("AI Operations refresh ownership", () => {
     await startDeletion();
     await finishDeletion();
     await fail(1, "Post-deletion refresh unavailable");
-    expect(
-      screen.getByText("Post-deletion refresh unavailable"),
-    ).toBeInTheDocument();
+    const notice = screen.getByText("Post-deletion refresh unavailable");
+    expect(notice).toBeInTheDocument();
     await refresh();
     await finish(2, 2);
     await expectRow(2);
