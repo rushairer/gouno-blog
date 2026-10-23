@@ -6,7 +6,9 @@ function run(id) {
     id, agent_id: 1, status: "succeeded", trigger_type: "manual",
     provider: "test", model: "test-model", input_tokens: 1, output_tokens: 2,
     created_at: "2026-10-23T00:00:00Z",
-    started_at: "2026-10-23T00:00:00Z", output_summary: `Snapshot ${id}`,
+    started_at: "2026-10-23T00:00:00Z",
+    finished_at: "2026-10-23T00:00:02Z",
+    output_summary: `Snapshot ${id}`,
   };
 }
 

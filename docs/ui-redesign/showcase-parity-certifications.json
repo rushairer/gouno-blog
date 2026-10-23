@@ -12,14 +12,13 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "needs-manual-recertification",
-      "reason": "PR #383 changes full-refresh lifecycle ownership in AI Operations. Prior refs and artifacts remain historical until fresh delta review and browser evidence are recorded in docs/ui-redesign/ai-refresh-review-2026-10-23.md.",
+      "status": "verified",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-23",
-      "manualReview": "docs/ui-redesign/ai-run-selection-review-2026-10-23.md",
+      "manualReview": "docs/ui-redesign/ai-refresh-review-2026-10-23.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
-        "blog": "7df9170e1810253c6156114fa2e250cec9b8f0e1",
+        "blog": "32ff09fd13bcbb973d7bac3d5f4d238314bade72",
         "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
       },
       "gounoUiPackageVersion": "0.4.9",
@@ -51,35 +50,35 @@
         "runs": [
           {
             "name": "Blog Showcase Parity",
-            "id": 39871316909,
+            "id": 39934393266,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 39871316926,
+            "id": 39934393273,
             "result": "success"
           },
           {
             "name": "CI",
-            "id": 39871316896,
+            "id": 39934393284,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 39871316706,
+            "id": 39934393326,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 12466582406,
-            "name": "blog-showcase-parity-39871316909",
-            "sha256": "6c471a78d9968db018c0666dd4d06938f57c075f18389218e683e14954d9739a"
+            "id": 12494241073,
+            "name": "blog-showcase-parity-39934393266",
+            "sha256": "ec3e1a0e348aebd4ca21251074fd7549e3f4b634ec30f66eba3dc8f338711430"
           },
           {
-            "id": 12467057035,
-            "name": "blog-browser-acceptance-39871316926",
-            "sha256": "10190787770b555fe6a3cc855726b64765e55f5d0e2777d50988dfcd6eb8eb43"
+            "id": 12493447089,
+            "name": "blog-browser-acceptance-39934393273",
+            "sha256": "29839da0748702bd2bcef99405cde37d9c8f8ccfad6f29b9c7e424f9fdc88eaa"
           }
         ]
       },
@@ -100,8 +99,8 @@
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a007-recertification.md",
-      "recertificationReason": "Manual-first delta review of Agent detail request ownership against unchanged Canonical source: fresh paired screenshots, full Product browser evidence and actual out-of-order response regressions inspected. Unaffected AI-family source and prior state coverage are retained, not newly claimed as a full manual re-audit."
+      "previousManualReview": "docs/ui-redesign/ai-run-selection-review-2026-10-23.md",
+      "recertificationReason": "Incremental manual-first review of full-workspace refresh ownership against unchanged Canonical source. Fresh paired screenshots and actual desktop/mobile refresh-order evidence were inspected; current failure, explicit read retry and retired StrictMode setup are behavior-tested. Unaffected AI-family source and prior state coverage remain historical coverage, not a newly claimed whole-family manual audit."
     },
     {
       "id": "blog-admin-core-support",
