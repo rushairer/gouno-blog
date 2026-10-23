@@ -13,6 +13,7 @@ export default defineConfig({
     "ai-workspace-matrix.pw.mjs",
     "ai-workspace-interactions.pw.mjs",
     "ai-run-selection.pw.mjs",
+    "ai-refresh-lifecycle.pw.mjs",
     "mfa-popup.pw.mjs",
   ],
   fullyParallel: false,
