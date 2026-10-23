@@ -1,5 +1,7 @@
 # AI Operations 整页刷新：人工优先增量审查
 
+Status: **verified** — manual-first delta review of the source candidate recorded below; final-head acceptance remains required.
+
 ## 结论与引用
 
 **受影响刷新行为完成增量审查；不是整个 AI 家族的全量人工重审。** Product 基线 `87127fb8171be45f57481e2a81c978c22e0f88c2`；已审查候选 `32ff09fd13bcbb973d7bac3d5f4d238314bade72`，实际测试合并引用 `b1f292c8681c1b039cddfb02832aa92ca9020caf`。Canonical 主分支重新读回为 `2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9`，包版本仍为 0.4.9。
