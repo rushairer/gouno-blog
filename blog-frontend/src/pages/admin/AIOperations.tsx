@@ -286,12 +286,14 @@ function AgentConsoleContent() {
     setLoading(true);
     load(epoch)
       .catch((reason: Error) => {
-        if (loadMounted.current && epoch === loadEpoch.current)
+        if (loadMounted.current && epoch === loadEpoch.current) {
           setError(reason.message);
+        }
       })
       .finally(() => {
-        if (loadMounted.current && epoch === loadEpoch.current)
+        if (loadMounted.current && epoch === loadEpoch.current) {
           setLoading(false);
+        }
       });
     return () => {
       loadMounted.current = false;
@@ -339,8 +341,9 @@ function AgentConsoleContent() {
       );
     } finally {
       // The latest refresh may supersede the still-pending initial load.
-      if (loadMounted.current && epoch === loadEpoch.current)
+      if (loadMounted.current && epoch === loadEpoch.current) {
         setLoading(false);
+      }
     }
   };
 
