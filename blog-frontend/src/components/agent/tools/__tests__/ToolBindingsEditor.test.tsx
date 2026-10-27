@@ -115,7 +115,9 @@ describe("ToolBindingsEditor", () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     function ControlledEditor() {
-      const [bindings, setBindings] = useState<Record<string, Record<string, unknown>>>({
+      const [bindings, setBindings] = useState<
+        Record<string, Record<string, unknown>>
+      >({
         "content.search_knowledge": { limit: 8 },
       });
       return (
@@ -171,14 +173,18 @@ describe("ToolBindingsEditor", () => {
 
     await user.click(screen.getByRole("button", { name: "JSON" }));
     const editor = screen.getByDisplayValue(/"limit": 8/);
-    fireEvent.change(editor, { target: { value: '{"content.search_knowledge":' } });
+    fireEvent.change(editor, {
+      target: { value: '{"content.search_knowledge":' },
+    });
     expect(onDraftValidityChange).toHaveBeenLastCalledWith(false);
     expect(onChange).not.toHaveBeenCalled();
 
     fireEvent.change(editor, {
       target: { value: '{"content.search_knowledge":null}' },
     });
-    expect(screen.getByText("每项 Tool 绑定配置必须是 JSON 对象")).toBeInTheDocument();
+    expect(
+      screen.getByText("每项 Tool 绑定配置必须是 JSON 对象"),
+    ).toBeInTheDocument();
     expect(onDraftValidityChange).toHaveBeenLastCalledWith(false);
     expect(onChange).not.toHaveBeenCalled();
 
