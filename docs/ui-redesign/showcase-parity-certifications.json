@@ -14,11 +14,11 @@
       "scope": "Blog Admin AI Settings + AI Operations",
       "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-10-23",
-      "manualReview": "docs/ui-redesign/ai-refresh-review-2026-10-23.md",
+      "reviewDate": "2026-10-28",
+      "manualReview": "docs/ui-redesign/tool-bindings-json-review-2026-10-27.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
-        "blog": "32ff09fd13bcbb973d7bac3d5f4d238314bade72",
+        "blog": "3cae8d44af173537ec5bcb050090b6f178ff3cfe",
         "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
       },
       "gounoUiPackageVersion": "0.4.9",
@@ -32,7 +32,9 @@
         "privileged",
         "one-time-key",
         "destructive-modal",
-        "responsive"
+        "responsive",
+        "invalid-tool-binding-draft",
+        "recovered-tool-binding-draft"
       ],
       "ownedPaths": [
         "blog-frontend/src/pages/admin/AISettings.tsx",
@@ -49,43 +51,49 @@
       "browserEvidence": {
         "runs": [
           {
-            "name": "Blog Showcase Parity",
-            "id": 39934393266,
-            "result": "success"
-          },
-          {
-            "name": "UI Browser Acceptance",
-            "id": 39934393273,
-            "result": "success"
-          },
-          {
             "name": "CI",
-            "id": 39934393284,
+            "id": 40543680478,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 39934393326,
+            "id": 40543680468,
+            "result": "success"
+          },
+          {
+            "name": "UI Browser Acceptance",
+            "id": 40543680564,
+            "result": "success"
+          },
+          {
+            "name": "Blog Showcase Parity",
+            "id": 40543680502,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 12494241073,
-            "name": "blog-showcase-parity-39934393266",
-            "sha256": "ec3e1a0e348aebd4ca21251074fd7549e3f4b634ec30f66eba3dc8f338711430"
+            "id": 12751019539,
+            "name": "database-integration",
+            "sha256": "f46289cc040c40aba9f7f85b10104a2f0f8a7f1326be2b4f43d7cce3f1700ff6"
           },
           {
-            "id": 12493447089,
-            "name": "blog-browser-acceptance-39934393273",
-            "sha256": "29839da0748702bd2bcef99405cde37d9c8f8ccfad6f29b9c7e424f9fdc88eaa"
+            "id": 12752197962,
+            "name": "blog-browser-acceptance-40543680564",
+            "sha256": "f5eea57caf774755a9c1f9d1da4c89c1e3cbfd31cc5413dc82c7d94d530174f2"
+          },
+          {
+            "id": 12751959067,
+            "name": "blog-showcase-parity-40543680502",
+            "sha256": "3be763ac0c60d7aa12635b882d30d1175db9c257f06750b44c68fcf1d7eb84ab"
           }
         ]
       },
       "intentionalDivergences": [
         "API Access binds real server-side Client, Capability and invocation-audit APIs; loading, empty, recoverable error, timestamps and live audit values are Product-owned states beyond the static Fixture.",
         "Connector OAuth/credential/Outbox input and delivery behavior remains real-product behavior.",
-        "Agent and Workflow run evidence may contain real audit/suggestion/evidence sections not represented by the Fixture."
+        "Agent and Workflow run evidence may contain real audit/suggestion/evidence sections not represented by the Fixture.",
+        "Tool Bindings JSON draft validation, blocked Save and visual-form recovery are Product-owned states for actual configured Tools; the canonical Showcase create-Skill fixture does not include an invalid JSON binding. Dedicated Editor structure and component styles remain canonical."
       ],
       "reviewDimensions": [
         "composition",
@@ -99,8 +107,8 @@
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/ai-run-selection-review-2026-10-23.md",
-      "recertificationReason": "Incremental manual-first review of full-workspace refresh ownership against unchanged Canonical source. Fresh paired screenshots and actual desktop/mobile refresh-order evidence were inspected; current failure, explicit read retry and retired StrictMode setup are behavior-tested. Unaffected AI-family source and prior state coverage remain historical coverage, not a newly claimed whole-family manual audit."
+      "previousManualReview": "docs/ui-redesign/ai-refresh-review-2026-10-23.md",
+      "recertificationReason": "2026-10-28 manual-first incremental review of real Product Skill Tool Bindings invalid/valid JSON states and Desktop/Mobile screenshots against unchanged canonical Gouno UI 2e1e1a5c. Confirmed no layout drift; 376 frontend tests, 357 Chromium, 86 paired parity, CI and six image scanners passed on source candidate 3cae8d; captured and hash-verified source artifacts. The surrounding AI family retains prior historical certification evidence, not a newly asserted full UI audit."
     },
     {
       "id": "blog-admin-core-support",

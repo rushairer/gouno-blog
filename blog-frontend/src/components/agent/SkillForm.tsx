@@ -73,6 +73,7 @@ export function SkillForm({
     initial ? { ...initial } : { ...defaults },
   );
   const [saving, setSaving] = useState(false);
+  const [toolBindingsDraftValid, setToolBindingsDraftValid] = useState(true);
   const [schemaText, setSchemaText] = useState(() =>
     JSON.stringify(initial?.input_schema || defaults.input_schema, null, 2),
   );
@@ -112,6 +113,7 @@ export function SkillForm({
         };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!toolBindingsDraftValid) return;
     setSaving(true);
     try {
       await onSave({
@@ -262,6 +264,7 @@ export function SkillForm({
                         }))
                       }
                       locale={locale}
+                      onDraftValidityChange={setToolBindingsDraftValid}
                     />
                   </div>
                 </div>
@@ -527,6 +530,7 @@ export function SkillForm({
             color="primary"
             type="submit"
             loading={saving}
+            disabled={!toolBindingsDraftValid}
             icon={<Save />}
           >
             {saving ? labels.saving : labels.save}

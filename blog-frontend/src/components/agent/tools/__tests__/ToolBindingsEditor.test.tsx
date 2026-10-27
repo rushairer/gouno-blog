@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ToolBindingsEditor } from "../ToolBindingsEditor";
@@ -110,26 +111,86 @@ describe("ToolBindingsEditor", () => {
     expect(screen.getByDisplayValue("Newsletter")).toBeInTheDocument();
   });
 
-  it("switches to raw JSON mode and updates on valid JSON input", async () => {
+  it("applies edited JSON to a controlled parent, then reflects visual changes back", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
+    function ControlledEditor() {
+      const [bindings, setBindings] = useState<
+        Record<string, Record<string, unknown>>
+      >({
+        "content.search_knowledge": { limit: 8 },
+      });
+      return (
+        <ToolBindingsEditor
+          capabilities={["content.search_knowledge"]}
+          tools={mockTools}
+          toolBindings={bindings}
+          onChange={(next) => {
+            onChange(next);
+            setBindings(next);
+          }}
+          locale="zh"
+        />
+      );
+    }
+
+    render(<ControlledEditor />);
+    await user.click(screen.getByRole("button", { name: "JSON" }));
+    const editor = screen.getByDisplayValue(/"limit": 8/);
+    fireEvent.change(editor, {
+      target: { value: '{"content.search_knowledge":{"limit":12}}' },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      "content.search_knowledge": { limit: 12 },
+    });
+    await user.click(screen.getByRole("button", { name: /可视化配置/ }));
+    expect(screen.getByDisplayValue("12")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /标准检索/ }));
+    expect(onChange).toHaveBeenLastCalledWith({
+      "content.search_knowledge": { limit: 8 },
+    });
+    await user.click(screen.getByRole("button", { name: "JSON" }));
+    expect(screen.getByDisplayValue(/"limit": 8/)).toBeInTheDocument();
+  });
+
+  it("rejects malformed and non-object Tool bindings without updating the parent", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onDraftValidityChange = vi.fn();
 
     render(
       <ToolBindingsEditor
         capabilities={["content.search_knowledge"]}
         tools={mockTools}
-        toolBindings={{
-          "content.search_knowledge": { limit: 8 },
-        }}
+        toolBindings={{ "content.search_knowledge": { limit: 8 } }}
         onChange={onChange}
+        onDraftValidityChange={onDraftValidityChange}
         locale="zh"
       />,
     );
 
-    const jsonBtn = screen.getByRole("button", { name: "JSON" });
-    await user.click(jsonBtn);
+    await user.click(screen.getByRole("button", { name: "JSON" }));
+    const editor = screen.getByDisplayValue(/"limit": 8/);
+    fireEvent.change(editor, {
+      target: { value: '{"content.search_knowledge":' },
+    });
+    expect(onDraftValidityChange).toHaveBeenLastCalledWith(false);
+    expect(onChange).not.toHaveBeenCalled();
 
-    expect(screen.getByText("原始 JSON 绑定配置")).toBeInTheDocument();
+    fireEvent.change(editor, {
+      target: { value: '{"content.search_knowledge":null}' },
+    });
+    expect(
+      screen.getByText("每项 Tool 绑定配置必须是 JSON 对象"),
+    ).toBeInTheDocument();
+    expect(onDraftValidityChange).toHaveBeenLastCalledWith(false);
+    expect(onChange).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: /可视化配置/ }));
+    expect(onDraftValidityChange).toHaveBeenLastCalledWith(true);
+    await user.click(screen.getByRole("button", { name: "JSON" }));
     expect(screen.getByDisplayValue(/"limit": 8/)).toBeInTheDocument();
   });
 });

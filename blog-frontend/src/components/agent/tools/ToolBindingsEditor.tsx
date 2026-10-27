@@ -18,6 +18,7 @@ export interface ToolBindingsEditorProps {
   tools: ToolDefinition[];
   toolBindings: Record<string, Record<string, unknown>>;
   onChange: (bindings: Record<string, Record<string, unknown>>) => void;
+  onDraftValidityChange?: (valid: boolean) => void;
   locale: "en" | "zh";
 }
 
@@ -34,6 +35,7 @@ export function ToolBindingsEditor({
   tools,
   toolBindings,
   onChange,
+  onDraftValidityChange,
   locale,
 }: ToolBindingsEditorProps) {
   const isZh = locale === "zh";
@@ -136,14 +138,37 @@ export function ToolBindingsEditor({
             ? 'JSON 必须是对象格式（如 {"tool_name": { ... }}）'
             : "JSON must be an object",
         );
+        onDraftValidityChange?.(false);
+        return;
+      }
+      if (
+        Object.values(parsed).some(
+          (binding) =>
+            typeof binding !== "object" ||
+            binding === null ||
+            Array.isArray(binding),
+        )
+      ) {
+        setJsonError(
+          isZh
+            ? "每项 Tool 绑定配置必须是 JSON 对象"
+            : "Each Tool binding must be a JSON object",
+        );
+        onDraftValidityChange?.(false);
         return;
       }
       setJsonError(null);
+      onDraftValidityChange?.(true);
       onChange(parsed as Record<string, Record<string, unknown>>);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setJsonError(
-        err?.message || (isZh ? "JSON 语法错误" : "Invalid JSON syntax"),
+        err instanceof Error
+          ? err.message
+          : isZh
+            ? "JSON 语法错误"
+            : "Invalid JSON syntax",
       );
+      onDraftValidityChange?.(false);
     }
   };
 
@@ -184,7 +209,15 @@ export function ToolBindingsEditor({
             variant={mode === "visual" ? "solid" : "outline"}
             color={mode === "visual" ? "primary" : "default"}
             size="small"
-            onClick={() => setMode("visual")}
+            onClick={() => {
+              // Returning to the visual form discards an unapplied invalid JSON draft.
+              if (mode === "json") {
+                setJsonText(JSON.stringify(toolBindings || {}, null, 2));
+                setJsonError(null);
+                onDraftValidityChange?.(true);
+              }
+              setMode("visual");
+            }}
             icon={<FormInput size={14} />}
           >
             {isZh ? "可视化配置" : "Visual Form"}

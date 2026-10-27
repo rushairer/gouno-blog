@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SkillForm } from "../SkillForm";
@@ -59,6 +59,7 @@ describe("SkillForm", () => {
 
   it("allows switching between visual form and raw JSON mode", async () => {
     const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
 
     render(
       <SkillForm
@@ -91,7 +92,7 @@ describe("SkillForm", () => {
         }}
         tools={mockTools}
         locale="zh"
-        onSave={vi.fn()}
+        onSave={onSave}
         onCancel={vi.fn()}
       />,
     );
@@ -110,5 +111,26 @@ describe("SkillForm", () => {
     expect(
       screen.getByDisplayValue(/https:\/\/tech\.example\.com\/feed/),
     ).toBeInTheDocument();
+    // Invalid JSON must not silently save the last accepted Tool bindings.
+    const editor = screen.getByDisplayValue(
+      /https:\/\/tech\.example\.com\/feed/,
+    );
+    const save = screen.getByRole("button", { name: "保存 Skill" });
+    fireEvent.change(editor, { target: { value: '{"rss.fetch":null}' } });
+    expect(save).toBeDisabled();
+    await user.click(save);
+    expect(onSave).not.toHaveBeenCalled();
+
+    const accepted = {
+      "rss.fetch": {
+        feeds: [{ name: "Tech Blog", url: "https://new.example.com/feed" }],
+      },
+    };
+    fireEvent.change(editor, { target: { value: JSON.stringify(accepted) } });
+    expect(save).toBeEnabled();
+    await user.click(save);
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ tool_bindings: accepted }),
+    );
   });
 });

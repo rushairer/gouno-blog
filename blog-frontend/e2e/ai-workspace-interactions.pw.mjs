@@ -340,6 +340,63 @@ test("Skill Tool authorization contains long identifiers without overflow", asyn
   await attachScreenshot(page, testInfo, "u04a-skill-long-tool-identifier");
 });
 
+for (const viewport of [
+  { name: "desktop", width: 1440, height: 900 },
+  { name: "mobile", width: 390, height: 844 },
+]) {
+  test(`Skill Tool binding JSON rejects invalid drafts without saving (${viewport.name})`, async ({ page }, testInfo) => {
+    const { consoleProblems, fixtureState } = await openAiPage(
+      page,
+      "/admin/ai-settings?section=skills",
+      viewport,
+    );
+    await page.getByRole("button", { name: "Edit" }).first().click();
+    await expect(page.getByRole("heading", { level: 2, name: /Edit Skill/ })).toBeVisible();
+    await page.getByRole("checkbox", {
+      name: /analytics.list_low_engagement_posts/,
+    }).check();
+
+    await page.getByRole("button", { name: "JSON" }).click();
+    const editor = page.locator(".tool-bindings-editor__json textarea");
+    await expect(editor).toBeVisible();
+    await editor.fill('{"analytics.list_low_engagement_posts":null}');
+    await expect(page.getByText("Each Tool binding must be a JSON object")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save Skill" })).toBeDisabled();
+    await expectNoDocumentOverflow(page);
+    expectFixtureHealth(fixtureState, consoleProblems);
+    await attachScreenshot(page, testInfo, `skill-json-invalid-${viewport.name}`);
+
+    // Discard an invalid draft: accepted bindings survive the mode switch.
+    await page.getByRole("button", { name: "Visual Form" }).click();
+    await expect(page.getByRole("button", { name: "Save Skill" })).toBeEnabled();
+    await page.getByRole("button", { name: "JSON" }).click();
+    await expect(editor).toHaveValue(/"analytics.list_low_engagement_posts"/);
+    await expect(editor).not.toHaveValue(/null/);
+
+    // Correct the draft: the accepted JSON must reach the visual form.
+    await editor.fill(
+      JSON.stringify({
+        "analytics.list_low_engagement_posts": {
+          min_views: 321,
+          max_engagement_rate: 0.02,
+          limit: 20,
+        },
+      }),
+    );
+    await expect(page.getByRole("button", { name: "Save Skill" })).toBeEnabled();
+    await page.getByRole("button", { name: "Visual Form" }).click();
+    await expect(
+      page.locator(".tool-config-card input[type='number']").first(),
+    ).toHaveValue("321");
+    await expectNoDocumentOverflow(page);
+    await attachScreenshot(page, testInfo, `skill-json-recovered-${viewport.name}`);
+
+    await page.getByRole("button", { name: "JSON" }).click();
+    await expect(editor).toHaveValue(/"min_views": 321/);
+    expectFixtureHealth(fixtureState, consoleProblems);
+  });
+}
+
 test("Skill copy uses a controlled modal without submitting a mutation", async ({ page }, testInfo) => {
   const { consoleProblems, fixtureState } = await openAiPage(
     page,
