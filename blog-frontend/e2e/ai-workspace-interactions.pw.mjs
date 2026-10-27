@@ -369,7 +369,7 @@ for (const viewport of [
     await page.getByRole("button", { name: "Visual Form" }).click();
     await expect(page.getByRole("button", { name: "Save Skill" })).toBeEnabled();
     await page.getByRole("button", { name: "JSON" }).click();
-    await expect(editor).toContainText('"analytics.list_low_engagement_posts"');
+    await expect(editor).toHaveValue(/"analytics.list_low_engagement_posts"/);
     expectFixtureHealth(fixtureState, consoleProblems);
   });
 }
