@@ -366,10 +366,33 @@ for (const viewport of [
     expectFixtureHealth(fixtureState, consoleProblems);
     await attachScreenshot(page, testInfo, `skill-json-invalid-${viewport.name}`);
 
+    // Discard an invalid draft: accepted bindings survive the mode switch.
     await page.getByRole("button", { name: "Visual Form" }).click();
     await expect(page.getByRole("button", { name: "Save Skill" })).toBeEnabled();
     await page.getByRole("button", { name: "JSON" }).click();
     await expect(editor).toHaveValue(/"analytics.list_low_engagement_posts"/);
+    await expect(editor).not.toHaveValue(/null/);
+
+    // Correct the draft: the accepted JSON must reach the visual form.
+    await editor.fill(
+      JSON.stringify({
+        "analytics.list_low_engagement_posts": {
+          min_views: 321,
+          max_engagement_rate: 0.02,
+          limit: 20,
+        },
+      }),
+    );
+    await expect(page.getByRole("button", { name: "Save Skill" })).toBeEnabled();
+    await page.getByRole("button", { name: "Visual Form" }).click();
+    await expect(
+      page.locator(".tool-config-card input[type='number']").first(),
+    ).toHaveValue("321");
+    await expectNoDocumentOverflow(page);
+    await attachScreenshot(page, testInfo, `skill-json-recovered-${viewport.name}`);
+
+    await page.getByRole("button", { name: "JSON" }).click();
+    await expect(editor).toHaveValue(/"min_views": 321/);
     expectFixtureHealth(fixtureState, consoleProblems);
   });
 }
