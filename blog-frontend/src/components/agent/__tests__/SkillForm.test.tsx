@@ -112,7 +112,9 @@ describe("SkillForm", () => {
       screen.getByDisplayValue(/https:\/\/tech\.example\.com\/feed/),
     ).toBeInTheDocument();
     // Invalid JSON must not silently save the last accepted Tool bindings.
-    const editor = screen.getByDisplayValue(/https:\/\/tech\.example\.com\/feed/);
+    const editor = screen.getByDisplayValue(
+      /https:\/\/tech\.example\.com\/feed/,
+    );
     const save = screen.getByRole("button", { name: "保存 Skill" });
     fireEvent.change(editor, { target: { value: '{"rss.fetch":null}' } });
     expect(save).toBeDisabled();
