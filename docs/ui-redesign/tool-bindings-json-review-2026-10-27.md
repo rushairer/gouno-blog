@@ -2,6 +2,8 @@
 
 Status: **verified** — 2026-10-28 增量人工优先复核。此结论仅覆盖本次受影响 Skill 编辑器状态；不是 AI 家族所有页面的重新认证，也不是项目级 A+ 放行。
 
+Manual-first evidence: 逐张手工打开真实 Product Chromium 桌面/手机非法草稿及恢复态截图，另将最终 Product Skill Dedicated Editor 与最新 Gouno UI Showcase 的成对截图并排检查。下文分别记录了视觉观察、业务 Fixture 差别、行为断言与未覆盖范围；没有仅凭自动化通过就宣称完成手工复核。
+
 ## 基线与范围
 
 - Blog base main: `00d6be81aa1fd1615139aac8f40424d769485670` (#388 security hotfix); 源码候选：`3cae8d44af173537ec5bcb050090b6f178ff3cfe`。该版本相对上次已通过的 `b775854` 仅新增浏览器测试与截图附件，不修改 Product 源码。
