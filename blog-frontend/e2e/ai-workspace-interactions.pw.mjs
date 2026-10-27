@@ -340,6 +340,40 @@ test("Skill Tool authorization contains long identifiers without overflow", asyn
   await attachScreenshot(page, testInfo, "u04a-skill-long-tool-identifier");
 });
 
+for (const viewport of [
+  { name: "desktop", width: 1440, height: 900 },
+  { name: "mobile", width: 390, height: 844 },
+]) {
+  test(`Skill Tool binding JSON rejects invalid drafts without saving (${viewport.name})`, async ({ page }, testInfo) => {
+    const { consoleProblems, fixtureState } = await openAiPage(
+      page,
+      "/admin/ai-settings?section=skills",
+      viewport,
+    );
+    await page.getByRole("button", { name: "Edit" }).first().click();
+    await expect(page.getByRole("heading", { level: 2, name: /Edit Skill/ })).toBeVisible();
+    await page.getByRole("checkbox", {
+      name: /analytics.list_low_engagement_posts/,
+    }).check();
+
+    await page.getByRole("button", { name: "JSON" }).click();
+    const editor = page.locator(".tool-bindings-editor__json textarea");
+    await expect(editor).toBeVisible();
+    await editor.fill('{"analytics.list_low_engagement_posts":null}');
+    await expect(page.getByText("Each Tool binding must be a JSON object")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save Skill" })).toBeDisabled();
+    await expectNoDocumentOverflow(page);
+    expectFixtureHealth(fixtureState, consoleProblems);
+    await attachScreenshot(page, testInfo, `skill-json-invalid-${viewport.name}`);
+
+    await page.getByRole("button", { name: "Visual Form" }).click();
+    await expect(page.getByRole("button", { name: "Save Skill" })).toBeEnabled();
+    await page.getByRole("button", { name: "JSON" }).click();
+    await expect(editor).toContainText('"analytics.list_low_engagement_posts"');
+    expectFixtureHealth(fixtureState, consoleProblems);
+  });
+}
+
 test("Skill copy uses a controlled modal without submitting a mutation", async ({ page }, testInfo) => {
   const { consoleProblems, fixtureState } = await openAiPage(
     page,
