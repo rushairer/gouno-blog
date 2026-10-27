@@ -12,10 +12,10 @@
     {
       "id": "blog-admin-ai",
       "scope": "Blog Admin AI Settings + AI Operations",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-23",
-      "manualReview": "docs/ui-redesign/ai-refresh-review-2026-10-23.md",
+      "manualReview": "docs/ui-redesign/tool-bindings-json-review-2026-10-27.md",
       "legacyHardeningDoc": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md",
       "reviewedRefs": {
         "blog": "32ff09fd13bcbb973d7bac3d5f4d238314bade72",
@@ -99,8 +99,8 @@
         "blog-admin-ai-operations",
         "blog-admin-ai-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/ai-run-selection-review-2026-10-23.md",
-      "recertificationReason": "Incremental manual-first review of full-workspace refresh ownership against unchanged Canonical source. Fresh paired screenshots and actual desktop/mobile refresh-order evidence were inspected; current failure, explicit read retry and retired StrictMode setup are behavior-tested. Unaffected AI-family source and prior state coverage remain historical coverage, not a newly claimed whole-family manual audit."
+      "previousManualReview": "docs/ui-redesign/ai-refresh-review-2026-10-23.md",
+      "recertificationReason": "Pending manual-first review of Skill Tool Bindings JSON draft validation and Save guard. Existing certified AI page states remain historical; this new Product-owned path change is NOT yet recertified. Require exact-head browser screenshots and current Canonical parity before restoring verified."
     },
     {
       "id": "blog-admin-core-support",
