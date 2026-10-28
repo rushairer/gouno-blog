@@ -42,6 +42,32 @@ def check():
             sums,
         ), f"missing checksum for golang.org/x/net {exact_version}{suffix}"
 
+    jose = re.search(
+        r"(?m)^\s*github\.com/go-jose/go-jose/v4 v(\d+)\.(\d+)\.(\d+)(?:\s+// indirect)?$",
+        backend_mod,
+    )
+    assert jose, "backend must pin github.com/go-jose/go-jose/v4"
+    jose_version = tuple(map(int, jose.groups()))
+    assert jose_version >= (4, 1, 6), "go-jose v4.1.6+ required for GHSA-mgcc-cww5-fp2q"
+    exact_jose = "v" + ".".join(map(str, jose_version))
+    for suffix in ("", "/go.mod"):
+        assert re.search(
+            rf"(?m)^github\.com/go-jose/go-jose/v4 {re.escape(exact_jose + suffix)} h1:[A-Za-z0-9+/=]+$",
+            sums,
+        ), f"missing checksum for go-jose {exact_jose}{suffix}"
+
+    for component in ("blog-backend", "seed"):
+        dockerfile = (root / component / "Dockerfile").read_text()
+        for package in ("musl", "musl-utils"):
+            pins = re.findall(
+                rf"{re.escape(package)}=(\d+)\.(\d+)\.(\d+)-r(\d+)",
+                dockerfile,
+            )
+            assert len(pins) >= 2, f"{component}: builder and runtime must pin {package}"
+            assert all(tuple(map(int, version)) >= (1, 2, 6, 3) for version in pins), (
+                f"{component}: {package} must be >= 1.2.6-r3 for CVE-2026-107891"
+            )
+
     workflow = (root / ".github/workflows/ci.yml").read_text()
     for name in ("blog-backend", "seed"):
         assert f"go-version-file: {name}/go.mod" in workflow, (
