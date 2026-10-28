@@ -412,12 +412,12 @@
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-10-06",
+      "reviewDate": "2026-10-28",
       "manualReview": "docs/ui-redesign/page-editor-save-fence-review-2026-10-28.md",
       "reviewedRefs": {
-        "blog": "01278d5046dfd74bcf78d9c35832141beb010675",
+        "blog": "b497435bd5d66e772b56307040269d5ace956159",
         "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
       },
       "gounoUiPackageVersion": "0.4.9",
@@ -430,7 +430,10 @@
         "modal",
         "privileged",
         "responsive",
-        "dark-mode"
+        "dark-mode",
+        "page-save-older-acknowledgement",
+        "page-save-current-acknowledgement",
+        "desktop-mobile"
       ],
       "reviewDimensions": [
         "composition",
@@ -467,41 +470,41 @@
       "browserEvidence": {
         "runs": [
           {
-            "name": "Blog Showcase Parity",
-            "id": 37481262324,
-            "result": "success"
-          },
-          {
-            "name": "UI Browser Acceptance",
-            "id": 37481262325,
-            "result": "success"
-          },
-          {
             "name": "CI",
-            "id": 37481262300,
+            "id": 40615328947,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 37481262167,
+            "id": 40615329101,
             "result": "success"
           },
           {
-            "name": "Gosso Release BFF Compatibility",
-            "id": 37481262153,
+            "name": "UI Browser Acceptance",
+            "id": 40615328938,
+            "result": "success"
+          },
+          {
+            "name": "Blog Showcase Parity",
+            "id": 40615329178,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 11422440290,
-            "name": "blog-showcase-parity-37481262324",
-            "sha256": "3b1f85efa588f36b32758bce8937e13b3471411bf5b804b01c7db87feb4bf900"
+            "id": 12784429662,
+            "name": "database-integration",
+            "sha256": "fe38ba4b50dfa07677e6e86a76feba171f68ffd2aebcaaee99471ee14079a79c"
           },
           {
-            "id": 11422060992,
-            "name": "blog-browser-acceptance-37481262325",
-            "sha256": "5b62655704fbea7d6dcb5cc643f7ae8c7a03b1bb33e6b3edb755344770081a60"
+            "id": 12785440521,
+            "name": "blog-browser-acceptance-40615328938",
+            "sha256": "9a93bc2b6b8c9ed61f46752e4d62b93d56c0f381a84fe19f2f0f0a8e5c92e456"
+          },
+          {
+            "id": 12785580057,
+            "name": "blog-showcase-parity-40615329178",
+            "sha256": "5fc4c1b25cd12e718ae5c71de000e2a658fcf708441ac6acfb33d5523b596c3a"
           }
         ]
       },
@@ -521,7 +524,7 @@
         "blog-admin-site-settings"
       ],
       "previousManualReview": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md",
-      "recertificationReason": "PageEditor Page save acknowledgement previously overwrote later, still-uncommitted local edits and cleared dirty state; preview also could open an out-of-date snapshot. The changed Product-owned PageEditor requires fresh desktop/mobile manual review, real API race regression and exact-head browser/Showcase evidence before this Core Wave 3 certification can be restored."
+      "recertificationReason": "2026-10-28 Manual-first incremental recertification of PageEditor delayed-ACK state ownership (not entire Core Wave 3). Product at b497435bd5d66e772b56307040269d5ace956159, Canonical at 2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9, unchanged @gouno/ui 0.4.9. Real browser desktop/mobile stale and saved response screenshots manually inspected, canonical layout compared, 379 Vitest, 359 Chromium, 86 paired parity, PostgreSQL 115 required, six scanners passed. See exact-hash artifact record in current manualReview doc. New edits survive delayed response, status stays dirty; second acknowledged save clears dirty. Historical coverage of other Wave 3 pages remains prior evidence, not recertified as part of this change."
     }
   ]
 }
