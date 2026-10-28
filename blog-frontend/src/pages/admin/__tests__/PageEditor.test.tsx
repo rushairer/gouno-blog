@@ -276,6 +276,7 @@ describe("PageEditor", () => {
       screen.queryByRole("button", { name: "AI 写作" }),
     ).not.toBeInTheDocument();
   });
+
   it("preserves newer edits after a delayed save ACK", async () => {
     const user = userEvent.setup();
     const pending = deferred<CustomPage>();
@@ -406,5 +407,4 @@ describe("PageEditor", () => {
     await waitFor(() => expect(load).toHaveBeenCalledWith("202"));
     expect(await screen.findByLabelText("标题")).toHaveValue("第二版标题");
   });
-
 });
