@@ -412,10 +412,10 @@
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-06",
-      "manualReview": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md",
+      "manualReview": "docs/ui-redesign/page-editor-save-fence-review-2026-10-28.md",
       "reviewedRefs": {
         "blog": "01278d5046dfd74bcf78d9c35832141beb010675",
         "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
@@ -520,8 +520,8 @@
         "blog-admin-users",
         "blog-admin-site-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md",
-      "recertificationReason": "MarkdownRenderer URL-scheme hardening was manually source-reviewed and re-certified against current Gouno UI main with fresh successful Showcase rendered parity and full Blog product browser acceptance; canonical presentation remains unchanged and the security boundary is retained."
+      "previousManualReview": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md",
+      "recertificationReason": "PageEditor Page save acknowledgement previously overwrote later, still-uncommitted local edits and cleared dirty state; preview also could open an out-of-date snapshot. The changed Product-owned PageEditor requires fresh desktop/mobile manual review, real API race regression and exact-head browser/Showcase evidence before this Core Wave 3 certification can be restored."
     }
   ]
 }
