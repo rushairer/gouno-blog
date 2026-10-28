@@ -412,10 +412,10 @@
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-28",
-      "manualReview": "docs/ui-redesign/page-editor-save-fence-review-2026-10-28.md",
+      "manualReview": "docs/ui-redesign/post-editor-save-fence-review-2026-10-28.md",
       "reviewedRefs": {
         "blog": "b497435bd5d66e772b56307040269d5ace956159",
         "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
@@ -523,8 +523,8 @@
         "blog-admin-users",
         "blog-admin-site-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md",
-      "recertificationReason": "2026-10-28 Manual-first incremental recertification of PageEditor delayed-ACK state ownership (not entire Core Wave 3). Product at b497435bd5d66e772b56307040269d5ace956159, Canonical at 2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9, unchanged @gouno/ui 0.4.9. Real browser desktop/mobile stale and saved response screenshots manually inspected, canonical layout compared, 379 Vitest, 359 Chromium, 86 paired parity, PostgreSQL 115 required, six scanners passed. See exact-hash artifact record in current manualReview doc. New edits survive delayed response, status stays dirty; second acknowledged save clears dirty. Historical coverage of other Wave 3 pages remains prior evidence, not recertified as part of this change."
+      "previousManualReview": "docs/ui-redesign/page-editor-save-fence-review-2026-10-28.md",
+      "recertificationReason": "PostEditor save/preview acknowledgements could mark an older server snapshot saved while newer local edits remained; auto-save could replay an ambiguous failed revision, and a late CREATE response could discard later draft text. Behaviour-only PostEditor change still requires fresh manual-first comparison plus exact-head real desktop/mobile browser and Showcase evidence. Strict ledger deliberately blocks verification until manual evidence and CI pass."
     }
   ]
 }
