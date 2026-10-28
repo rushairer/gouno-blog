@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { installApiFixtures, setTheme } from "./mock-api.mjs";
 import { limitedProfile } from "./session-fixtures.mjs";
+import { adminPage } from "./core-admin-fixtures.mjs";
 
 async function openAdmin(page, path, options = {}) {
   await setTheme(page, options.theme || "light");
@@ -187,6 +188,63 @@ test("Page editor keeps Post-only navigator out and reviews title summary metada
   );
   expect(unknown).toEqual([]);
 });
+
+for (const viewport of [
+  { label: "desktop", width: 1440, height: 900 },
+  { label: "mobile", width: 390, height: 844 },
+]) {
+  test(`Page editor keeps post-dispatch edits after an older save ACK (${viewport.label})`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    const unknown = await openAdmin(page, "/admin/pages/201/edit");
+    const requests = [];
+    let releaseFirst;
+    let firstDispatched;
+    const firstRequest = new Promise((resolve) => {
+      firstDispatched = resolve;
+    });
+    const release = new Promise((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    await page.route("**/api/admin/pages/201", async (route) => {
+      if (route.request().method() !== "PUT") return route.fallback();
+      const body = route.request().postDataJSON();
+      requests.push(body);
+      if (requests.length === 1) {
+        firstDispatched();
+        await release;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: { ...adminPage, ...body, id: 201 } }),
+      });
+    });
+
+    const title = page.getByRole("textbox", { name: "标题", exact: true });
+    await title.fill("First submitted title");
+    await page.getByRole("button", { name: "更新单页" }).click();
+    await firstRequest;
+    await title.fill("Newer unsaved title");
+    releaseFirst();
+
+    await expect(title).toHaveValue("Newer unsaved title");
+    await expect(page.getByText("有未保存的更改")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await captureWave3Evidence(page, testInfo, `page-save-stale-${viewport.label}.png`);
+
+    await page.getByRole("button", { name: "更新单页" }).click();
+    await expect(page.locator('[data-slot="notification"]')).toContainText("单页已成功发布");
+    await expect(title).toHaveValue("Newer unsaved title");
+    await expect(page.getByText(/已于.*保存/)).toBeVisible();
+    expect(requests).toHaveLength(2);
+    expect(requests[0].title).toBe("First submitted title");
+    expect(requests[1].title).toBe("Newer unsaved title");
+    await expectNoHorizontalOverflow(page);
+    await captureWave3Evidence(page, testInfo, `page-save-current-${viewport.label}.png`);
+    expect(unknown).toEqual([]);
+  });
+}
 
 test("Read-only post editor removes write and AI actions for another author's post", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
