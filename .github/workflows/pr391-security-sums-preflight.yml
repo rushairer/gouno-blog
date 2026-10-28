@@ -1,0 +1,30 @@
+name: Temporary go-jose checksum preflight
+on:
+  push:
+    branches: [hardening/a-plus-go-jose-musl-20261028]
+permissions:
+  contents: read
+jobs:
+  checksum:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+      - name: Fetch patched module and verify checksums
+        run: cd blog-backend && go mod download github.com/go-jose/go-jose/v4@v4.1.6 && go mod verify
+      - name: Show exact Go checksum update
+        run: git diff -- blog-backend/go.mod blog-backend/go.sum
+      - name: Upload generated go.sum
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: patched-jose-sums
+          path: blog-backend/go.sum
+          retention-days: 1
+          if-no-files-found: error
+      - name: Compile OIDC/BFF unit suite against patched go-jose
+        run: cd blog-backend && go test ./internal/authbff/...
