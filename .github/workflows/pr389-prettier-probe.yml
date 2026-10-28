@@ -1,0 +1,33 @@
+name: One-time PR389 Prettier probe
+
+on:
+  push:
+    branches:
+      - hardening/a-plus-page-editor-save-fence-20261028
+
+permissions:
+  contents: read
+
+jobs:
+  format-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - name: Install exact lockfile dependencies
+        run: cd blog-frontend && npm ci
+      - name: Render Prettier 3.8.5 output without changing the remote branch
+        run: cd blog-frontend && ./node_modules/.bin/prettier --write src/pages/admin/__tests__/PageEditor.test.tsx
+      - name: Attach formatted fixture
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: page-editor-prettier-389
+          path: blog-frontend/src/pages/admin/__tests__/PageEditor.test.tsx
+          if-no-files-found: error
+          retention-days: 1
