@@ -1,6 +1,6 @@
 # PostEditor delayed ACK and autosave — Manual-first review (2026-10-28)
 
-Status: **needs-manual-recertification**
+Status: **verified** — 2026-10-28. Manual-first incremental PostEditor save/preview/autosave recertification; not an entire Core Wave 3 re-audit or global A+ release authorization.
 
 ## Defect and scope
 
@@ -25,3 +25,36 @@ Status: **needs-manual-recertification**
 
 - No changes to Blog backend, OIDC confidential BFF, GOSSO, Connector Hold, provider or Media recovery. This change does not establish cross-user revision CAS; 409 conflicts remain server-owned. Version-restore overlapping edits and unrelated external recovery require distinct follow-up verification.
 - Browser plugin not available; use repository's pinned real Chromium Playwright with controlled intercepted API and manually inspect image evidence. Passing fixture-backed tests does not prove live deployment or real provider effects. Keep global A+ #359 and recovery #338 open.
+
+## Accepted real source candidate and exact artifact evidence
+
+- Source Blog head: `875c5067defc49111b0c0f4e8ff31a54ae30a753` (a true Git merge of patched security main `a0063748d43eb2dfc5b1cf8e79aaa5de44294ded` and PostEditor candidate `d17ab754fcc873a5fb8ae96d2dfc63c07e63e102`). Canonical Gouno UI HEAD: `2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9`; `@gouno/ui` exactly 0.4.9.
+- CI [40663300351](https://github.com/rushairer/gouno-blog/actions/runs/40663300351): success — front-end 67 Vitest files, **383 tests**, 66 existing lint warnings/0 errors, no npm audit vulnerabilities, TypeScript, formatter, CSS, strict UI certification, 94 JS chunks <=500kB; backend/seed race/vet and real PostgreSQL passed.
+- Images [40663300635](https://github.com/rushairer/gouno-blog/actions/runs/40663300635): success — three images with **six successful** Trivy/Grype scans using patched go-jose/musl baseline, no suppressed vulnerability.
+- UI Browser Acceptance [40663300458](https://github.com/rushairer/gouno-blog/actions/runs/40663300458): success — **361 real Chromium tests passed**, no failed, skipped or flaky. Both new desktop and mobile cases verify PUT `/api/posts/101` receives the first and second titles; stale ACK retains later edits and beforeunload, latest ACK reports save and increments server revision. Front-end backend API contract is unchanged.
+- Blog Showcase Parity [40663300526](https://github.com/rushairer/gouno-blog/actions/runs/40663300526): success — **86** Product/Canonical paired tests, including Post Editor desktop/light and mobile/dark fixtures.
+
+### Downloaded final source-candidate ZIP artifact SHA-256
+
+| Evidence | Artifact ID | Independently calculated ZIP SHA-256 |
+| --- | --- | --- |
+| Isolated real PostgreSQL | 12804268781 | `986fbb46e55cdc0287ec65dbe274ba3c2d49f479b9bea74a61273311c3bfd27b` |
+| Product Chromium browser | 12803954946 | `b8a83db8679f5ddaed98dd007dbfbeec0c73b1a2bd70d083f549157253e8a376` |
+| Paired Showcase parity | 12804773570 | `d594a28e087a5058be612c9e4c24cce302b58f32484a1af4f38231a3e3c493db` |
+
+Database summary JSON: **21 packages**, all required integration tests reported complete; `ok=true`, cleanup exit 0, and three injected false-green failures (missing DSN, unknown DB and invalid migration) correctly returned exit 1. No real database/service skipped or hidden. All three ZIP digests were computed directly from downloaded bytes and matched GitHub artifact digests.
+
+## Manual-first visual inspection — source and rendered browser
+
+- Opened `post-save-stale-desktop.png` and `post-save-stale-mobile.png` from actual Chromium browser artifacts. The visible latest title remains **Newer unsaved post title**, while header clearly says **有未保存的更改**. No erroneous saved timestamp and no old title inserted after the delayed server ACK. Editor actions remain reachable on both 1440 x 900 desktop and 390 x 844 mobile viewports, without document-level horizontal overflow.
+- Opened `post-save-current-desktop.png` and `post-save-current-mobile.png`. Only after the deliberate subsequent `更新文章` mutation does the status become **已于 ... 保存**, with a successful `文章已成功发布！` notification; title stays latest on both. Toast is transient and does not obscure editing controls beyond its expected notification layer.
+- Opened current exact-source parity `post-editor-desktop-light-product.png`, `post-editor-desktop-light-showcase.png`, `post-editor-mobile-dark-product.png`, and `post-editor-mobile-dark-showcase.png` and compared against baseline main snapshot before the fix. **All four PNGs are byte-for-byte identical** to previously accepted captures. Canonical DocumentEditorShell, editor/outline/history/Inspector composition, typography, spacing, responsive behavior and field-level AI actions unchanged.
+- Intentional divergence remains: Product displays actual fixture-backed published `Browser Acceptance Post` with its API-owned revision/authorization/save state, while frozen Showcase uses static editorial draft `每日 AI 资讯` plus FixtureDock; the differences are in data, route/permission, and scenario, not primitives or composition.
+- The earlier initial #390 workflow was correctly red because the newly added test intercepted `/api/admin/posts/101` rather than real `PUT /api/posts/101`; previous image scan used a vulnerable backend baseline. Those failures are preserved and not treated as passing. The corrected test and actual repaired main security commit are in the accepted source head, which was rerun and succeeded.
+
+## Limitations and final documentation-head release gate
+
+- This is frontend async ownership for PostEditor Save, Preview and draft autosave. It does not establish Provider-side exactly-once, external billing receipts, post-op live deployment, or revision CAS for external competing operators; genuine HTTP 409 remains server-owned. A lost CREATE response with unknown server outcome still requires separate operator review rather than blind replay.
+- PostEditor version-restore overlapping in-flight edits and unrelated admin page states were not a new full Core Wave 3 visual audit; their historical certification evidence remains historical.
+- Final documentation-only PR head must pass all four gates again before SHA-guarded merge. Security main `a0063748...` already passed PR security and post-merge CI/BFF/Showcase and published immutable backend+Seed images, but that is not evidence of production deployment.
+- Browser plugin unavailable; actual tested path is repo Playwright Chromium and manually opened evidence. #359 and #338 remain OPEN; no global A+ claim.
