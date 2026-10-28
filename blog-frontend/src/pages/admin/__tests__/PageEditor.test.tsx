@@ -276,7 +276,7 @@ describe("PageEditor", () => {
       screen.queryByRole("button", { name: "AI 写作" }),
     ).not.toBeInTheDocument();
   });
-  it("keeps edits made after Save dispatch and does not falsely clear beforeunload", async () => {
+  it("preserves newer edits after a delayed save ACK", async () => {
     const user = userEvent.setup();
     const pending = deferred<CustomPage>();
     vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
@@ -323,7 +323,7 @@ describe("PageEditor", () => {
     expect(afterUnload.defaultPrevented).toBe(false);
   });
 
-  it("does not preview an old server snapshot while newer edits are unsaved", async () => {
+  it("blocks stale preview while newer edits remain", async () => {
     const user = userEvent.setup();
     const pending = deferred<CustomPage>();
     vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
@@ -363,7 +363,7 @@ describe("PageEditor", () => {
     });
   });
 
-  it("retains a newly created page identity without replaying CREATE after an in-flight edit", async () => {
+  it("reuses created Page ID after in-flight edits", async () => {
     const user = userEvent.setup();
     const pending = deferred<CustomPage>();
     const created = { ...draftPage, id: 202, title: "新建页面", slug: "new-page" };
