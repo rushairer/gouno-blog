@@ -367,7 +367,12 @@ describe("PageEditor", () => {
   it("reuses created Page ID after in-flight edits", async () => {
     const user = userEvent.setup();
     const pending = deferred<CustomPage>();
-    const created = { ...draftPage, id: 202, title: "新建页面", slug: "new-page" };
+    const created = {
+      ...draftPage,
+      id: 202,
+      title: "新建页面",
+      slug: "new-page",
+    };
     const create = vi
       .spyOn(pagesApi, "createPage")
       .mockReturnValue(pending.promise);
