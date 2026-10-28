@@ -153,7 +153,7 @@ for (const viewport of [
       releaseFirst = resolve;
     });
 
-    await page.route("**/api/admin/posts/101", async (route) => {
+    await page.route("**/api/posts/101", async (route) => {
       if (route.request().method() !== "PUT") return route.fallback();
       const body = route.request().postDataJSON();
       requests.push(body);
