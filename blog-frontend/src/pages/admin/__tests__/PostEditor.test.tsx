@@ -437,7 +437,9 @@ describe("PostEditor", () => {
       title: "最初文章标题",
       revision: 1,
     };
-    const create = vi.spyOn(postsApi, "createPost").mockReturnValue(pending.promise);
+    const create = vi
+      .spyOn(postsApi, "createPost")
+      .mockReturnValue(pending.promise);
     const save = vi
       .spyOn(postsApi, "updatePost")
       .mockImplementation(async (_id, payload) => ({
@@ -493,5 +495,4 @@ describe("PostEditor", () => {
     expect(title).toHaveValue("自动保存失败的草稿");
     expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
   });
-
 });

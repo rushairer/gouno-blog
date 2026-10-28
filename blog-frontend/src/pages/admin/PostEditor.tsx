@@ -745,8 +745,7 @@ export default function PostEditor() {
           return;
         }
         currentPost = saved;
-        if (isNew)
-          navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
+        if (isNew) navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
       } catch (reason) {
         recordConflict(reason);
         const message =
