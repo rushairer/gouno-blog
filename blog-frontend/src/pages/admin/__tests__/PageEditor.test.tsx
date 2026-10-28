@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { GossoProvider } from "@gosso/client/react";
@@ -37,6 +43,14 @@ function renderEditor(path = "/admin/pages/new", client = mockClient) {
       </AppFeedbackProvider>
     </GossoProvider>,
   );
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
 }
 
 const draftPage: CustomPage = {
@@ -267,5 +281,141 @@ describe("PageEditor", () => {
     expect(
       screen.queryByRole("button", { name: "AI 写作" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("preserves newer edits after a delayed save ACK", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<CustomPage>();
+    vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
+    const save = vi
+      .spyOn(pagesApi, "updatePage")
+      .mockImplementationOnce(() => pending.promise)
+      .mockImplementation(async (_id, payload) => ({
+        ...draftPage,
+        ...payload,
+      }));
+
+    renderEditor("/admin/pages/3/edit");
+    const title = await screen.findByLabelText("标题");
+    await user.clear(title);
+    await user.type(title, "最初提交的标题");
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+
+    // The editor must remain usable while the previous API request is pending.
+    await user.clear(title);
+    await user.type(title, "保存请求期间的新标题");
+    await act(async () => {
+      pending.resolve({ ...draftPage, title: "最初提交的标题" });
+    });
+
+    expect(title).toHaveValue("保存请求期间的新标题");
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+    expect(screen.queryByText(/已于.*保存/)).not.toBeInTheDocument();
+    const beforeUnload = new Event("beforeunload", { cancelable: true });
+    fireEvent(window, beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    expect(save).toHaveBeenLastCalledWith(
+      3,
+      expect.objectContaining({ title: "保存请求期间的新标题" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/已于.*保存/)).toBeInTheDocument();
+    });
+    const afterUnload = new Event("beforeunload", { cancelable: true });
+    fireEvent(window, afterUnload);
+    expect(afterUnload.defaultPrevented).toBe(false);
+  });
+
+  it("blocks stale preview while newer edits remain", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<CustomPage>();
+    vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
+    const save = vi
+      .spyOn(pagesApi, "updatePage")
+      .mockImplementationOnce(() => pending.promise)
+      .mockImplementation(async (_id, payload) => ({
+        ...draftPage,
+        ...payload,
+      }));
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    renderEditor("/admin/pages/3/edit");
+    const slug = await screen.findByLabelText("访问路径 (Slug)");
+    await user.clear(slug);
+    await user.type(slug, "preview-first");
+    await user.click(screen.getByRole("button", { name: "预览前台页面" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+
+    await user.clear(slug);
+    await user.type(slug, "preview-newer");
+    await act(async () => {
+      pending.resolve({ ...draftPage, slug: "preview-first" });
+    });
+    expect(slug).toHaveValue("preview-newer");
+    expect(open).not.toHaveBeenCalled();
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "预览前台页面" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    expect(save).toHaveBeenLastCalledWith(
+      3,
+      expect.objectContaining({ slug: "preview-newer" }),
+    );
+    await waitFor(() => {
+      expect(open).toHaveBeenCalledWith("/preview-newer", "_blank");
+    });
+  });
+
+  it("reuses created Page ID after in-flight edits", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<CustomPage>();
+    const created = {
+      ...draftPage,
+      id: 202,
+      title: "新建页面",
+      slug: "new-page",
+    };
+    const create = vi
+      .spyOn(pagesApi, "createPage")
+      .mockReturnValue(pending.promise);
+    const updatePage = vi
+      .spyOn(pagesApi, "updatePage")
+      .mockImplementation(async (_id, payload) => ({
+        ...created,
+        ...payload,
+      }));
+    const load = vi
+      .spyOn(pagesApi, "getAdminPage")
+      .mockResolvedValue({ ...created, title: "第二版标题" });
+
+    renderEditor();
+    const title = await screen.findByLabelText("标题");
+    await user.type(title, "新建页面");
+    await user.type(screen.getByLabelText("访问路径 (Slug)"), "new-page");
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+
+    await user.clear(title);
+    await user.type(title, "第二版标题");
+    await act(async () => {
+      pending.resolve(created);
+    });
+    expect(title).toHaveValue("第二版标题");
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+    expect(load).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(updatePage).toHaveBeenCalledTimes(1));
+    expect(updatePage).toHaveBeenCalledWith(
+      202,
+      expect.objectContaining({ title: "第二版标题" }),
+    );
+    expect(create).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(load).toHaveBeenCalledWith("202"));
+    expect(await screen.findByLabelText("标题")).toHaveValue("第二版标题");
   });
 });
