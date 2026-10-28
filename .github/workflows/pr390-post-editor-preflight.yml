@@ -1,0 +1,42 @@
+name: Temporary PostEditor targeted preflight
+
+on:
+  push:
+    branches:
+      - hardening/a-plus-post-editor-save-fence-20261028
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: blog-frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Format exact two Product test files without writing to PR
+        run: |
+          ./node_modules/.bin/prettier --write src/pages/admin/PostEditor.tsx src/pages/admin/__tests__/PostEditor.test.tsx
+      - name: Upload exact pinned Prettier result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: post-editor-formatted-source
+          path: |
+            blog-frontend/src/pages/admin/PostEditor.tsx
+            blog-frontend/src/pages/admin/__tests__/PostEditor.test.tsx
+          retention-days: 1
+      - name: Typecheck TypeScript 7 CLI
+        run: npm exec tsc -b
+      - name: Real PostEditor component tests
+        run: npm exec vitest run src/pages/admin/__tests__/PostEditor.test.tsx
