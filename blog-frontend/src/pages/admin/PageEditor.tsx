@@ -123,7 +123,11 @@ export default function PageEditor() {
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [error, setError] = useState("");
   const [confirmExit, setConfirmExit] = useState(false);
+  // The ref protects beforeunload synchronously; React state owns the render.
   const dirty = useRef(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const editRevision = useRef(0);
+  const saveInFlight = useRef(false);
 
   const [editorMode, setEditorMode] = useState<MarkdownEditorMode>("edit");
   const [editorSelection, setEditorSelection] =
@@ -151,19 +155,30 @@ export default function PageEditor() {
       setLoading(false);
       return;
     }
+    let active = true;
     setLoading(true);
     pagesApi
       .getAdminPage(id)
       .then((data) => {
+        if (!active) return;
         setPage(data);
         setPublishIntent(data.status || "draft");
+        dirty.current = false;
+        setIsDirty(false);
+        setSavedAt(null);
         setError("");
       })
       .catch((reason: Error) => {
+        if (!active) return;
         setError(reason.message);
         notify(reason.message, "error");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [allowed, id, notify]);
 
   useEffect(() => {
@@ -189,17 +204,46 @@ export default function PageEditor() {
     }
   };
 
+  const markEdited = () => {
+    editRevision.current += 1;
+    dirty.current = true;
+    setIsDirty(true);
+    setSavedAt(null);
+  };
+
   const update = <K extends keyof CustomPage>(key: K, value: CustomPage[K]) => {
     if (isReadOnly) return;
     setPage((current) => ({ ...current, [key]: value }));
-    dirty.current = true;
-    setSavedAt(null);
+    markEdited();
     invalidateDerivedSuggestions(key);
   };
 
+  const applySaveResult = useCallback(
+    (result: CustomPage, submittedRevision: number) => {
+      if (editRevision.current !== submittedRevision) {
+        // The server saved an older snapshot. Keep subsequent local edits;
+        // for a newly created Page, retain its identity for the next PUT.
+        setPage((current) => ({
+          ...current,
+          id: result.id,
+          created_at: result.created_at,
+          updated_at: result.updated_at,
+        }));
+        return false;
+      }
+      setPage(result);
+      setPublishIntent(result.status || "draft");
+      dirty.current = false;
+      setIsDirty(false);
+      setSavedAt(new Date());
+      return true;
+    },
+    [],
+  );
+
   const persist = useCallback(
     async (status: PostStatus, automatic = false) => {
-      if (isReadOnly) return;
+      if (isReadOnly || saveInFlight.current) return;
       if (!page.title.trim()) {
         const message = "请先填写单页标题。";
         if (!automatic) {
@@ -217,6 +261,8 @@ export default function PageEditor() {
         return;
       }
 
+      saveInFlight.current = true;
+      const submittedRevision = editRevision.current;
       setSaving(true);
       setError("");
       const payload: Partial<CustomPage> = {
@@ -237,17 +283,16 @@ export default function PageEditor() {
         const result = page.id
           ? await pagesApi.updatePage(page.id, payload)
           : await pagesApi.createPage(payload);
-        setPage(result);
-        setPublishIntent(result.status || "draft");
-        dirty.current = false;
-        setSavedAt(new Date());
-        if (!automatic) {
+        const current = applySaveResult(result, submittedRevision);
+        if (!automatic && current) {
           notify(
             status === "published" ? "单页已成功发布！" : "单页草稿已保存。",
             "success",
           );
         }
-        if (!page.id)
+        // Do not navigate a new Page while a newer, unsaved local draft exists:
+        // route hydration could overwrite it with the older server snapshot.
+        if (isNew && current)
           navigate(`/admin/pages/${result.id}/edit`, { replace: true });
       } catch (reason) {
         const message =
@@ -255,10 +300,11 @@ export default function PageEditor() {
         setError(message);
         notify(message, "error");
       } finally {
+        saveInFlight.current = false;
         setSaving(false);
       }
     },
-    [isReadOnly, navigate, notify, page],
+    [applySaveResult, isNew, isReadOnly, navigate, notify, page],
   );
 
   const leaveEditor = () => {
@@ -363,8 +409,7 @@ export default function PageEditor() {
           ? metadataSuggestion.seo_description
           : current.seo_description,
     }));
-    dirty.current = true;
-    setSavedAt(null);
+    markEdited();
     setMetadataSuggestion(null);
     setMetadataSelection([]);
   };
@@ -415,12 +460,15 @@ export default function PageEditor() {
   };
 
   const openFrontsitePreview = async () => {
+    if (saveInFlight.current) return;
     let currentPage = page;
     if (!isReadOnly && (dirty.current || !currentPage.id)) {
       if (!currentPage.title.trim() || !currentPage.slug.trim()) {
         setError("请先填写单页标题与路径。");
         return;
       }
+      saveInFlight.current = true;
+      const submittedRevision = editRevision.current;
       setSaving(true);
       setError("");
       try {
@@ -440,11 +488,13 @@ export default function PageEditor() {
         const result = currentPage.id
           ? await pagesApi.updatePage(currentPage.id, payload)
           : await pagesApi.createPage(payload);
+        if (!applySaveResult(result, submittedRevision)) {
+          // Previewing the saved version would misrepresent the user's
+          // newer local draft. Require an explicit subsequent save/preview.
+          return;
+        }
         currentPage = result;
-        setPage(result);
-        dirty.current = false;
-        setSavedAt(new Date());
-        if (!page.id)
+        if (isNew)
           navigate(`/admin/pages/${result.id}/edit`, { replace: true });
       } catch (reason) {
         setError(
@@ -452,6 +502,7 @@ export default function PageEditor() {
         );
         return;
       } finally {
+        saveInFlight.current = false;
         setSaving(false);
       }
     }
@@ -534,7 +585,7 @@ export default function PageEditor() {
             })}{" "}
             保存
           </>
-        ) : dirty.current ? (
+        ) : isDirty ? (
           "有未保存的更改"
         ) : (
           "所有更改已保存"
@@ -632,9 +683,10 @@ export default function PageEditor() {
             aria-label="状态"
             value={publishIntent}
             onChange={(value) => {
-              setPublishIntent(selectValue(value) as PostStatus);
-              dirty.current = true;
-              setSavedAt(null);
+              const next = selectValue(value) as PostStatus;
+              if (next === publishIntent) return;
+              setPublishIntent(next);
+              markEdited();
             }}
           >
             <option value="draft">草稿</option>
