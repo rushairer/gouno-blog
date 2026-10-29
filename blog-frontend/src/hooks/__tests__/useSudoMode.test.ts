@@ -1,9 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import {
-  useSudoMode,
-  SUDO_SESSION_CLEARED_EVENT,
-} from "../useSudoMode";
+import { useSudoMode, SUDO_SESSION_CLEARED_EVENT } from "../useSudoMode";
 import { STEP_UP_COMPLETED_EVENT, SUDO_SESSION_STALE_EVENT } from "../../mfa";
 
 describe("useSudoMode", () => {
