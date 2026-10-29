@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"mime"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/gouno"
@@ -23,7 +23,7 @@ func RequestBodyLimitMiddleware() gin.HandlerFunc {
 			return
 		}
 		limit := int64(MaxAPIJSONBody)
-		if strings.HasPrefix(strings.ToLower(ctx.GetHeader("Content-Type")), "multipart/form-data") {
+		if isMediaMultipartUpload(ctx) {
 			limit = MaxAPIMultipartBody
 		}
 		if ctx.Request.ContentLength > limit {
@@ -33,4 +33,13 @@ func RequestBodyLimitMiddleware() gin.HandlerFunc {
 		ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, limit)
 		ctx.Next()
 	}
+}
+
+// isMediaMultipartUpload grants larger framing only on the real Media route.
+func isMediaMultipartUpload(ctx *gin.Context) bool {
+	if ctx.Request.Method != http.MethodPost || ctx.FullPath() != "/api/admin/media" {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(ctx.GetHeader("Content-Type"))
+	return err == nil && mediaType == "multipart/form-data"
 }
