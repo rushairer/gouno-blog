@@ -282,6 +282,100 @@ describe("PostEditor", () => {
     expect(await screen.findByText("已成功恢复历史版本。")).toBeInTheDocument();
   });
 
+  it("preserves edits made while history restore is in flight", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<Post>();
+    const initial = { ...draftPost, revision: 3 };
+    const previous = {
+      ...initial,
+      id: 42,
+      post_id: 5,
+      title: "历史文章标题",
+      content: "历史文章正文",
+    };
+    vi.spyOn(postsApi, "getAdminPost").mockResolvedValue(initial);
+    vi.spyOn(postsApi, "getVersions").mockResolvedValue([previous]);
+    const restore = vi
+      .spyOn(postsApi, "restoreVersion")
+      .mockReturnValue(pending.promise);
+    const update = vi.spyOn(postsApi, "updatePost").mockImplementation(
+      async (_id, payload) => ({ ...initial, ...payload, revision: 5 }),
+    );
+    renderEditor("/admin/posts/5/edit");
+
+    await user.click(await screen.findByRole("tab", { name: /历史 1/ }));
+    await user.click(
+      screen.getByRole("button", { name: /历史文章标题.*历史版本/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "恢复版本" }));
+    await waitFor(() => {
+      expect(restore).toHaveBeenCalledWith(5, 42, 3);
+    });
+    expect(screen.getByText("正在恢复…")).toBeInTheDocument();
+
+    const title = screen.getByLabelText("标题");
+    await user.clear(title);
+    await user.type(title, "恢复请求期间的新标题");
+    await act(async () => {
+      pending.resolve({ ...initial, title: "历史文章标题", revision: 4 });
+    });
+
+    expect(title).toHaveValue("恢复请求期间的新标题");
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+    expect(
+      screen.queryByText("已成功恢复历史版本。"),
+    ).not.toBeInTheDocument();
+    const before = new Event("beforeunload", { cancelable: true });
+    fireEvent(window, before);
+    expect(before.defaultPrevented).toBe(true);
+    expect(update).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenLastCalledWith(
+      5,
+      expect.objectContaining({
+        title: "恢复请求期间的新标题",
+        revision: 4,
+      }),
+    );
+    expect(restore).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("草稿已保存。")).toBeInTheDocument();
+  });
+
+  it("blocks history restore while local draft changes are unsaved", async () => {
+    const user = userEvent.setup();
+    const version = {
+      ...draftPost,
+      id: 42,
+      post_id: 5,
+      title: "历史文章标题",
+    };
+    vi.spyOn(postsApi, "getAdminPost").mockResolvedValue(draftPost);
+    vi.spyOn(postsApi, "getVersions").mockResolvedValue([version]);
+    const restore = vi.spyOn(postsApi, "restoreVersion");
+    renderEditor("/admin/posts/5/edit");
+
+    const title = await screen.findByLabelText("标题");
+    await user.type(title, "还有未保存的字");
+    await user.click(screen.getByRole("tab", { name: /历史 1/ }));
+    await user.click(
+      screen.getByRole("button", { name: /历史文章标题.*历史版本/ }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "恢复历史版本" });
+    expect(dialog).toHaveTextContent(
+      "有未保存的修改。请先保存，再恢复历史版本，避免丢失草稿。",
+    );
+    expect(
+      screen.getByRole("button", { name: "恢复版本" }),
+    ).toBeDisabled();
+    expect(restore).not.toHaveBeenCalled();
+    expect(title).toHaveValue(
+      draftPost.title + "还有未保存的字",
+    );
+  });
+
   it("renders wide preview content in internal scroll containers", async () => {
     const user = userEvent.setup();
     vi.spyOn(postsApi, "getAdminPost").mockResolvedValue({
