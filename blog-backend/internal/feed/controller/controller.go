@@ -6,6 +6,7 @@ import (
 	"fmt"
 	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -24,14 +25,35 @@ type SiteSettingsReader interface {
 	GetSiteSettings(ctx context.Context) (map[string]string, error)
 }
 
+const fallbackFeedOrigin = "https://blog.dev.local"
+
+// Feed URLs must use trusted server configuration, never request Host or
+// X-Forwarded-* headers, which unauthenticated clients can spoof.
 type FeedController struct {
 	svc          FeedPostReader
 	pageSvc      *pageservice.PageService
 	siteSettings SiteSettingsReader
+	publicOrigin string
 }
 
-func NewFeedController(svc FeedPostReader, pageSvc *pageservice.PageService, siteSettings SiteSettingsReader) *FeedController {
-	return &FeedController{svc: svc, pageSvc: pageSvc, siteSettings: siteSettings}
+func NewFeedController(svc FeedPostReader, pageSvc *pageservice.PageService, siteSettings SiteSettingsReader, oidcCallbackURL string) *FeedController {
+	return &FeedController{
+		svc: svc, pageSvc: pageSvc, siteSettings: siteSettings,
+		publicOrigin: canonicalFeedOriginFromCallback(oidcCallbackURL),
+	}
+}
+
+// The same callback URL is already validated by the confidential BFF at
+// application startup. Reject invalid/foreign-shaped values defensively
+// rather than falling back to any untrusted incoming Host header.
+func canonicalFeedOriginFromCallback(value string) string {
+	u, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || u == nil || u.Scheme != "https" || u.Host == "" ||
+		u.User != nil || u.Opaque != "" || u.RawQuery != "" || u.Fragment != "" ||
+		u.Path != "/api/auth/callback" || u.EscapedPath() != "/api/auth/callback" {
+		return fallbackFeedOrigin
+	}
+	return u.Scheme + "://" + u.Host
 }
 
 // RSS 2.0 Structs
@@ -77,7 +99,7 @@ func (ctrl *FeedController) GetRSS(c *gin.Context) {
 		return
 	}
 
-	baseURL := getBaseURL(c)
+	baseURL := ctrl.publicOrigin
 	title, description := ctrl.siteIdentity(c)
 	items := make([]RSSItem, 0, len(posts))
 	for _, p := range posts {
@@ -119,7 +141,7 @@ func (ctrl *FeedController) GetSitemap(c *gin.Context) {
 		return
 	}
 
-	baseURL := getBaseURL(c)
+	baseURL := ctrl.publicOrigin
 	urls := []SitemapURL{
 		{Loc: baseURL + "/", ChangeFreq: "daily", Priority: "1.0"},
 		{Loc: baseURL + "/articles", ChangeFreq: "daily", Priority: "0.9"},
@@ -168,21 +190,6 @@ func (ctrl *FeedController) GetSitemap(c *gin.Context) {
 
 	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.XML(http.StatusOK, sitemap)
-}
-
-func getBaseURL(c *gin.Context) string {
-	scheme := "http"
-	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
-		scheme = "https"
-	}
-	host := c.GetHeader("X-Forwarded-Host")
-	if host == "" {
-		host = c.Request.Host
-	}
-	if host == "" {
-		host = "blog.dev.local"
-	}
-	return fmt.Sprintf("%s://%s", scheme, host)
 }
 
 func (ctrl *FeedController) siteIdentity(c *gin.Context) (string, string) {
