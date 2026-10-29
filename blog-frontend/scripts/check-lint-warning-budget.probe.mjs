@@ -2,13 +2,14 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { enforceOxlintBudget, maxAllowedWarnings, parseOxlintSummary } from "./check-lint-warning-budget.mjs";
 
-test("accepts the exact lowered 65-warning baseline", () => {
-  const result = enforceOxlintBudget("Found 65 warnings and 0 errors.");
+test("accepts the exact lowered 61-warning baseline", () => {
+  const result = enforceOxlintBudget("Found 61 warnings and 0 errors.");
   assert.deepEqual(result, { warnings: maxAllowedWarnings, errors: 0 });
 });
 
-test("detects the former 66-warning baseline and any regression", () => {
-  assert.throws(() => enforceOxlintBudget("Found 66 warnings and 0 errors."), /warning ratchet exceeded/);
+test("rejects the old 65-warning ceiling and any new regression", () => {
+  assert.throws(() => enforceOxlintBudget("Found 65 warnings and 0 errors."), /warning ratchet exceeded/);
+  assert.throws(() => enforceOxlintBudget("Found 62 warnings and 0 errors."), /warning ratchet exceeded/);
   assert.throws(() => enforceOxlintBudget("Found 200 warnings and 0 errors."), /warning ratchet exceeded/);
 });
 

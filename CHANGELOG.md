@@ -7,6 +7,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Refresh Seed `golang.org/x/crypto` and test-only `@playwright/test` patch dependencies with matching, integrity-verified Go sum/npm lockfiles (Dependabot #374/#370). Reduce the strictly enforced Oxlint warning ceiling from 65 to 61: remove one dead Playwright measurement and three semantically redundant escapes in UI-contract rules; preserve security/CI/visual gates without rule suppression or Product UI changes.
+
 - Introduce a fail-closed, executable frontend Oxlint warning ratchet, initially tightened from 66 to 65 by removing an unused import in the Sudo hook test. Both `quality` and `check` enforce the same budget with parser/false-green regressions. No certified Product UI, BFF, permissions or Connector behavior was modified. The remaining warnings are technical debt, not waived or claimed resolved.
 
 ### Fixed
