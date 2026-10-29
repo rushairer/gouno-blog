@@ -258,7 +258,11 @@ for (const viewport of [
     await captureWave3Evidence(page, testInfo, `post-restore-stale-${viewport.label}.png`);
 
     await page.getByRole("button", { name: "更新文章" }).click();
-    await expect(page.locator('[data-slot="notification"]')).toContainText("文章已成功发布");
+    await expect(
+      page.locator('[data-slot="notification"]').filter({
+        hasText: "文章已成功发布",
+      }),
+    ).toBeVisible();
     await expect(title).toHaveValue("Newer unsaved after restore");
     await expect(page.getByText(/已于.*保存/)).toBeVisible();
     expect(writes).toHaveLength(1);
