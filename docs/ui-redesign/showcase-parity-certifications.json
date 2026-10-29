@@ -412,12 +412,12 @@
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "needs-manual-recertification",
+      "status": "verified",
       "reviewMethod": "manual-first",
-      "reviewDate": "2026-10-28",
+      "reviewDate": "2026-10-29",
       "manualReview": "docs/ui-redesign/post-editor-restore-fence-review-2026-10-29.md",
       "reviewedRefs": {
-        "blog": "875c5067defc49111b0c0f4e8ff31a54ae30a753",
+        "blog": "41f73bb4e59181d42332518411a7c4092a173dae",
         "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
       },
       "gounoUiPackageVersion": "0.4.9",
@@ -436,7 +436,10 @@
         "desktop-mobile",
         "post-save-stale-ack",
         "post-save-current-ack",
-        "post-autosave-no-replay"
+        "post-autosave-no-replay",
+        "post-restore-stale-ack",
+        "post-restore-current-ack",
+        "post-restore-dirty-block"
       ],
       "reviewDimensions": [
         "composition",
@@ -474,40 +477,40 @@
         "runs": [
           {
             "name": "CI",
-            "id": 40663300351,
+            "id": 40845726829,
             "result": "success"
           },
           {
             "name": "Images",
-            "id": 40663300635,
+            "id": 40845726797,
             "result": "success"
           },
           {
             "name": "UI Browser Acceptance",
-            "id": 40663300458,
+            "id": 40845726992,
             "result": "success"
           },
           {
             "name": "Blog Showcase Parity",
-            "id": 40663300526,
+            "id": 40845726701,
             "result": "success"
           }
         ],
         "artifacts": [
           {
-            "id": 12804268781,
+            "id": 12885485329,
             "name": "database-integration",
-            "sha256": "986fbb46e55cdc0287ec65dbe274ba3c2d49f479b9bea74a61273311c3bfd27b"
+            "sha256": "db18a5fa69ca440ed7ab6fa9d30b263c51ddaaa4d730b4169b13b1ecffde99d7"
           },
           {
-            "id": 12803954946,
-            "name": "blog-browser-acceptance-40663300458",
-            "sha256": "b8a83db8679f5ddaed98dd007dbfbeec0c73b1a2bd70d083f549157253e8a376"
+            "id": 12885092250,
+            "name": "blog-browser-acceptance-40845726992",
+            "sha256": "00076d854ef6f949db18883260f408fd5c091e4b837a3bae5cf4eb21af93c092"
           },
           {
-            "id": 12804773570,
-            "name": "blog-showcase-parity-40663300526",
-            "sha256": "d594a28e087a5058be612c9e4c24cce302b58f32484a1af4f38231a3e3c493db"
+            "id": 12885231418,
+            "name": "blog-showcase-parity-40845726701",
+            "sha256": "77e8a564a9afc8357392e8af0c49ac1774765adb2a46d3ee8895a31eea5d1345"
           }
         ]
       },
@@ -527,7 +530,7 @@
         "blog-admin-site-settings"
       ],
       "previousManualReview": "docs/ui-redesign/post-editor-save-fence-review-2026-10-28.md",
-      "recertificationReason": "2026-10-29 incremental PostEditor version restore race fix: in-flight restore formerly overlapped Save and could overwrite later edits or discard already-unsaved drafts; strict Core Wave 3 certification is withheld until real browser desktop/mobile delayed restore, canonical Product/Showcase screenshot inspection, full exact-head CI/Images/Browser/Parity plus final doc-head gates have passed. No prior evidence reused as new verification."
+      "recertificationReason": "2026-10-29 incremental Product-only PostEditor historical restore recertification. Real UI source blog 41f73bb4e59181d42332518411a7c4092a173dae, frozen Canonical UI 2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9, @gouno/ui 0.4.9. After fixed strict-notification locator, exact source head passed CI (385 Vitest, 66 existing lint warnings/0 errors, audit 0), all three images with six Trivy/Grype scans, 363 real Chromium tests, 86 Showcase paired tests and real PostgreSQL 21 packages/115 required, zero failed/skipped/missing. Desktop/mobile stale/current browser screenshots opened: newer title and dirty status survive delayed restore ACK; second explicit Save alone marks clean. Four paired baseline screenshots pixel-identical to previous accepted captures. Only PostEditor restore-state increment recertified; other Core Wave 3 page evidence remains historical. See manualReview for artifact SHA-256 and limits."
     }
   ]
 }
