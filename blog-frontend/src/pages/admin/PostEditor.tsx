@@ -162,6 +162,7 @@ export default function PostEditor() {
   const [versions, setVersions] = useState<PostVersion[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState(false);
@@ -429,7 +430,27 @@ export default function PostEditor() {
   };
 
   const restoreVersion = async () => {
-    if (!post.id || !restoreTarget || isReadOnly) return;
+    if (
+      !post.id ||
+      !restoreTarget ||
+      isReadOnly ||
+      conflict ||
+      savingRef.current
+    ) {
+      return;
+    }
+    if (dirty.current) {
+      notify("请先保存未保存的修改，再恢复历史版本。", "error");
+      return;
+    }
+    const submittedRevision = editRevision.current;
+    savingRef.current = true;
+    setSaving(true);
+    setRestoring(true);
+    setError("");
+    // A restored record may advance the server revision. No automatic
+    // replay is safe while the outcome of the restore is uncertain.
+    attemptedSaveRevision.current = submittedRevision;
     try {
       const restored =
         post.revision === undefined
@@ -439,19 +460,27 @@ export default function PostEditor() {
               restoreTarget.id,
               post.revision,
             );
-      setPost(restored);
-      setPublishIntent(restored.status || "draft");
-      dirty.current = false;
-      setIsDirty(false);
-      setSavedAt(new Date());
+      const current = applySavedPost(restored, submittedRevision);
+      if (current) {
+        setPublishIntent(restored.status || "draft");
+        notify("已成功恢复历史版本。", "success");
+      } else {
+        // Local edits after dispatch are intentionally retained, while
+        // their next explicit Save must use the new server revision.
+        attemptedSaveRevision.current = editRevision.current;
+        notify("历史版本已恢复；编辑期间的新修改尚未保存。", "success");
+      }
       setRestoreTarget(null);
       setNavigatorMode("outline");
-      notify("已成功恢复历史版本。", "success");
     } catch (reason) {
       recordConflict(reason);
       const message = reason instanceof Error ? reason.message : "版本恢复失败";
       setError(message);
       notify(message, "error");
+    } finally {
+      savingRef.current = false;
+      setRestoring(false);
+      setSaving(false);
     }
   };
 
@@ -837,6 +866,8 @@ export default function PostEditor() {
           <>
             <Eye className="size-4" /> 只读模式（他人文章）
           </>
+        ) : restoring ? (
+          "正在恢复…"
         ) : saving ? (
           "正在保存…"
         ) : isDirty ? (
@@ -1599,7 +1630,9 @@ export default function PostEditor() {
         title="恢复历史版本"
         description={
           restoreTarget
-            ? `恢复 ${new Date(restoreTarget.created_at).toLocaleString("zh-CN")} 的版本？当前内容会先保留为历史版本。`
+            ? isDirty
+              ? "有未保存的修改。请先保存，再恢复历史版本，避免丢失草稿。"
+              : `恢复 ${new Date(restoreTarget.created_at).toLocaleString("zh-CN")} 的版本？服务器上已保存的当前内容会先保留为历史版本。`
             : ""
         }
         onOpenChange={(open) => {
@@ -1614,6 +1647,7 @@ export default function PostEditor() {
               variant="solid"
               color="primary"
               onClick={() => void restoreVersion()}
+              disabled={isDirty || saving || conflict}
             >
               恢复版本
             </Button>
