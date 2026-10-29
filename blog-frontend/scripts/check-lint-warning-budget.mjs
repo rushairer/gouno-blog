@@ -10,7 +10,8 @@ const frontendRoot = fileURLToPath(new URL("../", import.meta.url));
 export const maxAllowedWarnings = 65;
 
 export function parseOxlintSummary(output) {
-  const plain = output.replace(/\x1b\[[0-9;]*m/g, "").replace(/\r/g, "");
+  const ansiColor = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+  const plain = output.replace(ansiColor, "").replace(/\r/g, "");
   const matches = [
     ...plain.matchAll(/\bFound\s+(\d+)\s+warnings?\s+and\s+(\d+)\s+errors?\b/g),
   ];
