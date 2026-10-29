@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Bind RSS and Sitemap absolute URLs to the server-configured Blog OIDC callback origin rather than client-supplied Host/X-Forwarded-Host/X-Forwarded-Proto. Fail closed on invalid/missing configuration and regression-test hostile forwarded headers on real Gin routes. Expand the first-order HTTP error disclosure Go AST guard from ten to sixteen independently scoped non-Connector controllers with positive/negative probes for direct and aliased `err.Error()` serialization. The separately frozen Connector transport risk remains tracked, not implicitly modified.
+
 - Restrict the global 11 MiB multipart allowance to a registered Media upload POST with a parsed multipart media type; forged MIME on non-upload JSON routes now retains the 2 MiB limit. Preserve fixed HTTP 413 for external Capability unknown-length/extra-whitespace JSON overflow, without invoking Tools or leaking one-time API keys; retain previous 400 errors for malformed JSON. Add body-size, route, MIME and actual Bearer API regressions.
 
 - Fix a Page read reliability/security misclassification and reject Page SERIAL/int64 identifier overflow before Get/Update/Delete SQL: confirmed no-row results retain the existing public/admin 404 and hidden-draft policy, while unknown PostgreSQL errors or canceled reads are no longer silently converted into “page not found” and instead return a redacted 5xx. Restore Article numeric-looking Slug fallback after a real missing ID (`sql.ErrNoRows`), but never retry the Slug on SQL failure. Add real PostgreSQL, HTTP secrecy and call-count regressions, and expand the direct HTTP-error AST guard to ten audited capability controllers.
