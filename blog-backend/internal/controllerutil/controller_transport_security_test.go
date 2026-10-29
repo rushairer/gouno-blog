@@ -10,8 +10,8 @@ import (
 	"testing"
 )
 
-// Static first-order HTTP disclosure guard for sixteen independently reviewed
-// non-Connector capability controller packages. The Connector product module
+// Static first-order HTTP disclosure guard for sixteen explicitly scoped
+// non-Connector capability controller directories. The Connector product module
 // remains on its separate explicit hold; extending this test to it requires a
 // dedicated contract and source audit, not silently bypassing the hold.
 //
@@ -52,6 +52,15 @@ func TestAuditedControllerResponsesNeverSerializeRawErrorMethods(t *testing.T) {
 // unrelated function's logging variable must not taint an HTTP handler.
 func rawErrorHTTPResponses(file *ast.File) []token.Pos {
 	var violations []token.Pos
+	// This precise exported sentinel is a previously audited, fixed public
+	// message; it never contains the wrapped internal storage error.
+	trustedMediaSentinel := false
+	for _, item := range file.Imports {
+		if item.Name != nil && item.Name.Name == "mediaservice" &&
+			item.Path.Value == `"github.com/rushairer/blog-backend/internal/media/service"` {
+			trustedMediaSentinel = true
+		}
+	}
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {
@@ -87,7 +96,7 @@ func rawErrorHTTPResponses(file *ast.File) []token.Pos {
 		for changed := true; changed; {
 			changed = false
 			for _, assignment := range assignments {
-				if !aliases[assignment.name] && hasRawErrorText(assignment.rhs, aliases) {
+				if !aliases[assignment.name] && hasRawErrorText(assignment.rhs, aliases, trustedMediaSentinel) {
 					aliases[assignment.name] = true
 					changed = true
 				}
@@ -99,7 +108,7 @@ func rawErrorHTTPResponses(file *ast.File) []token.Pos {
 				return true
 			}
 			for _, arg := range call.Args {
-				if hasRawErrorText(arg, aliases) {
+				if hasRawErrorText(arg, aliases, trustedMediaSentinel) {
 					violations = append(violations, call.Pos())
 					break
 				}
@@ -129,12 +138,21 @@ func isGinHTTPResponse(call *ast.CallExpr) bool {
 
 // Only flag a direct zero-argument Error() method or an alias already
 // derived from one; unrelated fixed domain messages remain permitted.
-func hasRawErrorText(expr ast.Expr, aliases map[string]bool) bool {
+func hasRawErrorText(expr ast.Expr, aliases map[string]bool, trustedMediaSentinel bool) bool {
 	found := false
 	ast.Inspect(expr, func(n ast.Node) bool {
 		if call, ok := n.(*ast.CallExpr); ok {
 			if sel, ok := call.Fun.(*ast.SelectorExpr); ok &&
 				sel.Sel.Name == "Error" && len(call.Args) == 0 {
+				// Only this typed, fixed message is allowed. Import-path and
+				// exact symbol checks prevent a matching alias from bypassing.
+				if trustedMediaSentinel {
+					if member, ok := sel.X.(*ast.SelectorExpr); ok && member.Sel.Name == "ErrMediaInUse" {
+						if pkg, ok := member.X.(*ast.Ident); ok && pkg.Name == "mediaservice" {
+							return false
+						}
+					}
+				}
 				found = true
 				return false
 			}
@@ -177,6 +195,15 @@ func TestHTTPResponseErrorGuardHasPositiveAndNegativeProbes(t *testing.T) {
 		{"cross-function-alias", `package p
 		func logOnly(err error) { message := err.Error(); logTrusted(message) }
 		func public(c *Context) { message := "fixed"; c.JSON(500, Response(message)) }`, false},
+		{"trusted-typed-sentinel", `package p
+		import mediaservice "github.com/rushairer/blog-backend/internal/media/service"
+		func f(c *Context) { message := mediaservice.ErrMediaInUse.Error(); c.JSON(409, Response(message)) }`, false},
+		{"untrusted-same-name", `package p
+		import mediaservice "example.invalid/unsafe"
+		func f(c *Context) { message := mediaservice.ErrMediaInUse.Error(); c.JSON(409, Response(message)) }`, true},
+		{"untrusted-other-sentinel", `package p
+		import mediaservice "github.com/rushairer/blog-backend/internal/media/service"
+		func f(c *Context) { message := mediaservice.ErrOther.Error(); c.JSON(500, Response(message)) }`, true},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
