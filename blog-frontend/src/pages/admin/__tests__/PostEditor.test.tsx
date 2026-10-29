@@ -298,9 +298,13 @@ describe("PostEditor", () => {
     const restore = vi
       .spyOn(postsApi, "restoreVersion")
       .mockReturnValue(pending.promise);
-    const update = vi.spyOn(postsApi, "updatePost").mockImplementation(
-      async (_id, payload) => ({ ...initial, ...payload, revision: 5 }),
-    );
+    const update = vi
+      .spyOn(postsApi, "updatePost")
+      .mockImplementation(async (_id, payload) => ({
+        ...initial,
+        ...payload,
+        revision: 5,
+      }));
     renderEditor("/admin/posts/5/edit");
 
     await user.click(await screen.findByRole("tab", { name: /历史 1/ }));
@@ -312,6 +316,9 @@ describe("PostEditor", () => {
       expect(restore).toHaveBeenCalledWith(5, 42, 3);
     });
     expect(screen.getByText("正在恢复…")).toBeInTheDocument();
+    // The modal blocks pointer interaction with the editor until dismissed.
+    // Dismissing it does not cancel the already-dispatched restore request.
+    await user.click(screen.getByRole("button", { name: "取消" }));
 
     const title = screen.getByLabelText("标题");
     await user.clear(title);
@@ -322,9 +329,7 @@ describe("PostEditor", () => {
 
     expect(title).toHaveValue("恢复请求期间的新标题");
     expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
-    expect(
-      screen.queryByText("已成功恢复历史版本。"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("已成功恢复历史版本。")).not.toBeInTheDocument();
     const before = new Event("beforeunload", { cancelable: true });
     fireEvent(window, before);
     expect(before.defaultPrevented).toBe(true);
@@ -367,13 +372,9 @@ describe("PostEditor", () => {
     expect(dialog).toHaveTextContent(
       "有未保存的修改。请先保存，再恢复历史版本，避免丢失草稿。",
     );
-    expect(
-      screen.getByRole("button", { name: "恢复版本" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "恢复版本" })).toBeDisabled();
     expect(restore).not.toHaveBeenCalled();
-    expect(title).toHaveValue(
-      draftPost.title + "还有未保存的字",
-    );
+    expect(title).toHaveValue(draftPost.title + "还有未保存的字");
   });
 
   it("renders wide preview content in internal scroll containers", async () => {
