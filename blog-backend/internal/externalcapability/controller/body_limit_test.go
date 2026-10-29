@@ -14,10 +14,10 @@ import (
 func TestExternalCapabilityBodyOverflowNeverInvokesTools(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	for _, tc := range []struct {
-		name, body string
-		unknownLength bool
+		name, body           string
+		unknownLength        bool
 		withGlobalMiddleware bool
-		want int
+		want                 int
 	}{
 		{"declared-overflow", `{"arguments":{}}` + strings.Repeat(" ", middleware.MaxAPIJSONBody), false, true, http.StatusRequestEntityTooLarge},
 		{"unknown-length-trailing-whitespace", `{"arguments":{}}` + strings.Repeat(" ", middleware.MaxAPIJSONBody), true, true, http.StatusRequestEntityTooLarge},

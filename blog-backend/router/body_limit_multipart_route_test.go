@@ -30,9 +30,9 @@ func TestMultipartLimitCannotBeSpoofedOnNonUploadRoutes(t *testing.T) {
 
 	cases := []struct {
 		name, method, path, mime string
-		unknownLength bool
-		bodySize int
-		want int
+		unknownLength            bool
+		bodySize                 int
+		want                     int
 	}{
 		{"real-upload", http.MethodPost, "/api/admin/media", "multipart/form-data; boundary=fixture", false, middleware.MaxAPIJSONBody+1, http.StatusNoContent},
 		{"spoof-json-endpoint", http.MethodPost, "/api/external/v1/capabilities/demo/invoke", "multipart/form-data; boundary=fixture", false, middleware.MaxAPIJSONBody+1, http.StatusRequestEntityTooLarge},
