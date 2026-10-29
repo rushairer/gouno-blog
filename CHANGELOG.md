@@ -5,6 +5,10 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Introduce a fail-closed, executable frontend Oxlint warning ratchet, initially tightened from 66 to 65 by removing an unused import in the Sudo hook test. Both `quality` and `check` enforce the same budget with parser/false-green regressions. No certified Product UI, BFF, permissions or Connector behavior was modified. The remaining warnings are technical debt, not waived or claimed resolved.
+
 ### Fixed
 
 - **React Hook correctness**: preserve the latest committed Provider/Embedding/Agent form draft for Step-Up MFA redirection without writing refs during render; update article browser title and SEO metadata when global site branding changes, including when an explicit brand override is later removed. Add rerender, key isolation, disabled form, canonical head cleanup and event regression tests. No certified Page/Connector source changes.
