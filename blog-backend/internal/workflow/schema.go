@@ -3,9 +3,12 @@ package workflow
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
+	"io"
 	"strings"
+
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 )
@@ -16,9 +19,20 @@ var supportedResourceTypes = map[string]bool{
 	"page": true,
 }
 
-func validateInputSchema(raw json.RawMessage) error {
+// newWorkflowSchemaCompiler permits in-document JSON Schema fragments but never
+// loads external references from the Blog server's filesystem or network.
+// Workflow schemas may be generated or edited: the default file loader is unsafe.
+func newWorkflowSchemaCompiler() *jsonschema.Compiler {
 	compiler := jsonschema.NewCompiler()
 	compiler.Draft = jsonschema.Draft2020
+	compiler.LoadURL = func(string) (io.ReadCloser, error) {
+		return nil, errors.New("external workflow schema references are disabled")
+	}
+	return compiler
+}
+
+func validateInputSchema(raw json.RawMessage) error {
+	compiler := newWorkflowSchemaCompiler()
 	if err := compiler.AddResource("workflow-input.json", bytes.NewReader(raw)); err != nil {
 		return fmt.Errorf("%w: invalid input schema: %v", ErrInvalid, err)
 	}
@@ -37,8 +51,7 @@ func validateInputSchema(raw json.RawMessage) error {
 			if err != nil {
 				return fmt.Errorf("%w: input field %q has an invalid default", ErrInvalid, name)
 			}
-			propertyCompiler := jsonschema.NewCompiler()
-			propertyCompiler.Draft = jsonschema.Draft2020
+			propertyCompiler := newWorkflowSchemaCompiler()
 			if err := propertyCompiler.AddResource("workflow-input-property.json", bytes.NewReader(propertyRaw)); err != nil {
 				return fmt.Errorf("%w: input field %q has an invalid default schema", ErrInvalid, name)
 			}
@@ -75,8 +88,7 @@ func validateInputSchema(raw json.RawMessage) error {
 }
 
 func validateWorkflowInput(schemaRaw json.RawMessage, value any) error {
-	compiler := jsonschema.NewCompiler()
-	compiler.Draft = jsonschema.Draft2020
+	compiler := newWorkflowSchemaCompiler()
 	if err := compiler.AddResource("workflow-input.json", bytes.NewReader(schemaRaw)); err != nil {
 		return fmt.Errorf("%w: invalid input schema", ErrInvalid)
 	}
