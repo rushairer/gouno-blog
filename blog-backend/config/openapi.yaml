@@ -1394,6 +1394,8 @@ paths:
           description: Capability is not authorized for this client or is not externally readable.
         '429':
           description: Client rate limit exceeded.
+        '413':
+          description: JSON request exceeds the 2 MiB limit.
 
   /admin/external-api/capabilities:
     get:
@@ -1430,6 +1432,8 @@ paths:
           description: Invalid expiry or rate limit.
         '403':
           description: Requested capability is not externally available or is not read-only.
+        '413':
+          description: JSON request exceeds the 2 MiB limit.
 
   /admin/external-api/clients/{id}:
     put:
@@ -1450,6 +1454,8 @@ paths:
           description: Client policy updated.
         '404':
           description: Client not found or already revoked.
+        '413':
+          description: JSON request exceeds the 2 MiB limit.
     delete:
       summary: Revoke an external API client
       description: Requires recent MFA. Revocation is permanent; invocation audits are retained.

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/middleware"
 	externaldomain "github.com/rushairer/blog-backend/internal/externalcapability/domain"
 	externalservice "github.com/rushairer/blog-backend/internal/externalcapability/service"
 	"github.com/rushairer/blog-backend/internal/tool"
@@ -60,16 +61,36 @@ type updateClientRequest struct {
 	ExpiresAt          *time.Time `json:"expires_at,omitempty"`
 }
 
+// bindJSON also caps isolated handlers and unknown-length requests.
+// Preserve MaxBytesError from a trailing-data Decode so clients receive 413.
 func bindJSON(c *gin.Context, value any) error {
+	if c.Request.ContentLength > middleware.MaxAPIJSONBody {
+		return &http.MaxBytesError{Limit: middleware.MaxAPIJSONBody}
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, middleware.MaxAPIJSONBody)
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(value); err != nil {
 		return err
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf("request body must contain one JSON object")
 	}
 	return nil
+}
+
+// Do not change the established fixed 400 contract for invalid JSON.
+// Oversized JSON is a distinct fixed 413; never return decoder details.
+func writeRequestBindingError(c *gin.Context, err error) {
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		c.JSON(http.StatusRequestEntityTooLarge, gouno.NewErrorResponse(http.StatusRequestEntityTooLarge, "external capability JSON request exceeds 2 MiB"))
+		return
+	}
+	writeError(c, externalservice.ErrInvalid)
 }
 
 func parseID(c *gin.Context) (int64, bool) {
@@ -127,7 +148,7 @@ func (ctrl *Controller) ListAudits(c *gin.Context) {
 func (ctrl *Controller) CreateClient(c *gin.Context) {
 	var req createClientRequest
 	if err := bindJSON(c, &req); err != nil {
-		writeError(c, externalservice.ErrInvalid)
+		writeRequestBindingError(c, err)
 		return
 	}
 	var principalID *int64
@@ -162,7 +183,11 @@ func (ctrl *Controller) UpdateClient(c *gin.Context) {
 		return
 	}
 	var req updateClientRequest
-	if err := bindJSON(c, &req); err != nil || req.Enabled == nil {
+	if err := bindJSON(c, &req); err != nil {
+		writeRequestBindingError(c, err)
+		return
+	}
+	if req.Enabled == nil {
 		writeError(c, externalservice.ErrInvalid)
 		return
 	}
@@ -289,7 +314,7 @@ func (ctrl *Controller) Invoke(c *gin.Context) {
 		Arguments json.RawMessage `json:"arguments"`
 	}
 	if err := bindJSON(c, &req); err != nil {
-		writeError(c, externalservice.ErrInvalid)
+		writeRequestBindingError(c, err)
 		return
 	}
 	requestID, _ := c.Get("request_id")
