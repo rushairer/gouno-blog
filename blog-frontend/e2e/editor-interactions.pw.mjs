@@ -196,6 +196,80 @@ for (const viewport of [
   });
 }
 
+for (const viewport of [
+  { label: "desktop", width: 1440, height: 900 },
+  { label: "mobile", width: 390, height: 844 },
+]) {
+  test(`Post editor retains edits after delayed version restore (${viewport.label})`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    const unknown = await openAdmin(page, "/admin/posts/101/edit");
+    let releaseRestore;
+    let restoreStarted;
+    const started = new Promise((resolve) => {
+      restoreStarted = resolve;
+    });
+    const pending = new Promise((resolve) => {
+      releaseRestore = resolve;
+    });
+    let restoreRequests = 0;
+    const writes = [];
+    await page.route("**/api/admin/posts/101/versions/11/restore", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      restoreRequests += 1;
+      restoreStarted();
+      await pending;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: { ...adminPost, title: "Older restored post title", revision: 4 },
+        }),
+      });
+    });
+    await page.route("**/api/posts/101", async (route) => {
+      if (route.request().method() !== "PUT") return route.fallback();
+      const payload = route.request().postDataJSON();
+      writes.push(payload);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: { ...adminPost, ...payload, id: 101, revision: 5 },
+        }),
+      });
+    });
+
+    await page.getByRole("tab", { name: /历史 1/ }).click();
+    await page.getByRole("button", { name: /Browser Acceptance Post.*历史版本/ }).click();
+    const dialog = page.getByRole("dialog", { name: "恢复历史版本" });
+    await dialog.getByRole("button", { name: "恢复版本" }).click();
+    await started;
+    await dialog.getByRole("button", { name: "取消" }).click();
+
+    const title = page.getByRole("textbox", { name: "标题", exact: true });
+    await title.fill("Newer unsaved after restore");
+    releaseRestore();
+
+    await expect(title).toHaveValue("Newer unsaved after restore");
+    await expect(page.getByText("有未保存的更改")).toBeVisible();
+    expect(restoreRequests).toBe(1);
+    expect(writes).toHaveLength(0);
+    await expectNoHorizontalOverflow(page);
+    await captureWave3Evidence(page, testInfo, `post-restore-stale-${viewport.label}.png`);
+
+    await page.getByRole("button", { name: "更新文章" }).click();
+    await expect(page.locator('[data-slot="notification"]')).toContainText("文章已成功发布");
+    await expect(title).toHaveValue("Newer unsaved after restore");
+    await expect(page.getByText(/已于.*保存/)).toBeVisible();
+    expect(writes).toHaveLength(1);
+    expect(writes[0].revision).toBe(4);
+    expect(writes[0].title).toBe("Newer unsaved after restore");
+    await expectNoHorizontalOverflow(page);
+    await captureWave3Evidence(page, testInfo, `post-restore-current-${viewport.label}.png`);
+    expect(unknown).toEqual([]);
+  });
+}
+
 test("Post editor exposes revision conflict without dropping the working draft", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 768, height: 900 });
   const unknown = await openAdmin(page, "/admin/posts/101/edit", {
