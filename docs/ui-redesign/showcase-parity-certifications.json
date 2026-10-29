@@ -412,10 +412,10 @@
     {
       "id": "blog-admin-core-wave3",
       "scope": "Blog Admin Post Editor + Page Editor + Notifications + Media Library + Site Settings + Users",
-      "status": "verified",
+      "status": "needs-manual-recertification",
       "reviewMethod": "manual-first",
       "reviewDate": "2026-10-28",
-      "manualReview": "docs/ui-redesign/post-editor-save-fence-review-2026-10-28.md",
+      "manualReview": "docs/ui-redesign/post-editor-restore-fence-review-2026-10-29.md",
       "reviewedRefs": {
         "blog": "875c5067defc49111b0c0f4e8ff31a54ae30a753",
         "gounoUi": "2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9"
@@ -526,8 +526,8 @@
         "blog-admin-users",
         "blog-admin-site-settings"
       ],
-      "previousManualReview": "docs/ui-redesign/page-editor-save-fence-review-2026-10-28.md",
-      "recertificationReason": "2026-10-28 targeted Manual-first PostEditor save/preview/autosave state ownership review after #391 security baseline merge. Source Blog 875c5067defc49111b0c0f4e8ff31a54ae30a753, Gouno UI 2e1e1a5c31cc6f741fecf273b7ddd63a88133ee9, @gouno/ui 0.4.9 unchanged. Real desktop/mobile stale/current ACK Product screenshots manually inspected and canonical paired Product/Showcase images visually compared and byte-verified unchanged; 383 Vitest, 361 real Chromium, 86 parity, mandatory PostgreSQL and six image scans succeeded. Scope is incremental PostEditor behavior and unaffected canonical composition; historical coverage of other Core Wave 3 pages not freshly re-audited. See manualReview for known limitations and artifact hashes."
+      "previousManualReview": "docs/ui-redesign/post-editor-save-fence-review-2026-10-28.md",
+      "recertificationReason": "2026-10-29 incremental PostEditor version restore race fix: in-flight restore formerly overlapped Save and could overwrite later edits or discard already-unsaved drafts; strict Core Wave 3 certification is withheld until real browser desktop/mobile delayed restore, canonical Product/Showcase screenshot inspection, full exact-head CI/Images/Browser/Parity plus final doc-head gates have passed. No prior evidence reused as new verification."
     }
   ]
 }
