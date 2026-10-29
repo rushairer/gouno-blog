@@ -4,10 +4,11 @@ import { fileURLToPath } from "node:url";
 
 const frontendRoot = fileURLToPath(new URL("../", import.meta.url));
 
-// Measured baseline after removing a single unused import in
-// src/hooks/__tests__/useSudoMode.test.ts. Lower after real repairs; never
-// raise this limit to accommodate new warnings.
-export const maxAllowedWarnings = 65;
+// Measured baseline after removing an unused Sudo Hook test import (#396),
+// one unused Playwright layout computation, and three redundant regex/template
+// escapes in the UI contract checker. Lower only after actual warning repairs;
+// never raise this ceiling to accommodate regressions.
+export const maxAllowedWarnings = 61;
 
 export function parseOxlintSummary(output) {
   const ansiColor = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");

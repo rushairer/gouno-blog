@@ -89,7 +89,6 @@ async function layoutFingerprint(locator) {
       : [];
     return nodes.map((node, index) => {
       const style = getComputedStyle(node);
-      const rect = node.getBoundingClientRect();
       return {
         index,
         tag: node.tagName.toLowerCase(),
