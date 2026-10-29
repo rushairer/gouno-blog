@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { GossoProvider } from "@gosso/client/react";
@@ -38,6 +44,14 @@ function renderEditor(path = "/admin/posts/new", client = mockClient) {
       </AppFeedbackProvider>
     </GossoProvider>,
   );
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
 }
 
 const draftPost: Post = {
@@ -320,5 +334,165 @@ describe("PostEditor", () => {
     expect(
       screen.queryByRole("button", { name: "AI 写作" }),
     ).not.toBeInTheDocument();
+  });
+  it("retains newer edits and beforeunload after a stale save ACK", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<Post>();
+    const initial = { ...draftPost, revision: 3 };
+    vi.spyOn(postsApi, "getAdminPost").mockResolvedValue(initial);
+    const save = vi
+      .spyOn(postsApi, "updatePost")
+      .mockImplementationOnce(() => pending.promise)
+      .mockImplementation(async (_id, payload) => ({
+        ...initial,
+        ...payload,
+        revision: 5,
+      }));
+
+    renderEditor("/admin/posts/5/edit");
+    const title = await screen.findByLabelText("标题");
+    await user.clear(title);
+    await user.type(title, "先提交的文章标题");
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+
+    await user.clear(title);
+    await user.type(title, "后续修改的文章标题");
+    await act(async () => {
+      pending.resolve({ ...initial, title: "先提交的文章标题", revision: 4 });
+    });
+
+    expect(title).toHaveValue("后续修改的文章标题");
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+    expect(screen.queryByText("草稿已保存。")).not.toBeInTheDocument();
+    const before = new Event("beforeunload", { cancelable: true });
+    fireEvent(window, before);
+    expect(before.defaultPrevented).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    expect(save).toHaveBeenLastCalledWith(
+      5,
+      expect.objectContaining({
+        title: "后续修改的文章标题",
+        revision: 4,
+      }),
+    );
+    expect(await screen.findByText("草稿已保存。")).toBeInTheDocument();
+    const after = new Event("beforeunload", { cancelable: true });
+    fireEvent(window, after);
+    expect(after.defaultPrevented).toBe(false);
+  });
+
+  it("does not preview an earlier ACK after subsequent edits", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<Post>();
+    const initial = { ...draftPost, revision: 3 };
+    vi.spyOn(postsApi, "getAdminPost").mockResolvedValue(initial);
+    const save = vi
+      .spyOn(postsApi, "updatePost")
+      .mockImplementationOnce(() => pending.promise)
+      .mockImplementation(async (_id, payload) => ({
+        ...initial,
+        ...payload,
+        revision: 5,
+      }));
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderEditor("/admin/posts/5/edit");
+    const title = await screen.findByLabelText("标题");
+    await user.clear(title);
+    await user.type(title, "预览旧版本");
+    await user.click(screen.getByRole("button", { name: "预览前台页面" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+
+    await user.clear(title);
+    await user.type(title, "预览新的内容");
+    await act(async () => {
+      pending.resolve({ ...initial, title: "预览旧版本", revision: 4 });
+    });
+    expect(title).toHaveValue("预览新的内容");
+    expect(open).not.toHaveBeenCalled();
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "预览前台页面" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    expect(save).toHaveBeenLastCalledWith(
+      5,
+      expect.objectContaining({ title: "预览新的内容", revision: 4 }),
+    );
+    await waitFor(() => {
+      expect(open).toHaveBeenCalledWith(
+        "/articles/daily-ai-news-2026-08-21?preview=true",
+        "_blank",
+      );
+    });
+  });
+
+  it("retains CREATE identity across later edits and uses PUT", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<Post>();
+    const created = {
+      ...draftPost,
+      id: 205,
+      title: "最初文章标题",
+      revision: 1,
+    };
+    const create = vi
+      .spyOn(postsApi, "createPost")
+      .mockReturnValue(pending.promise);
+    const save = vi
+      .spyOn(postsApi, "updatePost")
+      .mockImplementation(async (_id, payload) => ({
+        ...created,
+        ...payload,
+        revision: 2,
+      }));
+    const load = vi
+      .spyOn(postsApi, "getAdminPost")
+      .mockResolvedValue({ ...created, title: "下一版标题", revision: 2 });
+    renderEditor();
+    const title = await screen.findByLabelText("标题");
+    await user.type(title, "最初文章标题");
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+
+    await user.clear(title);
+    await user.type(title, "下一版标题");
+    await act(async () => {
+      pending.resolve(created);
+    });
+    expect(title).toHaveValue("下一版标题");
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+    expect(load).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(save).toHaveBeenCalledWith(
+      205,
+      expect.objectContaining({ title: "下一版标题", revision: 1 }),
+    );
+    expect(create).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(load).toHaveBeenCalledWith("205"));
+    expect(await screen.findByLabelText("标题")).toHaveValue("下一版标题");
+  });
+
+  it("does not automatically replay an ambiguous autosave", async () => {
+    vi.spyOn(postsApi, "getAdminPost").mockResolvedValue({
+      ...draftPost,
+      revision: 3,
+    });
+    const save = vi
+      .spyOn(postsApi, "updatePost")
+      .mockRejectedValue(new Error("network outcome uncertain"));
+    renderEditor("/admin/posts/5/edit");
+    const title = await screen.findByLabelText("标题");
+    fireEvent.change(title, { target: { value: "自动保存失败的草稿" } });
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1), {
+      timeout: 5000,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 2100));
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(title).toHaveValue("自动保存失败的草稿");
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
   });
 });

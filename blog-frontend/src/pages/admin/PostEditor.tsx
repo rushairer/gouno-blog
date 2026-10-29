@@ -198,6 +198,9 @@ export default function PostEditor() {
   const [mediaPurpose, setMediaPurpose] = useState<MediaPurpose>("body");
 
   const dirty = useRef(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const editRevision = useRef(0);
+  const attemptedSaveRevision = useRef<number | null>(null);
   const savingRef = useRef(false);
 
   const recordConflict = (reason: unknown) => {
@@ -217,24 +220,41 @@ export default function PostEditor() {
 
   useEffect(() => {
     if (!allowed) return;
+    let active = true;
     const requests: Promise<unknown>[] = [
-      siteApi.getCategories().then(setCategories),
+      siteApi.getCategories().then((value) => {
+        if (active) setCategories(value);
+      }),
     ];
     if (id) {
       requests.push(
         postsApi.getAdminPost(id).then((value) => {
+          if (!active) return;
           setPost(value);
           setPublishIntent(value.status || "draft");
+          dirty.current = false;
+          setIsDirty(false);
+          setSavedAt(null);
         }),
       );
-      requests.push(postsApi.getVersions(id).then(setVersions));
+      requests.push(
+        postsApi.getVersions(id).then((value) => {
+          if (active) setVersions(value);
+        }),
+      );
     }
     Promise.all(requests)
       .catch((reason: Error) => {
+        if (!active) return;
         setError(reason.message);
         notify(reason.message, "error");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [allowed, id, notify]);
 
   useEffect(() => {
@@ -262,12 +282,41 @@ export default function PostEditor() {
     }
   };
 
+  const markEdited = () => {
+    editRevision.current += 1;
+    dirty.current = true;
+    setIsDirty(true);
+    setSavedAt(null);
+  };
+
   const update = <K extends keyof Post>(key: K, value: Post[K]) => {
     setPost((current) => ({ ...current, [key]: value }));
-    dirty.current = true;
-    setSavedAt(null);
+    markEdited();
     invalidateDerivedSuggestions(key);
   };
+
+  const applySavedPost = useCallback(
+    (saved: Post, submittedRevision: number) => {
+      if (editRevision.current !== submittedRevision) {
+        // Retain later edits, but accept the server's newly created identity
+        // and revision so the next write is an UPDATE rather than a replay.
+        setPost((current) => ({
+          ...current,
+          id: saved.id,
+          revision: saved.revision,
+          updated_at: saved.updated_at,
+          created_at: saved.created_at,
+        }));
+        return false;
+      }
+      setPost(saved);
+      dirty.current = false;
+      setIsDirty(false);
+      setSavedAt(new Date());
+      return true;
+    },
+    [],
+  );
 
   const persist = useCallback(
     async (status: PostStatus, automatic = false) => {
@@ -292,7 +341,11 @@ export default function PostEditor() {
         return;
       }
       if (savingRef.current || conflict || isReadOnly) return;
-
+      const submittedRevision = editRevision.current;
+      // Never replay an ambiguous save automatically for the same revision.
+      if (automatic && attemptedSaveRevision.current === submittedRevision)
+        return;
+      attemptedSaveRevision.current = submittedRevision;
       savingRef.current = true;
       setSaving(true);
       setError("");
@@ -301,16 +354,8 @@ export default function PostEditor() {
         const saved = post.id
           ? await postsApi.updatePost(post.id, payload)
           : await postsApi.createPost(payload);
-        setPost((current) => {
-          if (current !== post) {
-            dirty.current = true;
-            return { ...current, revision: saved.revision };
-          }
-          dirty.current = false;
-          return saved;
-        });
-        setSavedAt(new Date());
-        if (!automatic) {
+        const current = applySavedPost(saved, submittedRevision);
+        if (!automatic && current) {
           setPublishIntent(saved.status || "draft");
           notify(
             status === "published"
@@ -321,7 +366,8 @@ export default function PostEditor() {
             "success",
           );
         }
-        if (!post.id)
+        // Route hydration must not replace a newer unsaved draft after CREATE.
+        if (isNew && current)
           navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
       } catch (reason) {
         recordConflict(reason);
@@ -334,7 +380,7 @@ export default function PostEditor() {
         setSaving(false);
       }
     },
-    [conflict, isReadOnly, navigate, notify, post],
+    [applySavedPost, conflict, isNew, isReadOnly, navigate, notify, post],
   );
 
   useEffect(() => {
@@ -342,16 +388,18 @@ export default function PostEditor() {
       isReadOnly ||
       conflict ||
       saving ||
-      !dirty.current ||
+      !isDirty ||
       !post.id ||
       !post.title.trim() ||
-      post.status !== "draft"
+      post.status !== "draft" ||
+      publishIntent !== "draft" ||
+      attemptedSaveRevision.current === editRevision.current
     ) {
       return;
     }
     const timer = window.setTimeout(() => void persist("draft", true), 1800);
     return () => window.clearTimeout(timer);
-  }, [conflict, isReadOnly, persist, post, saving]);
+  }, [conflict, isDirty, isReadOnly, persist, post, publishIntent, saving]);
 
   const outline = useMemo(
     () => extractMarkdownTOC(post.content),
@@ -394,6 +442,7 @@ export default function PostEditor() {
       setPost(restored);
       setPublishIntent(restored.status || "draft");
       dirty.current = false;
+      setIsDirty(false);
       setSavedAt(new Date());
       setRestoreTarget(null);
       setNavigatorMode("outline");
@@ -509,8 +558,7 @@ export default function PostEditor() {
           ? metadataSuggestion.seo_description
           : current.seo_description,
     }));
-    dirty.current = true;
-    setSavedAt(null);
+    markEdited();
     setMetadataSuggestion(null);
     setMetadataSelection([]);
   };
@@ -588,8 +636,7 @@ export default function PostEditor() {
         ? Array.from(new Set([...current.tags, ...taxonomySuggestion.tags]))
         : current.tags,
     }));
-    dirty.current = true;
-    setSavedAt(null);
+    markEdited();
     setTaxonomySuggestion(null);
     setTaxonomySelection([]);
   };
@@ -642,8 +689,7 @@ export default function PostEditor() {
         cover_url: result.url,
         cover_alt: result.alt,
       }));
-      dirty.current = true;
-      setSavedAt(null);
+      markEdited();
       notify("已更新文章封面。", "success");
       return;
     }
@@ -680,6 +726,8 @@ export default function PostEditor() {
         return;
       }
       savingRef.current = true;
+      const submittedRevision = editRevision.current;
+      attemptedSaveRevision.current = submittedRevision;
       setSaving(true);
       setError("");
       try {
@@ -688,14 +736,16 @@ export default function PostEditor() {
           status: currentPost.status || "draft",
           tags: currentPost.tags.filter(Boolean),
         };
-        currentPost = currentPost.id
+        const saved = currentPost.id
           ? await postsApi.updatePost(currentPost.id, payload)
           : await postsApi.createPost(payload);
-        setPost(currentPost);
-        dirty.current = false;
-        setSavedAt(new Date());
-        if (!post.id)
-          navigate(`/admin/posts/${currentPost.id}/edit`, { replace: true });
+        if (!applySavedPost(saved, submittedRevision)) {
+          // The preview would show the previous server snapshot, not the
+          // user's newer content. Require another explicit preview action.
+          return;
+        }
+        currentPost = saved;
+        if (isNew) navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
       } catch (reason) {
         recordConflict(reason);
         const message =
@@ -789,6 +839,8 @@ export default function PostEditor() {
           </>
         ) : saving ? (
           "正在保存…"
+        ) : isDirty ? (
+          "有未保存的更改"
         ) : savedAt ? (
           <>
             <Check className="size-4" /> 已于{" "}
@@ -798,8 +850,6 @@ export default function PostEditor() {
             })}{" "}
             保存
           </>
-        ) : dirty.current ? (
-          "有未保存的更改"
         ) : (
           "所有更改已保存"
         )}
@@ -999,9 +1049,10 @@ export default function PostEditor() {
             aria-label="状态"
             value={publishIntent}
             onChange={(value) => {
-              setPublishIntent(selectValue(value) as PostStatus);
-              dirty.current = true;
-              setSavedAt(null);
+              const next = selectValue(value) as PostStatus;
+              if (next === publishIntent) return;
+              setPublishIntent(next);
+              markEdited();
             }}
           >
             <option value="draft">草稿</option>
@@ -1588,6 +1639,8 @@ export default function PostEditor() {
                 setPost(latestPost);
                 setPublishIntent(latestPost.status || "draft");
                 dirty.current = false;
+                setIsDirty(false);
+                setSavedAt(null);
                 setConflict(false);
                 setError("");
                 setLatestPost(null);

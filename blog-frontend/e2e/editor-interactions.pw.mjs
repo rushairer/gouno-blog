@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { installApiFixtures, setTheme } from "./mock-api.mjs";
 import { limitedProfile } from "./session-fixtures.mjs";
-import { adminPage } from "./core-admin-fixtures.mjs";
+import { adminPage, adminPost } from "./core-admin-fixtures.mjs";
 
 async function openAdmin(page, path, options = {}) {
   await setTheme(page, options.theme || "light");
@@ -135,6 +135,66 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
   await expectNoHorizontalOverflow(page);
   expect(unknown).toEqual([]);
 });
+
+for (const viewport of [
+  { label: "desktop", width: 1440, height: 900 },
+  { label: "mobile", width: 390, height: 844 },
+]) {
+  test(`Post editor fences delayed save ACK and preserves newer edits (${viewport.label})`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    const unknown = await openAdmin(page, "/admin/posts/101/edit");
+    const requests = [];
+    let releaseFirst;
+    let firstDispatched;
+    const firstRequest = new Promise((resolve) => {
+      firstDispatched = resolve;
+    });
+    const release = new Promise((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    await page.route("**/api/posts/101", async (route) => {
+      if (route.request().method() !== "PUT") return route.fallback();
+      const body = route.request().postDataJSON();
+      requests.push(body);
+      if (requests.length === 1) {
+        firstDispatched();
+        await release;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: { ...adminPost, ...body, id: 101, revision: 3 + requests.length },
+        }),
+      });
+    });
+
+    const title = page.getByRole("textbox", { name: "标题", exact: true });
+    await title.fill("First submitted post title");
+    await page.getByRole("button", { name: "更新文章" }).click();
+    await firstRequest;
+    await title.fill("Newer unsaved post title");
+    releaseFirst();
+
+    await expect(title).toHaveValue("Newer unsaved post title");
+    await expect(page.getByText("有未保存的更改")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await captureWave3Evidence(page, testInfo, `post-save-stale-${viewport.label}.png`);
+
+    await page.getByRole("button", { name: "更新文章" }).click();
+    await expect(page.locator('[data-slot="notification"]')).toContainText("文章已成功发布");
+    await expect(title).toHaveValue("Newer unsaved post title");
+    await expect(page.getByText(/已于.*保存/)).toBeVisible();
+    expect(requests).toHaveLength(2);
+    expect(requests[0].title).toBe("First submitted post title");
+    expect(requests[1].title).toBe("Newer unsaved post title");
+    expect(requests[1].revision).toBe(4);
+    await expectNoHorizontalOverflow(page);
+    await captureWave3Evidence(page, testInfo, `post-save-current-${viewport.label}.png`);
+    expect(unknown).toEqual([]);
+  });
+}
 
 test("Post editor exposes revision conflict without dropping the working draft", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 768, height: 900 });
