@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -13,8 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 )
 
 type FeedPostReader interface {

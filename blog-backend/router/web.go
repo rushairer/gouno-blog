@@ -71,7 +71,7 @@ type WebRouterOptions struct {
 	AccessService      *access.Service
 	SecureCookies      bool
 	BFFClient          *authbff.Client
-	FeedOIDCCallbackURL string
+	FeedCallbackURL    string
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
@@ -127,7 +127,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	siteSvc := opts.SiteSvc
 	siteCtrl := sitecontroller.New(siteSvc)
 
-	feedCtrl := feedcontroller.NewFeedController(postSvc, pageSvc, siteSvc, opts.FeedOIDCCallbackURL)
+	feedCtrl := feedcontroller.NewFeedController(postSvc, pageSvc, siteSvc, opts.FeedCallbackURL)
 
 	communitySvc := opts.CommunitySvc
 	var interactionLimiter ratelimit.Limiter

@@ -2,13 +2,13 @@ package controller
 
 import (
 	"context"
-	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 )
 
 type fakeFeedPostReader struct {
@@ -90,11 +90,11 @@ func TestFeedOriginRejectsInvalidConfigurationAndUntrustedHost(t *testing.T) {
 		"empty":           "",
 		"http-scheme":     "http://blog.example.com/api/auth/callback",
 		"userinfo":        "https://user:password@blog.example.com/api/auth/callback",
-		"query":           "https://blog.example.com/api/auth/callback?next=evil",
-		"fragment":        "https://blog.example.com/api/auth/callback#evil",
-		"wrong-path":      "https://blog.example.com/login",
-		"relative":        "//malicious.example.test/api/auth/callback",
-		"javascript":      "javascript:alert(1)",
+		"query":            "https://blog.example.com/api/auth/callback?next=evil",
+		"fragment":         "https://blog.example.com/api/auth/callback#evil",
+		"wrong-path":       "https://blog.example.com/login",
+		"relative":         "//malicious.example.test/api/auth/callback",
+		"javascript":       "javascript:alert(1)",
 		"encoded-callback": "https://blog.example.com/api/auth/%63allback",
 	} {
 		t.Run(name, func(t *testing.T) {

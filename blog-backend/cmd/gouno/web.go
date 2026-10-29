@@ -426,7 +426,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
 		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, KnowledgeCtrl: knowledgeCtrl, ConnectorCtrl: connectorCtrl, ExternalCtrl: externalCtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
-		BFFClient: bffClient, FeedOIDCCallbackURL: os.Getenv("BLOG_OIDC_REDIRECT_URL"),
+		BFFClient: bffClient, FeedCallbackURL: os.Getenv("BLOG_OIDC_REDIRECT_URL"),
 	})
 }
 
