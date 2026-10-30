@@ -173,6 +173,11 @@ jobs:
           cache: npm
           cache-dependency-path: blog-frontend/package-lock.json
 
+      - name: Verify frontend quality gate cannot be bypassed
+        run: |
+          python3 -m unittest discover -s ../.github/scripts -p 'test_check_frontend_quality_contract.py'
+          python3 ../.github/scripts/check_frontend_quality_contract.py
+
       - name: Install dependencies
         run: npm ci
 
