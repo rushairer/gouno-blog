@@ -67,6 +67,42 @@ class ImageSecurityContractTest(unittest.TestCase):
 
         self.assertEqual(workflow.count(f"aquasecurity/trivy-action@{TRIVY_SHA}"), 3)
         self.assertEqual(workflow.count(f"anchore/scan-action@{GRYPE_SHA}"), 3)
+    def test_published_images_verify_exact_keyless_workflow_identity(self) -> None:
+        workflow = (
+            REPO_ROOT / ".github" / "workflows" / "publish-images.yml"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(workflow.count("      - name: Sign immutable image digest"), 3)
+        self.assertEqual(workflow.count("      - name: Verify immutable image signature"), 3)
+        self.assertEqual(
+            workflow.count("        run: bash .github/scripts/verify_image_signature.sh"),
+            3,
+        )
+        for kind in ("backend", "frontend", "seed"):
+            signer = (
+                "      - name: Sign immutable image digest\n"
+                "        env:\n"
+                "          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/gouno-blog-"
+                + kind + "\n"
+                "          DIGEST: ${{ steps.build.outputs.digest }}\n"
+                '        run: cosign sign --yes "${IMAGE}@${DIGEST}"'
+            )
+            verifier = (
+                "      - name: Verify immutable image signature\n"
+                "        env:\n"
+                f"          IMAGE_KIND: {kind}\n"
+                "          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/gouno-blog-"
+                + kind + "\n"
+                "          DIGEST: ${{ steps.build.outputs.digest }}\n"
+                "        run: bash .github/scripts/verify_image_signature.sh"
+            )
+            self.assertEqual(workflow.count(signer), 1, kind)
+            self.assertEqual(workflow.count(verifier), 1, kind)
+            self.assertLess(workflow.index(signer), workflow.index(verifier), kind)
+            self.assertLess(
+                workflow.index(verifier),
+                workflow.index("      - name: Record immutable image digest", workflow.index(verifier)),
+                kind,
+            )
 
 
 if __name__ == "__main__":

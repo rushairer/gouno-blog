@@ -33,6 +33,7 @@ IMAGE_CONFIG = {
 
 IMAGE_PIPELINE_FILES = {
     ".github/workflows/publish-images.yml",
+    ".github/scripts/verify_image_signature.sh",
     ".github/scripts/image_build_plan.py",
     # This guard controls whether automation-written runtime commits reach the
     # registry. Treat changes to it as release-control-plane changes and force

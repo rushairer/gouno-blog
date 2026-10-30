@@ -28,6 +28,9 @@ jobs:
       - name: Verify image security contract
         run: python3 .github/scripts/test_image_security_contract.py
 
+      - name: Verify keyless image identity and false-green detection
+        run: python3 -m unittest discover -s .github/scripts -p 'test_verify_image_signature.py'
+
   backend:
     name: Backend quality
     runs-on: ubuntu-latest
