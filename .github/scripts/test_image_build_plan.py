@@ -60,6 +60,12 @@ class ImageBuildPlanTest(unittest.TestCase):
             ["backend", "frontend"],
         )
 
+    def test_signature_verification_policy_change_republishes_all_images(self) -> None:
+        self.assertEqual(
+            select_images([".github/scripts/verify_image_signature.sh"]),
+            ["backend", "frontend", "seed"],
+        )
+
     def test_release_force_all_builds_every_image(self) -> None:
         self.assertEqual(select_images([], force_all=True), ["backend", "frontend", "seed"])
 

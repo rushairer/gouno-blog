@@ -56,6 +56,7 @@ This document defines the **immutable architectural rules, security baselines, a
    - First-party application images have **no floating `:main` fallback**. Production must fail closed unless operators provide explicit immutable `version@sha256:digest` references for every first-party application image.
    - `pull_policy: always` may refresh the referenced immutable digest, but it must never change the deployed artifact identity.
    - Third-party infrastructure images remain pinned to audited immutable digests.
+   - Publishing Blog backend/frontend/Seed images must run fail-closed Sigstore `cosign verify` **after** signing and **before** the digest is recorded, bound to the exact image@sha256 digest, GitHub Actions `publish-images.yml` workflow identity at the current trusted main/master or version-tag ref, and issuer `https://token.actions.githubusercontent.com`. No regex identity, tag-only verification, unsigned fallback, or skipped verification is acceptable. A successful signing step alone is not verification of authenticity. Keep behavioral false-green tests and image-selection rules aligned when modifying this security control.
    - Production secrets must be provided via Docker Secret files; raw env var secrets are rejected.
 
 ---

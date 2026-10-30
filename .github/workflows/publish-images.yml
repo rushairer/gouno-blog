@@ -180,6 +180,13 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
 
+      - name: Verify immutable image signature
+        env:
+          IMAGE_KIND: backend
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/gouno-blog-backend
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: bash .github/scripts/verify_image_signature.sh
+
       - name: Record immutable image digest
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/gouno-blog-backend
@@ -288,6 +295,13 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
 
+      - name: Verify immutable image signature
+        env:
+          IMAGE_KIND: frontend
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/gouno-blog-frontend
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: bash .github/scripts/verify_image_signature.sh
+
       - name: Record immutable image digest
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/gouno-blog-frontend
@@ -395,6 +409,13 @@ jobs:
           IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/gouno-blog-seed
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
+
+      - name: Verify immutable image signature
+        env:
+          IMAGE_KIND: seed
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/gouno-blog-seed
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: bash .github/scripts/verify_image_signature.sh
 
       - name: Record immutable image digest
         env:

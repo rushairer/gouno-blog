@@ -13,5 +13,8 @@
   and `GOSSO_BACKCHANNEL_ALLOWED_CIDRS` allows only the exact container network needed for back-channel logout; Gosso 1.6+ hard-denies loopback, link-local, metadata, unspecified, and multicast targets even when a broad CIDR is configured.
 - [ ] Docker secret files in `/opt/gouno-blog/secrets/*` are present with `chmod 600` permissions.
 - [ ] The tag workflow attaches each Blog image digest plus SPDX and CycloneDX
-  SBOMs to the GitHub Release; provenance and cosign verification succeed.
+  SBOMs to the GitHub Release; the publish workflow verifies each signed immutable
+  digest against the exact workflow OIDC identity and issuer before recording it.
+  Independently verify the three selected deployment digests and signatures
+  against their release-tag identities, provenance, and operator rollout receipt.
 - [ ] Isolated containers, networks, volumes, and temporary files are removed.
