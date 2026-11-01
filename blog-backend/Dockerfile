@@ -19,7 +19,7 @@ RUN go mod download && go mod verify
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -buildvcs=false -o /build/blog ./cmd
 
 # Runtime stage
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 
 RUN apk add --no-cache musl=1.2.6-r3 musl-utils=1.2.6-r3 ca-certificates=20261020-r0 tzdata=2026e-r0 zlib=1.3.2-r1
 
