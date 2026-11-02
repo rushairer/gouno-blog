@@ -835,7 +835,7 @@ describe("WorkflowRunRecords", () => {
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
       const match = String(url).match(
-        /\\/api\\/admin\\/ai-workflow-runs\\/(\\d+)\\/(steps|resources|interactions|media-candidates|events)$/,
+        /\/api\/admin\/ai-workflow-runs\/(\\d+)\/(steps|resources|interactions|media-candidates|events)$/,
       );
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
@@ -875,7 +875,7 @@ describe("WorkflowRunRecords", () => {
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
       const match = String(url).match(
-        /\\/api\\/admin\\/ai-workflow-runs\\/(\\d+)\\/(steps|resources|interactions|media-candidates|events)$/,
+        /\/api\/admin\/ai-workflow-runs\/(\\d+)\/(steps|resources|interactions|media-candidates|events)$/,
       );
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
@@ -918,7 +918,7 @@ describe("WorkflowRunRecords", () => {
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
       const match = String(url).match(
-        /\\/api\\/admin\\/ai-workflow-runs\\/(\\d+)\\/(steps|resources|interactions|media-candidates|events)$/,
+        /\/api\/admin\/ai-workflow-runs\/(\\d+)\/(steps|resources|interactions|media-candidates|events)$/,
       );
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
@@ -962,7 +962,7 @@ describe("WorkflowRunRecords", () => {
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
       const match = String(url).match(
-        /\\/api\\/admin\\/ai-workflow-runs\\/(\\d+)\\/(steps|resources|interactions|media-candidates|events)$/,
+        /\/api\/admin\/ai-workflow-runs\/(\\d+)\/(steps|resources|interactions|media-candidates|events)$/,
       );
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
