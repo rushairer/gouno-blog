@@ -1064,5 +1064,4 @@ describe("WorkflowRunRecords", () => {
       await screen.findByText("Run list lookup failed"),
     ).toBeInTheDocument();
   });
-
 });
