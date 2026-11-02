@@ -42,7 +42,6 @@ const run = {
   created_at: "2026-08-01T01:00:00Z",
 };
 
-
 type DeferredResponse = {
   promise: Promise<Response>;
   resolve: (response: Response) => void;
@@ -68,6 +67,10 @@ function resolveRunDetail(
     request.resolve(Response.json({ data: [] }));
   }
 }
+
+const runDetailPath = new RegExp(
+  "^/api/admin/ai-workflow-runs/(\\d+)/(steps|resources|interactions|media-candidates|events)$",
+);
 
 describe("WorkflowRunRecords", () => {
   beforeEach(() => {
@@ -835,7 +838,7 @@ describe("WorkflowRunRecords", () => {
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
       const match = String(url).match(
-        /\/api\/admin\/ai-workflow-runs\/(\d+)\/(steps|resources|interactions|media-candidates|events)$/,
+        runDetailPath,
       );
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
@@ -875,7 +878,7 @@ describe("WorkflowRunRecords", () => {
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
       const match = String(url).match(
-        /\/api\/admin\/ai-workflow-runs\/(\d+)\/(steps|resources|interactions|media-candidates|events)$/,
+        runDetailPath,
       );
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
@@ -918,7 +921,7 @@ describe("WorkflowRunRecords", () => {
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
       const match = String(url).match(
-        /\/api\/admin\/ai-workflow-runs\/(\d+)\/(steps|resources|interactions|media-candidates|events)$/,
+        runDetailPath,
       );
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
@@ -962,7 +965,7 @@ describe("WorkflowRunRecords", () => {
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
       const match = String(url).match(
-        /\/api\/admin\/ai-workflow-runs\/(\d+)\/(steps|resources|interactions|media-candidates|events)$/,
+        runDetailPath,
       );
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
@@ -1000,7 +1003,6 @@ describe("WorkflowRunRecords", () => {
       screen.queryByText("Current detail request failed"),
     ).not.toBeInTheDocument();
   });
-
 
   it("does not let a delayed URL run lookup override a newer row selection", async () => {
     const user = userEvent.setup();
