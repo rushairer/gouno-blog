@@ -213,6 +213,9 @@ export function WorkflowRunRecords({
     }
   };
 
+  const isCurrentSelectedRunIntent = (intent: SelectedRunIntent) =>
+    intent !== null && intent.epoch === selectionEpoch.current;
+
   const resolveInteraction = async (
     task: WorkflowInteractionTask,
     response: unknown,
@@ -224,6 +227,7 @@ export function WorkflowRunRecords({
       await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -242,6 +246,7 @@ export function WorkflowRunRecords({
       await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -277,6 +282,7 @@ export function WorkflowRunRecords({
       await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -312,6 +318,7 @@ export function WorkflowRunRecords({
       await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -328,12 +335,16 @@ export function WorkflowRunRecords({
     candidate: MediaCandidate,
     openDialog = false,
   ) => {
+    const intent = selectedRunIntent();
     setError("");
     try {
       const preview = await operationsApi.previewImageTask(candidate.id);
-      setImagePreviews((current) => ({ ...current, [candidate.id]: preview }));
-      if (openDialog) setPreviewDialogCandidateID(candidate.id);
+      if (!intent || isCurrentSelectedRunIntent(intent)) {
+        setImagePreviews((current) => ({ ...current, [candidate.id]: preview }));
+        if (openDialog) setPreviewDialogCandidateID(candidate.id);
+      }
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -467,6 +478,7 @@ export function WorkflowRunRecords({
 
   const retryStep = async (step: WorkflowStepRun) => {
     if (!selected || step.iteration === undefined) return;
+    const intent = selectedRunIntent();
     const key = `${step.step_id}:${step.iteration}`;
     setRetrying(key);
     setError("");
@@ -477,6 +489,7 @@ export function WorkflowRunRecords({
       });
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -491,6 +504,7 @@ export function WorkflowRunRecords({
 
   const retryFailedGroup = async (stepID: string) => {
     if (!selected) return;
+    const intent = selectedRunIntent();
     const iterations = selected.steps
       .filter(
         (step) =>
@@ -509,6 +523,7 @@ export function WorkflowRunRecords({
       });
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -540,6 +555,7 @@ export function WorkflowRunRecords({
       if (onRefresh) await onRefresh();
       return true;
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return false;
       setError(
         reason instanceof Error
           ? reason.message
@@ -582,12 +598,10 @@ export function WorkflowRunRecords({
     setError("");
     try {
       await workflowApi.deleteRun(run.id);
-      if (
-        selectedAtStart &&
-        selected?.run.id === run.id &&
-        selectionEpoch.current === intentEpoch
-      ) {
-        setSelected(null);
+      if (selectionEpoch.current === intentEpoch) {
+        if (selectedAtStart && selected?.run.id === run.id) {
+          setSelected(null);
+        }
         const url = new URL(window.location.href);
         if (Number(url.searchParams.get("run")) === run.id) {
           url.searchParams.delete("run");
@@ -597,6 +611,7 @@ export function WorkflowRunRecords({
       if (onRefresh) await onRefresh();
       return true;
     } catch (reason) {
+      if (selectionEpoch.current !== intentEpoch) return false;
       setError(
         reason instanceof Error
           ? reason.message
@@ -689,7 +704,6 @@ export function WorkflowRunRecords({
             inspectedFromURL.current = true;
             setSelected(null);
             setWorkflowID(Number(nextValue));
-            setSelected(null);
             setMobilePane("master");
             autoInspectedRunID.current = null;
             const url = new URL(window.location.href);
