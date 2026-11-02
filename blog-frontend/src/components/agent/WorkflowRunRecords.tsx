@@ -716,7 +716,7 @@ export function WorkflowRunRecords({
     inspectedFromURL.current = true;
     selectionEpoch.current += 1;
     void inspect(requested, true);
-  }, [inspect, runs]);
+  }, [inspect, runs, zh]);
 
   useEffect(() => {
     const requestedID = Number(
