@@ -340,7 +340,10 @@ export function WorkflowRunRecords({
     try {
       const preview = await operationsApi.previewImageTask(candidate.id);
       if (!intent || isCurrentSelectedRunIntent(intent)) {
-        setImagePreviews((current) => ({ ...current, [candidate.id]: preview }));
+        setImagePreviews((current) => ({
+          ...current,
+          [candidate.id]: preview,
+        }));
         if (openDialog) setPreviewDialogCandidateID(candidate.id);
       }
     } catch (reason) {
