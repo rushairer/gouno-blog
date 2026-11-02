@@ -1069,4 +1069,44 @@ describe("WorkflowRunRecords", () => {
       await screen.findByText("Run list lookup failed"),
     ).toBeInTheDocument();
   });
+
+  it("invalidates a pending detail read when its run is removed from the collection", async () => {
+    const requests = new Map<number, DeferredResponse[]>();
+    vi.mocked(apiFetch).mockImplementation((url) => {
+      const match = String(url).match(runDetailPath);
+      if (!match) return Promise.resolve(Response.json({ data: [] }));
+      const runID = Number(match[1]);
+      const deferred = deferredResponse();
+      requests.set(runID, [...(requests.get(runID) || []), deferred]);
+      return deferred.promise;
+    });
+
+    const { rerender } = render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await waitFor(() => expect(requests.get(6)).toHaveLength(5));
+    rerender(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await act(async () => resolveRunDetail(requests, 6));
+    expect(
+      screen.queryByRole("heading", { name: /Run #6/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("选择一个 Run 查看证据"),
+    ).toBeInTheDocument();
+  });
+
 });
