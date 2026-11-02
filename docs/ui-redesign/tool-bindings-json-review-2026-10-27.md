@@ -60,3 +60,16 @@ PostgreSQL 工件内 `summary.json`：21 个包、115 项 required、462 条成�
 - 页面运行在测试 API fixture 与真实 Chromium 中，不等于在生产环境执行真实后端 Skill 保存、AAL2 或 Provider 调用。
 - 此次仅 `blog-admin-ai` 受影响的 Skill 表单路径完成增量复核；其他 AI Settings / AI Operations 状态沿用已有历史证据，没有虚构新一轮完整全页视觉对比。
 - 整体 A+ 的 #359 和审批/Provider/Media 恢复演练 #338 仍开放；最终合并仍须对**认证文档提交的最终 PR head**重新运行全部适用门禁。
+
+
+## 2026-11-02 Oxlint warning triage — intentional draft/accepted-state boundaries
+
+The current main Oxlint baseline still reports three warnings in this component (one effect state update and two effect dependency warnings). A read-only review of the current source, its controlled parent, the existing unit tests and the manual-first browser evidence does **not** justify mechanically adding the missing dependencies or removing the effects.
+
+- The first effect synchronizes the local JSON editor text only when the parent-owned, accepted `toolBindings` value changes. It deliberately preserves an invalid local draft while the operator is typing. `jsonText` is intentionally not a dependency: making the effect run for every local keystroke would turn the accepted-value synchronization effect into a per-edit effect and risks overwriting a draft with the last accepted parent value. Invalid JSON does not call `onChange`; a valid JSON object updates the accepted parent value.
+- The second effect initializes defaults only when the selected `capabilities` set changes. It deliberately does not depend on `toolBindings`: a user may intentionally remove or customize a default binding, and re-running initialization after every accepted binding update would silently reinsert defaults. The parent currently supplies an inline `onChange` callback; adding that dependency would also re-run the initialization effect on unrelated parent renders.
+- `SkillForm` owns the accepted value and the save boundary. Invalid JSON sets `toolBindingsDraftValid=false`, disables Save and is rejected again in the submit handler. Returning to Visual Form explicitly discards the invalid draft, restores the last accepted values and restores save eligibility.
+
+The 2026-10-28 manual-first review above already inspected invalid and recovered JSON states in real Product Chromium desktop/mobile screenshots, checked that Save remains blocked for invalid input, and checked accepted JSON/visual round-tripping. The 2026-11-02 current-main browser suite again passed **363/363**; this is supporting regression evidence, not a substitute for the prior manual screenshot review.
+
+**Disposition:** retain these warnings in the enforced 61-warning ratchet for now; do not silence the rules or make a dependency-only edit. If this component is redesigned later, replace the synchronization effects with an explicit state-transition contract and preserve the same invalid-draft, accepted-value, capability-default and save-blocking tests.
