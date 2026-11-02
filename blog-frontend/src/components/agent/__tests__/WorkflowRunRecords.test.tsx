@@ -1001,4 +1001,66 @@ describe("WorkflowRunRecords", () => {
     ).not.toBeInTheDocument();
   });
 
+
+  it("does not let a delayed URL run lookup override a newer row selection", async () => {
+    const user = userEvent.setup();
+    const lookup = deferredResponse();
+    const staleUrlRun = { ...run, id: 999, error_message: "Stale URL lookup target" };
+    window.history.replaceState(null, "", "/?run=999");
+    vi.mocked(apiFetch).mockImplementation((url) =>
+      String(url) === "/api/admin/ai-workflow-runs"
+        ? lookup.promise
+        : Promise.resolve(Response.json({ data: [] })),
+    );
+
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(apiFetch).toHaveBeenCalledWith("/api/admin/ai-workflow-runs"),
+    );
+    await user.click(screen.getByRole("button", { name: /Run #6/ }));
+    expect(
+      await screen.findByRole("heading", { name: /Run #6/ }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      lookup.resolve(Response.json({ data: [run, staleUrlRun] }));
+    });
+
+    expect(screen.getByRole("heading", { name: /Run #6/ })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /Run #999/ }),
+    ).not.toBeInTheDocument();
+    expect(new URL(window.location.href).searchParams.get("run")).toBe("6");
+  });
+
+  it("surfaces a current URL run lookup failure instead of silently swallowing it", async () => {
+    window.history.replaceState(null, "", "/?run=999");
+    vi.mocked(apiFetch).mockImplementation((url) =>
+      String(url) === "/api/admin/ai-workflow-runs"
+        ? Promise.reject(new Error("Run list lookup failed"))
+        : Promise.resolve(Response.json({ data: [] })),
+    );
+
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Run list lookup failed"),
+    ).toBeInTheDocument();
+  });
+
 });
