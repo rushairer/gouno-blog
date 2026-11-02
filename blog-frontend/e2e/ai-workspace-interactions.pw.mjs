@@ -491,9 +491,10 @@ function delayedWorkflowRunRoute(page, { fail = false } = {}) {
   let delayedCount = 0;
   let completedCount = 0;
   const route = page.route(
-    /\\/api\\/admin\\/ai-workflow-runs\\/214\\/(steps|resources|interactions|media-candidates|events)$/,
+    /\/api\/admin\/ai-workflow-runs\/214\/(steps|resources|interactions|media-candidates|events)$/,
     async (requestRoute) => {
-      if (delayedCount < 5) {
+      const isDelayed = delayedCount < 5;
+      if (isDelayed) {
         delayedCount += 1;
         if (delayedCount === 5) resolveStarted();
         await gate;
@@ -508,9 +509,7 @@ function delayedWorkflowRunRoute(page, { fail = false } = {}) {
         }
       }
       await requestRoute.fallback();
-      if (delayedCount > 0 && completedCount < delayedCount) {
-        completedCount += 1;
-      }
+      if (isDelayed) completedCount += 1;
     },
   );
   return {
