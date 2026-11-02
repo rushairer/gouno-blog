@@ -26,11 +26,12 @@ async function attachScreenshot(page, testInfo, name) {
   await testInfo.attach(name, { path, contentType: "image/png" });
 }
 
-async function openAiPage(page, path, { theme = "light", width = 1440, height = 900 } = {}) {
+async function openAiPage(page, path, { theme = "light", width = 1440, height = 900, beforeNavigate } = {}) {
   await page.setViewportSize({ width, height });
   await prepareAiBrowserState(page, theme);
   const consoleProblems = captureConsoleProblems(page);
   const fixtureState = await installAiFixtures(page);
+  if (beforeNavigate) await beforeNavigate();
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   return { consoleProblems, fixtureState };
@@ -476,3 +477,142 @@ test("Provider settings expose provider and embedding configuration without writ
   expectFixtureHealth(fixtureState, consoleProblems);
   await attachScreenshot(page, testInfo, "u04a-provider-editor");
 });
+
+
+function delayedWorkflowRunRoute(page, { fail = false } = {}) {
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  let resolveStarted;
+  const started = new Promise((resolve) => {
+    resolveStarted = resolve;
+  });
+  let delayedCount = 0;
+  let completedCount = 0;
+  const route = page.route(
+    /\\/api\\/admin\\/ai-workflow-runs\\/214\\/(steps|resources|interactions|media-candidates|events)$/,
+    async (requestRoute) => {
+      if (delayedCount < 5) {
+        delayedCount += 1;
+        if (delayedCount === 5) resolveStarted();
+        await gate;
+        if (fail) {
+          await requestRoute.fulfill({
+            status: 502,
+            contentType: "application/json",
+            body: JSON.stringify({ error: { message: "Injected stale run detail failure" } }),
+          });
+          completedCount += 1;
+          return;
+        }
+      }
+      await requestRoute.fallback();
+      if (delayedCount > 0 && completedCount < delayedCount) {
+        completedCount += 1;
+      }
+    },
+  );
+  return {
+    route,
+    started,
+    release,
+    get delayedCount() {
+      return delayedCount;
+    },
+    get completedCount() {
+      return completedCount;
+    },
+  };
+}
+
+test("Workflow run detail keeps the latest selection when an older response arrives last", async ({ page }, testInfo) => {
+  let delayed;
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-ops?tab=records&record=workflow",
+    {
+      width: 1440,
+      height: 900,
+      beforeNavigate: async () => {
+        delayed = delayedWorkflowRunRoute(page);
+      },
+    },
+  );
+  await delayed.started;
+
+  const runList = page.getByRole("list", { name: "Workflow run list" });
+  const newerRun = runList
+    .getByRole("listitem")
+    .filter({ hasText: "Run #213" });
+  await newerRun.getByRole("button").click();
+  await expect(page.getByRole("heading", { name: /Run #213/ })).toBeVisible();
+
+  delayed.release();
+  await expect.poll(() => delayed.completedCount).toBe(5);
+  await expect(page.getByRole("heading", { name: /Run #213/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Run #214/ })).toHaveCount(0);
+  await expectNoDocumentOverflow(page);
+  expectFixtureHealth(fixtureState, consoleProblems);
+  await attachScreenshot(page, testInfo, "u04a-workflow-run-latest-selection");
+});
+
+test("obsolete Workflow run detail errors do not replace the current selection", async ({ page }, testInfo) => {
+  let delayed;
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-ops?tab=records&record=workflow",
+    {
+      width: 1440,
+      height: 900,
+      beforeNavigate: async () => {
+        delayed = delayedWorkflowRunRoute(page, { fail: true });
+      },
+    },
+  );
+  await delayed.started;
+
+  const runList = page.getByRole("list", { name: "Workflow run list" });
+  await runList
+    .getByRole("listitem")
+    .filter({ hasText: "Run #213" })
+    .getByRole("button")
+    .click();
+  await expect(page.getByRole("heading", { name: /Run #213/ })).toBeVisible();
+
+  delayed.release();
+  await expect.poll(() => delayed.completedCount).toBe(5);
+  await expect(page.getByRole("heading", { name: /Run #213/ })).toBeVisible();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Injected stale run detail failure" }),
+  ).toHaveCount(0);
+  expectFixtureHealth(fixtureState, consoleProblems);
+  await attachScreenshot(page, testInfo, "u04a-workflow-run-stale-error-ignored");
+});
+
+test("leaving the Workflow run center invalidates pending detail reads", async ({ page }) => {
+  let delayed;
+  const { consoleProblems, fixtureState } = await openAiPage(
+    page,
+    "/admin/ai-ops?tab=records&record=workflow",
+    {
+      width: 390,
+      height: 844,
+      beforeNavigate: async () => {
+        delayed = delayedWorkflowRunRoute(page);
+      },
+    },
+  );
+  await delayed.started;
+  await page.getByRole("tab", { name: "Automation" }).click();
+  await expect(page.getByRole("tab", { name: "Automation" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+
+  delayed.release();
+  await expect.poll(() => delayed.completedCount).toBe(5);
+  await expect(page.getByRole("heading", { name: /Run #214/ })).toHaveCount(0);
+  expectFixtureHealth(fixtureState, consoleProblems);
+});
+
