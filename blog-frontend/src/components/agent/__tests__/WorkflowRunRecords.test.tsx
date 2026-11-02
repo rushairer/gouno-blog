@@ -838,9 +838,7 @@ describe("WorkflowRunRecords", () => {
     const staleRun = { ...run, id: 7, error_message: "Stale Run #7 details" };
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
-      const match = String(url).match(
-        runDetailPath,
-      );
+      const match = String(url).match(runDetailPath);
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
       const deferred = deferredResponse();
@@ -878,9 +876,7 @@ describe("WorkflowRunRecords", () => {
     const staleRun = { ...run, id: 7 };
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
-      const match = String(url).match(
-        runDetailPath,
-      );
+      const match = String(url).match(runDetailPath);
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
       const deferred = deferredResponse();
@@ -902,18 +898,14 @@ describe("WorkflowRunRecords", () => {
     await waitFor(() => expect(requests.get(6)).toHaveLength(5));
 
     await act(async () => resolveRunDetail(requests, 7));
-    expect(
-      screen.getByRole("button", { name: /Run #6/ }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Run #6/ })).toBeDisabled();
     expect(screen.getByText("正在载入 Run 证据…")).toBeInTheDocument();
 
     await act(async () => resolveRunDetail(requests, 6));
     expect(
       await screen.findByRole("heading", { name: /Run #6/ }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Run #6/ }),
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Run #6/ })).toBeEnabled();
   });
 
   it("does not surface an obsolete detail request error over the current run", async () => {
@@ -921,9 +913,7 @@ describe("WorkflowRunRecords", () => {
     const staleRun = { ...run, id: 7 };
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
-      const match = String(url).match(
-        runDetailPath,
-      );
+      const match = String(url).match(runDetailPath);
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
       const deferred = deferredResponse();
@@ -965,9 +955,7 @@ describe("WorkflowRunRecords", () => {
     const user = userEvent.setup();
     const requests = new Map<number, DeferredResponse[]>();
     vi.mocked(apiFetch).mockImplementation((url) => {
-      const match = String(url).match(
-        runDetailPath,
-      );
+      const match = String(url).match(runDetailPath);
       if (!match) return Promise.resolve(Response.json({ data: [] }));
       const runID = Number(match[1]);
       const deferred = deferredResponse();
@@ -1104,9 +1092,6 @@ describe("WorkflowRunRecords", () => {
     expect(
       screen.queryByRole("heading", { name: /Run #6/ }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByText("选择一个 Run 查看证据"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("选择一个 Run 查看证据")).toBeInTheDocument();
   });
-
 });

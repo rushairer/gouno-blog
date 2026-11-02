@@ -176,9 +176,7 @@ export function WorkflowRunRecords({
       const epoch = ++inspectEpoch.current;
       setLoadingID(run.id);
       setError("");
-      setSelected((current) =>
-        current?.run.id === run.id ? current : null,
-      );
+      setSelected((current) => (current?.run.id === run.id ? current : null));
       if (syncRoute) {
         const url = new URL(window.location.href);
         url.searchParams.set("run", String(run.id));
