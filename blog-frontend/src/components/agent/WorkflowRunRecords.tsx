@@ -730,7 +730,6 @@ export function WorkflowRunRecords({
             inspectedFromURL.current = true;
             setSelected(null);
             setStatusFilter(String(nextValue));
-            setSelected(null);
             setMobilePane("master");
             autoInspectedRunID.current = null;
             const url = new URL(window.location.href);
