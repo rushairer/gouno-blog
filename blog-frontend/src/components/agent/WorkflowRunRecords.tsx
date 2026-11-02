@@ -390,6 +390,7 @@ export function WorkflowRunRecords({
       await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -414,6 +415,7 @@ export function WorkflowRunRecords({
       await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -434,6 +436,7 @@ export function WorkflowRunRecords({
       await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
