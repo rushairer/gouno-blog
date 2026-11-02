@@ -172,7 +172,9 @@ export function WorkflowRunRecords({
     async (
       run: WorkflowRun,
       syncRoute = new URLSearchParams(window.location.search).has("run"),
+      expectedSelectionEpoch = selectionEpoch.current,
     ) => {
+      if (expectedSelectionEpoch !== selectionEpoch.current) return;
       const epoch = ++inspectEpoch.current;
       setLoadingID(run.id);
       setError("");
@@ -240,7 +242,7 @@ export function WorkflowRunRecords({
 
   const refreshSelectedRunIfCurrent = async (intent: SelectedRunIntent) => {
     if (intent && intent.epoch === selectionEpoch.current) {
-      await inspect(intent.run);
+      await inspect(intent.run, undefined, intent.epoch);
     }
   };
 
@@ -500,8 +502,11 @@ export function WorkflowRunRecords({
       )
     )
       return;
+    const intentEpoch = selectionEpoch.current;
     const refreshTimer = window.setInterval(() => {
-      void inspect(selected.run);
+      if (intentEpoch === selectionEpoch.current) {
+        void inspect(selected.run, undefined, intentEpoch);
+      }
     }, 4000);
     const clockTimer = window.setInterval(
       () => setGenerationNow(Date.now()),
