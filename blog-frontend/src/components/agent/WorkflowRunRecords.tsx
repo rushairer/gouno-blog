@@ -666,7 +666,16 @@ export function WorkflowRunRecords({
             const found = allRuns.find((run) => run.id === requestedID);
             if (found) void inspect(found, true);
           })
-          .catch(() => {});
+          .catch((reason) => {
+            if (intentEpoch !== selectionEpoch.current) return;
+            setError(
+              reason instanceof Error
+                ? reason.message
+                : zh
+                  ? "无法载入运行列表。"
+                  : "Could not load the run list.",
+            );
+          });
       }
       return;
     }
