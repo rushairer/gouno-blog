@@ -90,6 +90,7 @@ export function WorkflowRunRecords({
   const autoInspectedRunID = useRef<number | null>(null);
   const inspectEpoch = useRef(0);
   const selectionEpoch = useRef(0);
+  const knownRunIDs = useRef(new Set(runs.map((run) => run.id)));
 
   useEffect(
     () => () => {
@@ -128,12 +129,41 @@ export function WorkflowRunRecords({
   }, [runs, statusFilter, workflowID]);
 
   useEffect(() => {
+    const currentRunIDs = new Set(runs.map((run) => run.id));
+    const removedSelectedRun =
+      selected !== null &&
+      knownRunIDs.current.has(selected.run.id) &&
+      !currentRunIDs.has(selected.run.id);
+    const removedLoadingRun =
+      loadingID !== null &&
+      knownRunIDs.current.has(loadingID) &&
+      !currentRunIDs.has(loadingID);
+    knownRunIDs.current = currentRunIDs;
+
+    if (removedSelectedRun || removedLoadingRun) {
+      const removedRunID = selected?.run.id ?? loadingID;
+      selectionEpoch.current += 1;
+      inspectEpoch.current += 1;
+      inspectedFromURL.current = true;
+      autoInspectedRunID.current = null;
+      setLoadingID(null);
+      setSelected(null);
+      setError("");
+      setMobilePane("master");
+      const url = new URL(window.location.href);
+      if (removedRunID !== null && Number(url.searchParams.get("run")) === removedRunID) {
+        url.searchParams.delete("run");
+        window.history.replaceState(null, "", url);
+      }
+      return;
+    }
+
     if (!selected) return;
     const latest = runs.find((run) => run.id === selected.run.id);
     if (latest && latest !== selected.run) {
       setSelected((current) => (current ? { ...current, run: latest } : null));
     }
-  }, [runs, selected]);
+  }, [runs, selected, loadingID]);
 
   const inspect = useCallback(
     async (
