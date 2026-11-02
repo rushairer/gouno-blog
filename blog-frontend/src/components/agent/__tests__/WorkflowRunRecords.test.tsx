@@ -945,7 +945,9 @@ describe("WorkflowRunRecords", () => {
     });
 
     expect(screen.getByRole("heading", { name: /Run #6/ })).toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Provider output did not match the required Markdown format.",
+    );
     expect(
       screen.queryByText("Obsolete detail request failed"),
     ).not.toBeInTheDocument();
