@@ -69,7 +69,8 @@ function resolveRunDetail(
 }
 
 const runDetailPath = new RegExp(
-  "^/api/admin/ai-workflow-runs/(\\d+)/(steps|resources|interactions|media-candidates|events)$",
+  "^/api/admin/ai-workflow-runs/(\\d+)/" +
+    "(steps|resources|interactions|media-candidates|events)$",
 );
 
 describe("WorkflowRunRecords", () => {
@@ -1007,7 +1008,11 @@ describe("WorkflowRunRecords", () => {
   it("does not let a delayed URL run lookup override a newer row selection", async () => {
     const user = userEvent.setup();
     const lookup = deferredResponse();
-    const staleUrlRun = { ...run, id: 999, error_message: "Stale URL lookup target" };
+    const staleUrlRun = {
+      ...run,
+      id: 999,
+      error_message: "Stale URL lookup target",
+    };
     window.history.replaceState(null, "", "/?run=999");
     vi.mocked(apiFetch).mockImplementation((url) =>
       String(url) === "/api/admin/ai-workflow-runs"
