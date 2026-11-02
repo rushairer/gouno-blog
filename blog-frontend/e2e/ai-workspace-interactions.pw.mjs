@@ -479,7 +479,7 @@ test("Provider settings expose provider and embedding configuration without writ
 });
 
 
-function delayedWorkflowRunRoute(page, { fail = false } = {}) {
+async function delayedWorkflowRunRoute(page, { fail = false } = {}) {
   let release;
   const gate = new Promise((resolve) => {
     release = resolve;
@@ -490,7 +490,7 @@ function delayedWorkflowRunRoute(page, { fail = false } = {}) {
   });
   let delayedCount = 0;
   let completedCount = 0;
-  const route = page.route(
+  const route = await page.route(
     /\/api\/admin\/ai-workflow-runs\/214\/(steps|resources|interactions|media-candidates|events)$/,
     async (requestRoute) => {
       const isDelayed = delayedCount < 5;
@@ -534,7 +534,7 @@ test("Workflow run detail keeps the latest selection when an older response arri
       width: 1440,
       height: 900,
       beforeNavigate: async () => {
-        delayed = delayedWorkflowRunRoute(page);
+        delayed = await delayedWorkflowRunRoute(page);
       },
     },
   );
@@ -565,7 +565,7 @@ test("obsolete Workflow run detail errors do not replace the current selection",
       width: 1440,
       height: 900,
       beforeNavigate: async () => {
-        delayed = delayedWorkflowRunRoute(page, { fail: true });
+        delayed = await delayedWorkflowRunRoute(page, { fail: true });
       },
     },
   );
@@ -598,7 +598,7 @@ test("leaving the Workflow run center invalidates pending detail reads", async (
       width: 390,
       height: 844,
       beforeNavigate: async () => {
-        delayed = delayedWorkflowRunRoute(page);
+        delayed = await delayedWorkflowRunRoute(page);
       },
     },
   );
