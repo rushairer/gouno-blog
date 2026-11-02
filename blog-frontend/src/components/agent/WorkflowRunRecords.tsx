@@ -151,7 +151,10 @@ export function WorkflowRunRecords({
       setError("");
       setMobilePane("master");
       const url = new URL(window.location.href);
-      if (removedRunID !== null && Number(url.searchParams.get("run")) === removedRunID) {
+      if (
+        removedRunID !== null &&
+        Number(url.searchParams.get("run")) === removedRunID
+      ) {
         url.searchParams.delete("run");
         window.history.replaceState(null, "", url);
       }
