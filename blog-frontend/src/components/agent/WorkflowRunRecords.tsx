@@ -28,6 +28,8 @@ function newestFirst<T extends { id: number }>(items: T[]): T[] {
   return [...items].sort((a, b) => b.id - a.id);
 }
 
+type SelectedRunIntent = { run: WorkflowRun; epoch: number } | null;
+
 export function WorkflowRunRecords({
   locale,
   workflows,
@@ -86,6 +88,19 @@ export function WorkflowRunRecords({
   const [generationNow, setGenerationNow] = useState(() => Date.now());
   const inspectedFromURL = useRef(false);
   const autoInspectedRunID = useRef<number | null>(null);
+  const inspectEpoch = useRef(0);
+  const selectionEpoch = useRef(0);
+  const knownRunIDs = useRef(new Set(runs.map((run) => run.id)));
+
+  useEffect(
+    () => () => {
+      inspectEpoch.current += 1;
+      selectionEpoch.current += 1;
+      inspectedFromURL.current = false;
+      autoInspectedRunID.current = null;
+    },
+    [],
+  );
 
   const names = useMemo(
     () => new Map(workflows.map((item) => [item.id, item.name])),
@@ -114,20 +129,56 @@ export function WorkflowRunRecords({
   }, [runs, statusFilter, workflowID]);
 
   useEffect(() => {
+    const currentRunIDs = new Set(runs.map((run) => run.id));
+    const removedSelectedRun =
+      selected !== null &&
+      knownRunIDs.current.has(selected.run.id) &&
+      !currentRunIDs.has(selected.run.id);
+    const removedLoadingRun =
+      loadingID !== null &&
+      knownRunIDs.current.has(loadingID) &&
+      !currentRunIDs.has(loadingID);
+    knownRunIDs.current = currentRunIDs;
+
+    if (removedSelectedRun || removedLoadingRun) {
+      const removedRunID = selected?.run.id ?? loadingID;
+      selectionEpoch.current += 1;
+      inspectEpoch.current += 1;
+      inspectedFromURL.current = true;
+      autoInspectedRunID.current = null;
+      setLoadingID(null);
+      setSelected(null);
+      setError("");
+      setMobilePane("master");
+      const url = new URL(window.location.href);
+      if (
+        removedRunID !== null &&
+        Number(url.searchParams.get("run")) === removedRunID
+      ) {
+        url.searchParams.delete("run");
+        window.history.replaceState(null, "", url);
+      }
+      return;
+    }
+
     if (!selected) return;
     const latest = runs.find((run) => run.id === selected.run.id);
     if (latest && latest !== selected.run) {
       setSelected((current) => (current ? { ...current, run: latest } : null));
     }
-  }, [runs, selected]);
+  }, [runs, selected, loadingID]);
 
   const inspect = useCallback(
     async (
       run: WorkflowRun,
       syncRoute = new URLSearchParams(window.location.search).has("run"),
+      expectedSelectionEpoch = selectionEpoch.current,
     ) => {
+      if (expectedSelectionEpoch !== selectionEpoch.current) return;
+      const epoch = ++inspectEpoch.current;
       setLoadingID(run.id);
       setError("");
+      setSelected((current) => (current?.run.id === run.id ? current : null));
       if (syncRoute) {
         const url = new URL(window.location.href);
         url.searchParams.set("run", String(run.id));
@@ -142,6 +193,7 @@ export function WorkflowRunRecords({
             workflowApi.getRunMediaCandidates(run.id),
             workflowApi.getRunEvents(run.id),
           ]);
+        if (epoch !== inspectEpoch.current) return;
         setSelected({
           run,
           steps,
@@ -165,6 +217,7 @@ export function WorkflowRunRecords({
           events: events.filter((item) => Boolean(item.event_type)),
         });
       } catch (reason) {
+        if (epoch !== inspectEpoch.current) return;
         setError(
           reason instanceof Error
             ? reason.message
@@ -173,22 +226,41 @@ export function WorkflowRunRecords({
               : "Could not load step logs.",
         );
       } finally {
-        setLoadingID(null);
+        if (epoch === inspectEpoch.current) setLoadingID(null);
       }
     },
     [zh],
   );
 
+  const invalidateInspect = () => {
+    inspectEpoch.current += 1;
+    setLoadingID(null);
+  };
+
+  const selectedRunIntent = (): SelectedRunIntent =>
+    selected ? { run: selected.run, epoch: selectionEpoch.current } : null;
+
+  const refreshSelectedRunIfCurrent = async (intent: SelectedRunIntent) => {
+    if (intent && intent.epoch === selectionEpoch.current) {
+      await inspect(intent.run, undefined, intent.epoch);
+    }
+  };
+
+  const isCurrentSelectedRunIntent = (intent: SelectedRunIntent) =>
+    intent !== null && intent.epoch === selectionEpoch.current;
+
   const resolveInteraction = async (
     task: WorkflowInteractionTask,
     response: unknown,
   ) => {
+    const intent = selectedRunIntent();
     setError("");
     try {
       await workflowApi.resolveInteraction(task, response);
-      if (selected) await inspect(selected.run);
+      await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -200,12 +272,14 @@ export function WorkflowRunRecords({
   };
 
   const cancelInteraction = async (task: WorkflowInteractionTask) => {
+    const intent = selectedRunIntent();
     setError("");
     try {
       await workflowApi.cancelInteraction(task);
-      if (selected) await inspect(selected.run);
+      await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -226,6 +300,7 @@ export function WorkflowRunRecords({
     candidate: MediaCandidate,
     action: "select" | "apply" | "regenerate" | "reject",
   ) => {
+    const intent = selectedRunIntent();
     setError("");
     try {
       const body =
@@ -237,9 +312,10 @@ export function WorkflowRunRecords({
               }
             : undefined;
       await operationsApi.imageTaskAction(candidate.id, action, body);
-      if (selected) await inspect(selected.run);
+      await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -259,6 +335,7 @@ export function WorkflowRunRecords({
 
   const batchSelect = async () => {
     if (!selected || selectedCandidates.length === 0) return;
+    const intent = selectedRunIntent();
     setBatchBusy("select");
     setError("");
     try {
@@ -271,9 +348,10 @@ export function WorkflowRunRecords({
       await operationsApi.batchMediaAction(selected.run.id, "select", {
         selections,
       });
-      await inspect(selected.run);
+      await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -290,12 +368,19 @@ export function WorkflowRunRecords({
     candidate: MediaCandidate,
     openDialog = false,
   ) => {
+    const intent = selectedRunIntent();
     setError("");
     try {
       const preview = await operationsApi.previewImageTask(candidate.id);
-      setImagePreviews((current) => ({ ...current, [candidate.id]: preview }));
-      if (openDialog) setPreviewDialogCandidateID(candidate.id);
+      if (!intent || isCurrentSelectedRunIntent(intent)) {
+        setImagePreviews((current) => ({
+          ...current,
+          [candidate.id]: preview,
+        }));
+        if (openDialog) setPreviewDialogCandidateID(candidate.id);
+      }
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -331,15 +416,17 @@ export function WorkflowRunRecords({
       )
     )
       return;
+    const intent = selectedRunIntent();
     setBatchBusy("apply");
     setError("");
     try {
       await operationsApi.batchMediaAction(selected.run.id, "apply", {
         candidate_ids: selectedCandidates.map((candidate) => candidate.id),
       });
-      await inspect(selected.run);
+      await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -354,15 +441,17 @@ export function WorkflowRunRecords({
 
   const batchReject = async () => {
     if (!selected || selectedCandidates.length === 0) return;
+    const intent = selectedRunIntent();
     setBatchBusy("reject");
     setError("");
     try {
       await operationsApi.batchMediaAction(selected.run.id, "reject", {
         candidate_ids: selectedCandidates.map((candidate) => candidate.id),
       });
-      await inspect(selected.run);
+      await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -376,12 +465,14 @@ export function WorkflowRunRecords({
   };
 
   const cancelGeneration = async (candidate: MediaCandidate) => {
+    const intent = selectedRunIntent();
     setError("");
     try {
       await operationsApi.cancelImageTask(candidate.id);
-      if (selected) await inspect(selected.run);
+      await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -411,8 +502,11 @@ export function WorkflowRunRecords({
       )
     )
       return;
+    const intentEpoch = selectionEpoch.current;
     const refreshTimer = window.setInterval(() => {
-      void inspect(selected.run);
+      if (intentEpoch === selectionEpoch.current) {
+        void inspect(selected.run, undefined, intentEpoch);
+      }
     }, 4000);
     const clockTimer = window.setInterval(
       () => setGenerationNow(Date.now()),
@@ -426,6 +520,7 @@ export function WorkflowRunRecords({
 
   const retryStep = async (step: WorkflowStepRun) => {
     if (!selected || step.iteration === undefined) return;
+    const intent = selectedRunIntent();
     const key = `${step.step_id}:${step.iteration}`;
     setRetrying(key);
     setError("");
@@ -436,6 +531,7 @@ export function WorkflowRunRecords({
       });
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -450,6 +546,7 @@ export function WorkflowRunRecords({
 
   const retryFailedGroup = async (stepID: string) => {
     if (!selected) return;
+    const intent = selectedRunIntent();
     const iterations = selected.steps
       .filter(
         (step) =>
@@ -468,6 +565,7 @@ export function WorkflowRunRecords({
       });
       if (onRefresh) await onRefresh();
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return;
       setError(
         reason instanceof Error
           ? reason.message
@@ -487,16 +585,19 @@ export function WorkflowRunRecords({
       )
     )
       return false;
+    const intent =
+      selected?.run.id === run.id
+        ? { run, epoch: selectionEpoch.current }
+        : null;
     setCancelling(true);
     setError("");
     try {
       await workflowApi.cancelRun(run.id);
-      if (selected?.run.id === run.id) {
-        await inspect(run);
-      }
+      await refreshSelectedRunIfCurrent(intent);
       if (onRefresh) await onRefresh();
       return true;
     } catch (reason) {
+      if (intent && !isCurrentSelectedRunIntent(intent)) return false;
       setError(
         reason instanceof Error
           ? reason.message
@@ -527,19 +628,32 @@ export function WorkflowRunRecords({
   const deleteRunByID = async (run: WorkflowRun): Promise<boolean> => {
     if (!["succeeded", "failed", "cancelled"].includes(run.status))
       return false;
+    const selectedAtStart = selected?.run.id === run.id;
+    const routeAtStart =
+      Number(new URLSearchParams(window.location.search).get("run")) === run.id;
+    if (selectedAtStart || routeAtStart) {
+      selectionEpoch.current += 1;
+      invalidateInspect();
+    }
+    const intentEpoch = selectionEpoch.current;
     setDeleting(true);
     setError("");
     try {
       await workflowApi.deleteRun(run.id);
-      if (selected?.run.id === run.id) {
-        setSelected(null);
+      if (selectionEpoch.current === intentEpoch) {
+        if (selectedAtStart && selected?.run.id === run.id) {
+          setSelected(null);
+        }
         const url = new URL(window.location.href);
-        url.searchParams.delete("run");
-        window.history.replaceState(null, "", url);
+        if (Number(url.searchParams.get("run")) === run.id) {
+          url.searchParams.delete("run");
+          window.history.replaceState(null, "", url);
+        }
       }
       if (onRefresh) await onRefresh();
       return true;
     } catch (reason) {
+      if (selectionEpoch.current !== intentEpoch) return false;
       setError(
         reason instanceof Error
           ? reason.message
@@ -583,19 +697,31 @@ export function WorkflowRunRecords({
     if (!requested) {
       if (runs.length > 0) {
         inspectedFromURL.current = true;
+        const intentEpoch = ++selectionEpoch.current;
         workflowApi
           .getRuns()
           .then((allRuns) => {
+            if (intentEpoch !== selectionEpoch.current) return;
             const found = allRuns.find((run) => run.id === requestedID);
             if (found) void inspect(found, true);
           })
-          .catch(() => {});
+          .catch((reason) => {
+            if (intentEpoch !== selectionEpoch.current) return;
+            setError(
+              reason instanceof Error
+                ? reason.message
+                : zh
+                  ? "无法载入运行列表。"
+                  : "Could not load the run list.",
+            );
+          });
       }
       return;
     }
     inspectedFromURL.current = true;
+    selectionEpoch.current += 1;
     void inspect(requested, true);
-  }, [inspect, runs]);
+  }, [inspect, runs, zh]);
 
   useEffect(() => {
     const requestedID = Number(
@@ -611,6 +737,7 @@ export function WorkflowRunRecords({
     )
       return;
     autoInspectedRunID.current = candidate.id;
+    selectionEpoch.current += 1;
     void inspect(candidate, false);
   }, [filtered, inspect, loadingID, selected]);
 
@@ -623,8 +750,11 @@ export function WorkflowRunRecords({
           aria-label={zh ? "筛选 Workflow" : "Filter Workflow"}
           value={String(workflowID)}
           onChange={(nextValue) => {
-            setWorkflowID(Number(nextValue));
+            selectionEpoch.current += 1;
+            invalidateInspect();
+            inspectedFromURL.current = true;
             setSelected(null);
+            setWorkflowID(Number(nextValue));
             setMobilePane("master");
             autoInspectedRunID.current = null;
             const url = new URL(window.location.href);
@@ -643,8 +773,11 @@ export function WorkflowRunRecords({
           aria-label={zh ? "筛选状态" : "Filter Status"}
           value={statusFilter}
           onChange={(nextValue) => {
-            setStatusFilter(String(nextValue));
+            selectionEpoch.current += 1;
+            invalidateInspect();
+            inspectedFromURL.current = true;
             setSelected(null);
+            setStatusFilter(String(nextValue));
             setMobilePane("master");
             autoInspectedRunID.current = null;
             const url = new URL(window.location.href);
@@ -727,6 +860,8 @@ export function WorkflowRunRecords({
                     selected={selected?.run.id === run.id}
                     disabled={loadingID === run.id}
                     onClick={() => {
+                      selectionEpoch.current += 1;
+                      inspectedFromURL.current = true;
                       setMobilePane("detail");
                       void inspect(run, true);
                     }}
@@ -757,6 +892,10 @@ export function WorkflowRunRecords({
               variant="ghost"
               icon={<ArrowLeft />}
               onClick={() => {
+                selectionEpoch.current += 1;
+                invalidateInspect();
+                inspectedFromURL.current = true;
+                autoInspectedRunID.current = filtered[0]?.id ?? null;
                 setMobilePane("master");
                 const url = new URL(window.location.href);
                 url.searchParams.delete("run");

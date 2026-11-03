@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
@@ -41,6 +41,37 @@ const run = {
   finished_at: "2026-08-01T01:00:02Z",
   created_at: "2026-08-01T01:00:00Z",
 };
+
+type DeferredResponse = {
+  promise: Promise<Response>;
+  resolve: (response: Response) => void;
+  reject: (reason: Error) => void;
+};
+
+function deferredResponse(): DeferredResponse {
+  let resolve!: (response: Response) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<Response>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function resolveRunDetail(
+  requests: Map<number, DeferredResponse[]>,
+  runID: number,
+  offset = 0,
+) {
+  for (const request of (requests.get(runID) || []).slice(offset)) {
+    request.resolve(Response.json({ data: [] }));
+  }
+}
+
+const runDetailPath = new RegExp(
+  "^/api/admin/ai-workflow-runs/(\\d+)/" +
+    "(steps|resources|interactions|media-candidates|events)$",
+);
 
 describe("WorkflowRunRecords", () => {
   beforeEach(() => {
@@ -800,5 +831,269 @@ describe("WorkflowRunRecords", () => {
 
     await waitFor(() => expect(deleteCalls()).toHaveLength(1));
     expect(onRefresh).toHaveBeenCalled();
+  });
+
+  it("keeps the latest selected run when an older detail response arrives last", async () => {
+    const user = userEvent.setup();
+    const staleRun = { ...run, id: 7, error_message: "Stale Run #7 details" };
+    const requests = new Map<number, DeferredResponse[]>();
+    vi.mocked(apiFetch).mockImplementation((url) => {
+      const match = String(url).match(runDetailPath);
+      if (!match) return Promise.resolve(Response.json({ data: [] }));
+      const runID = Number(match[1]);
+      const deferred = deferredResponse();
+      requests.set(runID, [...(requests.get(runID) || []), deferred]);
+      return deferred.promise;
+    });
+
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run, staleRun]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await waitFor(() => expect(requests.get(7)).toHaveLength(5));
+    await user.click(screen.getByRole("button", { name: /Run #6/ }));
+    await waitFor(() => expect(requests.get(6)).toHaveLength(5));
+
+    await act(async () => resolveRunDetail(requests, 6));
+    expect(
+      await screen.findByRole("heading", { name: /Run #6/ }),
+    ).toBeInTheDocument();
+
+    await act(async () => resolveRunDetail(requests, 7));
+    expect(screen.getByRole("heading", { name: /Run #6/ })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /Run #7/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not let an older request clear the loading state of a newer selection", async () => {
+    const user = userEvent.setup();
+    const staleRun = { ...run, id: 7 };
+    const requests = new Map<number, DeferredResponse[]>();
+    vi.mocked(apiFetch).mockImplementation((url) => {
+      const match = String(url).match(runDetailPath);
+      if (!match) return Promise.resolve(Response.json({ data: [] }));
+      const runID = Number(match[1]);
+      const deferred = deferredResponse();
+      requests.set(runID, [...(requests.get(runID) || []), deferred]);
+      return deferred.promise;
+    });
+
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run, staleRun]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await waitFor(() => expect(requests.get(7)).toHaveLength(5));
+    await user.click(screen.getByRole("button", { name: /Run #6/ }));
+    await waitFor(() => expect(requests.get(6)).toHaveLength(5));
+
+    await act(async () => resolveRunDetail(requests, 7));
+    expect(screen.getByRole("button", { name: /Run #6/ })).toBeDisabled();
+    expect(screen.getByText("正在载入 Run 证据…")).toBeInTheDocument();
+
+    await act(async () => resolveRunDetail(requests, 6));
+    expect(
+      await screen.findByRole("heading", { name: /Run #6/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Run #6/ })).toBeEnabled();
+  });
+
+  it("does not surface an obsolete detail request error over the current run", async () => {
+    const user = userEvent.setup();
+    const staleRun = { ...run, id: 7 };
+    const requests = new Map<number, DeferredResponse[]>();
+    vi.mocked(apiFetch).mockImplementation((url) => {
+      const match = String(url).match(runDetailPath);
+      if (!match) return Promise.resolve(Response.json({ data: [] }));
+      const runID = Number(match[1]);
+      const deferred = deferredResponse();
+      requests.set(runID, [...(requests.get(runID) || []), deferred]);
+      return deferred.promise;
+    });
+
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run, staleRun]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await waitFor(() => expect(requests.get(7)).toHaveLength(5));
+    await user.click(screen.getByRole("button", { name: /Run #6/ }));
+    await waitFor(() => expect(requests.get(6)).toHaveLength(5));
+    await act(async () => resolveRunDetail(requests, 6));
+    expect(
+      await screen.findByRole("heading", { name: /Run #6/ }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      const staleRequests = requests.get(7) || [];
+      staleRequests[0].reject(new Error("Obsolete detail request failed"));
+      resolveRunDetail(requests, 7, 1);
+    });
+
+    expect(screen.getByRole("heading", { name: /Run #6/ })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Provider output did not match the required Markdown format.",
+    );
+    expect(
+      screen.queryByText("Obsolete detail request failed"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps a current detail error actionable and allows a deliberate retry", async () => {
+    const user = userEvent.setup();
+    const requests = new Map<number, DeferredResponse[]>();
+    vi.mocked(apiFetch).mockImplementation((url) => {
+      const match = String(url).match(runDetailPath);
+      if (!match) return Promise.resolve(Response.json({ data: [] }));
+      const runID = Number(match[1]);
+      const deferred = deferredResponse();
+      requests.set(runID, [...(requests.get(runID) || []), deferred]);
+      return deferred.promise;
+    });
+
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await waitFor(() => expect(requests.get(6)).toHaveLength(5));
+    await act(async () => {
+      const firstAttempt = requests.get(6) || [];
+      firstAttempt[0].reject(new Error("Current detail request failed"));
+      resolveRunDetail(requests, 6, 1);
+    });
+    expect(
+      await screen.findByText("Current detail request failed"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Run #6/ }));
+    await waitFor(() => expect(requests.get(6)).toHaveLength(10));
+    await act(async () => resolveRunDetail(requests, 6, 5));
+    expect(
+      await screen.findByRole("heading", { name: /Run #6/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Current detail request failed"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not let a delayed URL run lookup override a newer row selection", async () => {
+    const user = userEvent.setup();
+    const lookup = deferredResponse();
+    const staleUrlRun = {
+      ...run,
+      id: 999,
+      error_message: "Stale URL lookup target",
+    };
+    window.history.replaceState(null, "", "/?run=999");
+    vi.mocked(apiFetch).mockImplementation((url) =>
+      String(url) === "/api/admin/ai-workflow-runs"
+        ? lookup.promise
+        : Promise.resolve(Response.json({ data: [] })),
+    );
+
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(apiFetch).toHaveBeenCalledWith("/api/admin/ai-workflow-runs"),
+    );
+    await user.click(screen.getByRole("button", { name: /Run #6/ }));
+    expect(
+      await screen.findByRole("heading", { name: /Run #6/ }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      lookup.resolve(Response.json({ data: [run, staleUrlRun] }));
+    });
+
+    expect(screen.getByRole("heading", { name: /Run #6/ })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /Run #999/ }),
+    ).not.toBeInTheDocument();
+    expect(new URL(window.location.href).searchParams.get("run")).toBe("6");
+  });
+
+  it("surfaces a current URL run lookup failure instead of silently swallowing it", async () => {
+    window.history.replaceState(null, "", "/?run=999");
+    vi.mocked(apiFetch).mockImplementation((url) =>
+      String(url) === "/api/admin/ai-workflow-runs"
+        ? Promise.reject(new Error("Run list lookup failed"))
+        : Promise.resolve(Response.json({ data: [] })),
+    );
+
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Run list lookup failed"),
+    ).toBeInTheDocument();
+  });
+
+  it("invalidates a pending detail read when its run is removed from the collection", async () => {
+    const requests = new Map<number, DeferredResponse[]>();
+    vi.mocked(apiFetch).mockImplementation((url) => {
+      const match = String(url).match(runDetailPath);
+      if (!match) return Promise.resolve(Response.json({ data: [] }));
+      const runID = Number(match[1]);
+      const deferred = deferredResponse();
+      requests.set(runID, [...(requests.get(runID) || []), deferred]);
+      return deferred.promise;
+    });
+
+    const { rerender } = render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await waitFor(() => expect(requests.get(6)).toHaveLength(5));
+    rerender(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    await act(async () => resolveRunDetail(requests, 6));
+    expect(
+      screen.queryByRole("heading", { name: /Run #6/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("选择一个 Run 查看证据")).toBeInTheDocument();
   });
 });
