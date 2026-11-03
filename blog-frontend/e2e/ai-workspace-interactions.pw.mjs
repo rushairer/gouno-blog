@@ -585,7 +585,16 @@ test("obsolete Workflow run detail errors do not replace the current selection",
   await expect(
     page.getByRole("alert").filter({ hasText: "Injected stale run detail failure" }),
   ).toHaveCount(0);
-  expectFixtureHealth(fixtureState, consoleProblems);
+  // The five intentionally injected HTTP 502 responses produce five Chromium
+  // resource-load console errors. Verify only those expected messages occur;
+  // page exceptions, warnings and any other console errors still fail the test.
+  await expect.poll(() => consoleProblems.length).toBe(5);
+  expect(consoleProblems).toEqual(
+    Array(5).fill(
+      "error: Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    ),
+  );
+  expectFixtureHealth(fixtureState, []);
   await attachScreenshot(page, testInfo, "u04a-workflow-run-stale-error-ignored");
 });
 
