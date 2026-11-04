@@ -6,7 +6,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 ## [Unreleased]
 
 ### Changed
-- Upgrade the Gouno Core runtime dependency to the published v1.4.0 release; retain the repository's existing architecture and product contracts.
+- Upgrade the Gouno Core runtime dependency to the published v1.4.0 release; retain the repository's existing architecture and product contracts. Align the generated backend module's inherited YAML, crypto, sys, text, and pipeline requirements with Core v1.4.0.
 - Pin Playwright browser acceptance and Showcase Parity jobs to ubuntu-24.04; ubuntu-latest has moved to Ubuntu 26.04, which Playwright 1.55.0 does not support.
 
 ### Changed
