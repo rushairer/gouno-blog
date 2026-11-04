@@ -154,3 +154,7 @@ This document defines the **immutable architectural rules, security baselines, a
 ## Browser test runner baseline
 
 - Playwright 1.55.0 browser acceptance and Showcase Parity jobs must use the explicit ubuntu-24.04 runner. Do not use ubuntu-latest for Playwright jobs until the pinned Playwright version explicitly supports the new runner image; any runner-image migration must pass both browser acceptance and Showcase Parity gates.
+
+## Gouno Core release dependency
+
+- Pin the Gouno Core dependency to a published immutable release tag. Verify the exact tag target and module checksums before upgrading. After a Core upgrade, run the repository's full tests, race, vet, lint, govulncheck, and all product-specific integration/security gates; do not treat a version bump as complete based only on `go mod tidy`.
