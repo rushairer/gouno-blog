@@ -150,3 +150,7 @@ This document defines the **immutable architectural rules, security baselines, a
 - Prettier `3.8.5` is an intentional governance pin while certified Product paths are frozen. Patch updates may be evaluated normally; formatter minor/major changes that rewrite certified Product source require an explicit certification-impact review before adoption rather than automatic dependency churn.
 - Dependency freshness does not mean choosing the numerically highest major. Runtime, type declarations, compiler CLI, programmatic API consumers, production compatibility, immutable deployment inputs, and manual-first Showcase certification must remain aligned.
 
+
+## Browser test runner baseline
+
+- Playwright 1.55.0 browser acceptance and Showcase Parity jobs must use the explicit ubuntu-24.04 runner. Do not use ubuntu-latest for Playwright jobs until the pinned Playwright version explicitly supports the new runner image; any runner-image migration must pass both browser acceptance and Showcase Parity gates.
