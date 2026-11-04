@@ -6,6 +6,9 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 ## [Unreleased]
 
 ### Changed
+- Pin Playwright browser acceptance and Showcase Parity jobs to ubuntu-24.04; ubuntu-latest has moved to Ubuntu 26.04, which Playwright 1.55.0 does not support.
+
+### Changed
 
 - Add immediate, fail-closed keyless Cosign verification for every published backend/frontend/Seed image by its immutable digest and exact GitHub Actions workflow/OIDC identity; reject untrusted refs/images or failed verification before recording release digests. Add independent positive/negative shell regression tests to CI and require a fresh publication of all images when the shared signing guard changes. No application/Connector/SSO behavior changes.
 
