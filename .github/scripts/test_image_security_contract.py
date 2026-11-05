@@ -19,7 +19,7 @@ class ImageSecurityContractTest(unittest.TestCase):
         frontend = (REPO_ROOT / "blog-frontend" / "Dockerfile").read_text(encoding="utf-8")
 
         self.assertIn("ca-certificates=20261020-r0", backend)
-        self.assertIn("tzdata=2026e-r0", backend)
+        self.assertIn("tzdata=2026f-r0", backend)
         self.assertIn("ca-certificates=20261020-r0", seed)
         self.assertIn("zlib=1.3.2-r1", backend)
         self.assertIn("zlib=1.3.2-r1", seed)

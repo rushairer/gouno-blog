@@ -34,13 +34,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GOSSO_RELEASE_VERSION: "1.6.1"
-  GOSSO_RELEASE_DIGEST: "sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b"
-  GOSSO_RELEASE_IMAGE: ghcr.io/rushairer/gosso:v1.6.1@sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b
+  GOSSO_RELEASE_VERSION: "1.7.0"
+  GOSSO_RELEASE_DIGEST: "sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a"
+  GOSSO_RELEASE_IMAGE: ghcr.io/rushairer/gosso:v1.7.0@sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a
 
 jobs:
-  gosso-1-6-1-bff:
-    name: Gosso v1.6.1 BFF acceptance
+  gosso-1-7-0-bff:
+    name: Gosso v1.7.0 BFF acceptance
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
