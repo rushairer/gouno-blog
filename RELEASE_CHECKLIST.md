@@ -1,7 +1,7 @@
 # Release Checklist
 
 - [ ] Root CHANGELOG, version tag, image tags, and compatibility matrix agree.
-- [ ] `doc/release-manifest-v1.1.0.md` contains immutable digests for every
+- [ ] `doc/release-manifest-v1.6.0.md` contains immutable digests for every
   already-published downstream application image; Blog's own target rows remain
   blocked until the tag workflow publishes and attaches their digest files.
 - [ ] Backend, seed, frontend, dependency, and vulnerability gates pass.
