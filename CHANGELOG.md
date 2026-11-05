@@ -5,11 +5,19 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Changed
-- Upgrade the Gouno Core runtime dependency to the published v1.4.0 release; retain the repository's existing architecture and product contracts. Align the generated backend module's inherited YAML, crypto, sys, text, and pipeline requirements with Core v1.4.0.
-- Pin Playwright browser acceptance and Showcase Parity jobs to ubuntu-24.04; ubuntu-latest has moved to Ubuntu 26.04, which Playwright 1.55.0 does not support.
+Release candidate: **v1.6.0**. This section is not a published release. Release remains blocked by upstream acceptance, manual-first Showcase recertification and the complete deployment/security checklist.
+
+### Added
+
+- Add a read-only external capability gateway with scoped machine authentication and administrative API Access management. Add provider/vendor protocol configuration and guarded image-generation reconciliation/manual-resolution capabilities; these are backward-compatible user-facing features supporting a v1.6.0 candidate rather than a patch-only release.
+
+- Local `identity-backfill report` / `approve` commands with transactional, evidence-referenced mapping records.
+- Disposable database integration CI gate and historical upgrade regressions; align frontend CI with the complete quality command.
 
 ### Changed
+
+- Upgrade the Gouno Core runtime dependency to the published v1.4.0 release; retain the repository's existing architecture and product contracts. Align the generated backend module's inherited YAML, crypto, sys, text, and pipeline requirements with Core v1.4.0.
+- Pin Playwright browser acceptance and Showcase Parity jobs to ubuntu-24.04; ubuntu-latest has moved to Ubuntu 26.04, which Playwright 1.55.0 does not support.
 
 - Add immediate, fail-closed keyless Cosign verification for every published backend/frontend/Seed image by its immutable digest and exact GitHub Actions workflow/OIDC identity; reject untrusted refs/images or failed verification before recording release digests. Add independent positive/negative shell regression tests to CI and require a fresh publication of all images when the shared signing guard changes. No application/Connector/SSO behavior changes.
 
@@ -19,9 +27,39 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 - Introduce a fail-closed, executable frontend Oxlint warning ratchet, initially tightened from 66 to 65 by removing an unused import in the Sudo hook test. Both `quality` and `check` enforce the same budget with parser/false-green regressions. No certified Product UI, BFF, permissions or Connector behavior was modified. The remaining warnings are technical debt, not waived or claimed resolved.
 
+- Split nine independent public Blog routes (`Home`, `ArticleIndex`, `PostDetail`, `Categories`, `Tags`, `Archive`, `About`, `NotFound`, `CustomPageView`) into lazy-loaded modules while retaining PublicShell/Suspense loading. Enforce a real 500 kB maximum for **every** emitted JavaScript chunk at build time, with false-green tests for missing output and oversized renamed/vendor chunks. Keep security and permissions, certified page composition and Connector hold unchanged.
+- Pin the isolated Playwright browser-acceptance dependency at 1.63.0 with a committed lockfile, run it through `npm ci`, and audit its complete dependency graph in CI.
+- Verify Go module contents during backend and seed CI and pin the govulncheck tool to its v1.6.0 commit for reproducible supply-chain checks.
+- Resolve token revocation through the OIDC discovery `revocation_endpoint` and require the endpoint to share the configured issuer HTTPS origin.
+
+- Keep local first-party application images on the floating `main` channel with always-pull semantics, while production Compose fails closed unless every first-party image is supplied explicitly as an immutable version+digest reference; third-party infrastructure images remain digest-pinned.
+- Upgrade the frontend's confidential-BFF client dependency from `@gosso/client` 0.9.2 to the registry-published 0.9.3 release.
+- Align the bundled Gosso deployment contract with the final 1.6 security baseline: keep only the explicit Docker private back-channel subnet, advance the production Gosso image example to v1.6.1, and gate confidential-BFF RFC 7009 revocation against the published v1.6.1 artifact.
+- Standardize Modal structure and design system alignment: move modal action buttons out of form/body content into unified sticky `footer` prop across all modals (Step-Up MFA, Tags, Users, Post Reports, Article Preview), and maintain stable close button geometry anchored to the title bar regardless of subtitle presence.
+- Align Knowledge Base (Embedding Profiles) table layout and styling with Model Connections (Provider Profiles): separate API Key into an isolated secret-masked column with standard subtext, use `.provider-identity` cell structure, and unify action icon primitives (`Edit2`).
+
+- Add Frosted-Glass Sudo Security Gate (`<SudoGate>`) to lock and blur high-privilege configuration zones (Site Settings, Member Roles, Model Connections, Knowledge Base) until authenticated, with 1-click MFA step-up activation and 10-minute non-disruptive editing windows.
+- Add Proactive Sudo Mode Sensing & Status Banner (`useSudoMode`, `SudoBanner`) across Site Settings, Member Roles, and AI Model Connections, allowing users to pre-activate security credentials and view real-time remaining Sudo validity.
+- Add zero-cognitive-load automatic background request re-dispatch on Step-Up MFA completion so that saving forms completes seamlessly with instant success feedback.
+- Add universal form draft preservation and auto-restore hook (`useFormDraft`) with `STEP_UP_MFA_REQUIRED_EVENT` snapshotting across Site Settings, AI Provider, Embedding, and Agent forms to prevent input loss during Step-Up MFA authentication.
+- Add seamless popup-based Step-Up MFA authentication (`openStepUpPopup`, `checkAndHandleStepUpPopupCallback`) to allow in-place verification and automatic request retry without page reloads.
+
 ### Fixed
 
 - **React Hook correctness**: preserve the latest committed Provider/Embedding/Agent form draft for Step-Up MFA redirection without writing refs during render; update article browser title and SEO metadata when global site branding changes, including when an explicit brand override is later removed. Add rerender, key isolation, disabled form, canonical head cleanup and event regression tests. No certified Page/Connector source changes.
+
+- Restore OpenAI-compatible automatic streaming fallback for upstreams that return `Stream must be set to true` (and equivalent explicit required-stream variants), including Responses API requests; Agent run failures now report the actual provider attempt count instead of always saying three attempts.
+
+- Reject unsafe Markdown URL schemes, including `javascript:`, `data:`, and `blob:`, for rendered links and images.
+- Keep the router PostVersion restore test adapter aligned with the canonical four-argument restore contract.
+
+- Fix `.panel-header` margin/padding inside `.workspace-panel` to eliminate double horizontal inset and align perfectly with table and form content.
+- Standardize `.panel-header` titles across Knowledge Base and Connector workspaces to plain text titles without inline icons.
+- Align Toast notification layout: vertically center icon and text, set `flex: 1` on message container, and push close button to the far right (`margin-left: auto`).
+- Match Workflow resume checkpoints by iteration, preserving each for_each item's output and failed-item retry selection.
+
+- Allow fresh databases to migrate without an Owner. Record system template provenance and require explicit exact-identity approval for unresolved historical human records; see [migration exception and upgrade impact](docs/quality/adr-q01a-identity-migrations.md).
+- Attribute Skill and Workflow edits' new versions to the authenticated local actor, preserving original template provenance.
 
 ### Security
 
@@ -56,46 +94,6 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - Gate container images with SHA-pinned Trivy and Grype scans for fixable HIGH/CRITICAL vulnerabilities, both on pull-request local images and on published immutable GHCR digests.
 - Refresh the frontend Nginx runtime image to the current immutable `stable-alpine` digest and explicitly pin patched `libexpat=2.8.5-r0` / `pcre2=10.49-r0` after the new scanner gate identified fixable HIGH vulnerabilities in the previous runtime layers.
 - Pin Alpine `ca-certificates` and `tzdata` package revisions used by backend/seed Dockerfiles so image package installation is reproducible.
-
-
-### Changed
-
-- Split nine independent public Blog routes (`Home`, `ArticleIndex`, `PostDetail`, `Categories`, `Tags`, `Archive`, `About`, `NotFound`, `CustomPageView`) into lazy-loaded modules while retaining PublicShell/Suspense loading. Enforce a real 500 kB maximum for **every** emitted JavaScript chunk at build time, with false-green tests for missing output and oversized renamed/vendor chunks. Keep security and permissions, certified page composition and Connector hold unchanged.
-- Pin the isolated Playwright browser-acceptance dependency at 1.63.0 with a committed lockfile, run it through `npm ci`, and audit its complete dependency graph in CI.
-- Verify Go module contents during backend and seed CI and pin the govulncheck tool to its v1.6.0 commit for reproducible supply-chain checks.
-- Resolve token revocation through the OIDC discovery `revocation_endpoint` and require the endpoint to share the configured issuer HTTPS origin.
-
-- Keep local first-party application images on the floating `main` channel with always-pull semantics, while production Compose fails closed unless every first-party image is supplied explicitly as an immutable version+digest reference; third-party infrastructure images remain digest-pinned.
-- Upgrade the frontend's confidential-BFF client dependency from `@gosso/client` 0.9.2 to the registry-published 0.9.3 release.
-- Align the bundled Gosso deployment contract with the final 1.6 security baseline: keep only the explicit Docker private back-channel subnet, advance the production Gosso image example to v1.6.1, and gate confidential-BFF RFC 7009 revocation against the published v1.6.1 artifact.
-- Standardize Modal structure and design system alignment: move modal action buttons out of form/body content into unified sticky `footer` prop across all modals (Step-Up MFA, Tags, Users, Post Reports, Article Preview), and maintain stable close button geometry anchored to the title bar regardless of subtitle presence.
-- Align Knowledge Base (Embedding Profiles) table layout and styling with Model Connections (Provider Profiles): separate API Key into an isolated secret-masked column with standard subtext, use `.provider-identity` cell structure, and unify action icon primitives (`Edit2`).
-
-- Add Frosted-Glass Sudo Security Gate (`<SudoGate>`) to lock and blur high-privilege configuration zones (Site Settings, Member Roles, Model Connections, Knowledge Base) until authenticated, with 1-click MFA step-up activation and 10-minute non-disruptive editing windows.
-- Add Proactive Sudo Mode Sensing & Status Banner (`useSudoMode`, `SudoBanner`) across Site Settings, Member Roles, and AI Model Connections, allowing users to pre-activate security credentials and view real-time remaining Sudo validity.
-- Add zero-cognitive-load automatic background request re-dispatch on Step-Up MFA completion so that saving forms completes seamlessly with instant success feedback.
-- Add universal form draft preservation and auto-restore hook (`useFormDraft`) with `STEP_UP_MFA_REQUIRED_EVENT` snapshotting across Site Settings, AI Provider, Embedding, and Agent forms to prevent input loss during Step-Up MFA authentication.
-- Add seamless popup-based Step-Up MFA authentication (`openStepUpPopup`, `checkAndHandleStepUpPopupCallback`) to allow in-place verification and automatic request retry without page reloads.
-
-### Fixed
-
-- Restore OpenAI-compatible automatic streaming fallback for upstreams that return `Stream must be set to true` (and equivalent explicit required-stream variants), including Responses API requests; Agent run failures now report the actual provider attempt count instead of always saying three attempts.
-
-- Reject unsafe Markdown URL schemes, including `javascript:`, `data:`, and `blob:`, for rendered links and images.
-- Keep the router PostVersion restore test adapter aligned with the canonical four-argument restore contract.
-
-- Fix `.panel-header` margin/padding inside `.workspace-panel` to eliminate double horizontal inset and align perfectly with table and form content.
-- Standardize `.panel-header` titles across Knowledge Base and Connector workspaces to plain text titles without inline icons.
-- Align Toast notification layout: vertically center icon and text, set `flex: 1` on message container, and push close button to the far right (`margin-left: auto`).
-- Match Workflow resume checkpoints by iteration, preserving each for_each item's output and failed-item retry selection.
-
-- Allow fresh databases to migrate without an Owner. Record system template provenance and require explicit exact-identity approval for unresolved historical human records; see [migration exception and upgrade impact](docs/quality/adr-q01a-identity-migrations.md).
-- Attribute Skill and Workflow edits' new versions to the authenticated local actor, preserving original template provenance.
-
-### Added
-
-- Local `identity-backfill report` / `approve` commands with transactional, evidence-referenced mapping records.
-- Disposable database integration CI gate and historical upgrade regressions; align frontend CI with the complete quality command.
 
 ## [1.5.26] - 2026-09-04
 
