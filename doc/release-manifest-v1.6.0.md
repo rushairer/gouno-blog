@@ -11,7 +11,7 @@ The v1.5.26-to-main diff includes new read-only external capability/API Access a
 | Blog backend | Core v1.4.0; patched Go 1.27.x | Final Blog SHA and tagged image pending |
 | Blog frontend | @gouno/ui 0.4.9; @gosso/client 0.9.3; Node 24 LTS | Final tagged image pending |
 | Blog Seed | Patched Go 1.27.x | Final tagged image pending |
-| Gosso | v1.7.0 candidate | Exact published version+digest and BFF compatibility pending |
+| Gosso | v1.7.0@sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a | Published signature/SBOM/Helm acceptance complete; final Blog BFF compatibility still required |
 | Gosso Admin | v0.7.25 candidate | Manual Showcase recertification and staging acceptance pending |
 
 ## Artifact inventory to complete after authorized publication

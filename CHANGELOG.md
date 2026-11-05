@@ -16,6 +16,8 @@ Release candidate: **v1.6.0**. This section is not a published release. Release 
 
 ### Changed
 
+- Pin the isolated BFF compatibility gate and production Gosso example to the signature-verified Gosso v1.7.0 release digest. Keep Admin and Blog release acceptance separate; no BFF or Connector behavior changes.
+
 - Upgrade the Gouno Core runtime dependency to the published v1.4.0 release; retain the repository's existing architecture and product contracts. Align the generated backend module's inherited YAML, crypto, sys, text, and pipeline requirements with Core v1.4.0.
 - Pin Playwright browser acceptance and Showcase Parity jobs to ubuntu-24.04; ubuntu-latest has moved to Ubuntu 26.04, which Playwright 1.55.0 does not support.
 
