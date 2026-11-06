@@ -33,3 +33,15 @@ Candidate: **v1.6.0**, not v1.5.27: the diff after v1.5.26 introduces the read-o
 - [ ] After tagging, independently verify all three image digests and exact `publish-images.yml@refs/tags/v1.6.0` Cosign identities, SBOMs, provenance and release attachments. Signing success is insufficient.
 
 Core stays v1.4.0; frontend registry pins stay @gouno/ui 0.4.9 and @gosso/client 0.9.3. No product, security or certification status is changed by this release-documentation preparation.
+
+### November 6 evidence refresh — no release approval
+
+Current main `53d4a7c9eb781b12bc583800fdda3a62af515be2` passed fresh
+[Browser Acceptance, 366 tests](https://github.com/rushairer/gouno-blog/actions/runs/42195398048)
+and [Showcase Parity, 86 tests](https://github.com/rushairer/gouno-blog/actions/runs/42195404351).
+Existing exact-main backend/database/Seed/frontend CI and Gosso v1.7.0 BFF
+acceptance are linked in the candidate manifest. No checkbox above is inferred
+from those signals alone. The actual Canonical Showcase has failed font assets;
+`blog-admin-ai` remains pending, Admin v0.7.25 remains unpublished, and Staging,
+backup restore and rollback acceptance still lack an identified authorized
+target and receipts. No target tag/image/signature/SBOM or deployment is claimed.
