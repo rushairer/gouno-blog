@@ -18,7 +18,7 @@ RUN npm run build
 # Static serving does not use the full image's XML, njs or image-filter modules.
 FROM nginx:stable-alpine-slim@sha256:dede8895648b461178c3bc604f7eed4423efe5220b2c4d839f5eb3d34ac3f8f7
 
-RUN apk add --no-cache pcre2=10.49-r0 zlib=1.3.2-r1 \
+RUN apk add --no-cache pcre2=10.49-r0 zlib=1.4-r0 \
     && mkdir -p /etc/nginx/snippets \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
     && touch /var/run/nginx.pid \

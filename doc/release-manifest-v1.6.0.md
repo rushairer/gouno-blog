@@ -8,10 +8,10 @@ The v1.5.26-to-main diff includes new read-only external capability/API Access a
 
 | Component | Required candidate baseline | Published release acceptance |
 | --- | --- | --- |
-| Blog backend | Core v1.4.0; patched Go 1.27.x | Final Blog SHA and tagged image pending |
+| Blog backend | Core v1.4.0; patched Go 1.27.x; x/net v0.62.0 | Final Blog SHA and tagged image pending |
 | Blog frontend | @gouno/ui 0.4.9; @gosso/client 0.9.3; Node 24 LTS | Final tagged image pending |
 | Blog Seed | Patched Go 1.27.x | Final tagged image pending |
-| Gosso | v1.7.0@sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a | Published signature/SBOM/Helm acceptance complete; final Blog BFF compatibility still required |
+| Gosso | v1.7.0@sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a | Published supply-chain receipts exist; initial-secret BFF passes, but real secret-rotation defect blocks full governance acceptance |
 | Gosso Admin | v0.7.25 candidate | Manual Showcase recertification and staging acceptance pending |
 
 ## Artifact inventory to complete after authorized publication
@@ -34,3 +34,41 @@ Each full identity is `https://github.com/rushairer/gouno-blog/.github/workflows
 - Identify staging configuration, backups, rollback points and immutable upstream images; complete the root release checklist. No production target is authorized by this task.
 
 Keep actual deployment configuration and secrets outside this manifest. Add the completed immutable artifact evidence in a post-publication documentation commit without moving the validated tag.
+
+## November 6 final-closeout verification
+
+This manifest remains **blocked / unpublished**. Current audited main is
+`53d4a7c9eb781b12bc583800fdda3a62af515be2`; remote `v1.6.0` is absent.
+The formal version remains v1.5.26. No main-channel digest replaces any PENDING
+release row above.
+
+| Exact-main evidence | Result |
+| --- | --- |
+| [CI 42016283335](https://github.com/rushairer/gouno-blog/actions/runs/42016283335) | Backend race/vet/govulncheck, required isolated PostgreSQL integration, Seed, frontend quality/coverage/build, Compose and image contract passed; dependency review is event-skipped on main, not a PR-review pass |
+| [Gosso v1.7.0 BFF 42016283306](https://github.com/rushairer/gouno-blog/actions/runs/42016283306) | Passed against the pinned published image; confidential seed, PKCE/resource audience, refresh, HttpOnly login flow, HTTPS back-channel logout and revocation exercised |
+| [Browser Acceptance 42195398048](https://github.com/rushairer/gouno-blog/actions/runs/42195398048) | 366 passed on Ubuntu 24.04 |
+| [Showcase Parity 42195404351](https://github.com/rushairer/gouno-blog/actions/runs/42195404351) | 86 passed; not manual certification |
+| Supplemental native-browser interaction subset | 23 passed on macOS; delayed stale success/error, pending-read invalidation, selection/refresh ownership and related AI interactions; fixture presentation evidence only |
+
+Browser artifact: `13492610459`, API archive digest
+`sha256:b1c85023f59ccc94363d5f20cd3a4d0e90379423a3f438f360cf3c56b9216b58`.
+Parity artifact: `13492445481`, API archive digest
+`sha256:e4c594f58407393975c06c1d86e664463ad7a4a30ebc2649d65694c65c40f7d0`.
+Download/hash receipts are retained separately; an API digest alone is not a
+claim of independent archive verification or visual approval.
+
+`blog-admin-ai` stays **needs-manual-recertification**. The November6 Canonical font defect was fixed in [UI PR #161](https://github.com/rushairer/gouno-ui/pull/161), merged at `d17154139bb217be9cd61b140c78db73b1430b3e`. [Normal Golden 42206493211](https://github.com/rushairer/gouno-ui/actions/runs/42206493211) passed187; both consumer gates and Pages passed. Real public Chromium on November8 confirmed both font faces loaded via HTTP200 and match published0.4.9 bytes. UI/Client package pins are unchanged. Required direct state review and maintainer certification are still pending; automation cannot sign the ledger.
+
+## November 8 upstream correctness and operational blockers
+
+Admin v0.7.25 remains unpublished. [Its stronger official-image compatibility check](https://github.com/rushairer/gosso-admin/actions/runs/42203332667) proves Gosso v1.7.0 does not persist rotated Client Secrets: the retired secret authenticates and the returned secret receives invalid_client. Signing/SBOM provenance does not establish feature correctness. Existing Blog BFF success uses initial credentials and does not certify rotation.
+
+A [concrete tested local patch and receipt](https://github.com/rushairer/gosso-admin/pull/97) proposes a narrow dedicated secret CAS, with real database owner/admin/rollback/concurrency regressions and additional race fixes. It is **not an upstream merged or released patch**. Gosso is read-only under the current task; v1.7.1 requires a scope exception and full independent upstream publication/compatibility acceptance. Keep the baseline table on the actual published v1.7.0 until a real replacement is accepted; do not substitute Gosso main/local images.
+
+No authorized Staging target, actual backup-restore or rollback receipt has been supplied. Admin release, manual certification and operational gates remain open. No target Tag, own image digest, signature or SBOM is asserted. Keep Connector behavior freeze, confidential BFF/local Owner authorization and quality ratchets unchanged. Final merged Blog SHA needs its own acceptance. The formal version remains v1.5.26.
+
+## November 8 image-scan security remediation
+
+The documentation-head image run [42440708333](https://github.com/rushairer/gouno-blog/actions/runs/42440708333) newly fails backend HIGH scanning on `golang.org/x/net v0.60.0`, `CVE-2026-78661`. [Official Go advisory GO-2026-6860](https://pkg.go.dev/vuln/GO-2026-6860) fixes HTML parser quadratic resource consumption in v0.62.0. The candidate now pins v0.62.0 with matching verified checksums and raises its fail-closed downgrade floor. Keep unrelated inherited requirements and all scanner thresholds intact. New final-head backend/database/dependency/image gates are required; historical green builds do not certify this update. No production deploy or target release is asserted.
+
+The same resumed image run independently finds Critical `CVE-2026-4738` in runtime zlib1.3.2-r1 via Grype. All three runtime Dockerfiles now pin Alpine zlib1.4-r0, confirmed installable on the existing immutable Alpine/Nginx bases; the runtime contract's exact-pin expectations advance with it. [Upstream zlib1.4 release notes](https://zlib.net/) include the fix. Nginx configuration validation passes with the patched package. Both scanners and severity cutoffs remain required. Final source-head multiarchitecture image builds and both scans must pass before acceptance.

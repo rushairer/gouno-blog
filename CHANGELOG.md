@@ -66,6 +66,10 @@ Release candidate: **v1.6.0**. This section is not a published release. Release 
 
 ### Security
 
+- Pin backend, frontend and Seed runtime zlib to Alpine `1.4-r0` after the November 8 Grype database flags `CVE-2026-4738` at the mandatory Critical threshold. Verify the package installs on the existing immutable runtime bases and Nginx configuration remains valid; preserve both vulnerability scanners and exact-pin regression checks.
+
+- Patch backend `golang.org/x/net` to `v0.62.0` with verified module checksums after the release image scan detected HIGH `CVE-2026-78661` / [GO-2026-6860](https://pkg.go.dev/vuln/GO-2026-6860). Raise the fail-closed dependency floor to prevent downgrade; retain Core v1.4.0, UI/Client pins, public behavior and container scan thresholds.
+
 - Reconcile the pending backend-Go Dependabot group without reverting the mainline JOSE requirement: upgrade AWS SDK, miniredis and Tink Go (`v2.9.0`) while retaining `go-jose/v4 v4.1.6` (instead of the stale PR's `v4.1.4`). Preserve checked module checksums and add fail-closed BFF cryptographic dependency-floor tests with downgrade/missing/duplicate/malformed negative probes. No token, cookie, OAuth, API or keyset protocol change; existing TLS issuer/AEAD contracts remain mandatory.
 
 - Fix a Page read reliability/security misclassification and reject Page SERIAL/int64 identifier overflow before Get/Update/Delete SQL: confirmed no-row results retain the existing public/admin 404 and hidden-draft policy, while unknown PostgreSQL errors or canceled reads are no longer silently converted into “page not found” and instead return a redacted 5xx. Restore Article numeric-looking Slug fallback after a real missing ID (`sql.ErrNoRows`), but never retry the Slug on SQL failure. Add real PostgreSQL, HTTP secrecy and call-count regressions, and expand the direct HTTP-error AST guard to ten audited capability controllers.

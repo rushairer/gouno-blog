@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -buildvcs=false
 # Runtime stage
 FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 
-RUN apk add --no-cache musl=1.2.6-r3 musl-utils=1.2.6-r3 ca-certificates=20261020-r0 tzdata=2026f-r0 zlib=1.3.2-r1
+RUN apk add --no-cache musl=1.2.6-r3 musl-utils=1.2.6-r3 ca-certificates=20261020-r0 tzdata=2026f-r0 zlib=1.4-r0
 
 RUN addgroup -S -g 10001 blog && adduser -S -D -H -u 10001 -G blog blog \
     && mkdir -p /app/data/media \

@@ -33,7 +33,7 @@ def check():
     x_net = re.search(r"(?m)^\s*golang\.org/x/net v(\d+)\.(\d+)\.(\d+)(?:\s+// indirect)?$", backend_mod)
     assert x_net, "backend must explicitly pin golang.org/x/net"
     x_net_version = tuple(map(int, x_net.groups()))
-    assert x_net_version >= (0, 60, 0), "golang.org/x/net v0.60.0+ required for 2026 HTTP/2 fixes"
+    assert x_net_version >= (0, 62, 0), "golang.org/x/net v0.62.0+ required for CVE-2026-78661 and prior HTTP/2 fixes"
     sums = (root / "blog-backend/go.sum").read_text()
     exact_version = "v" + ".".join(map(str, x_net_version))
     for suffix in ("", "/go.mod"):

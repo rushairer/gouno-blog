@@ -27,9 +27,29 @@ Candidate: **v1.6.0**, not v1.5.27: the diff after v1.5.26 introduces the read-o
 - [ ] Accept the published Gosso v1.7.0 exact immutable image and rerun confidential-BFF compatibility against that digest; the existing v1.6.1 result is historical evidence only.
 - [ ] Complete Gosso Admin upstream release acceptance before any Blog tag.
 - [ ] Renew the `blog-admin-ai` certification through direct state-by-state rendered Showcase/Product review and a parity-sensitive PR. Current ledger status is `needs-manual-recertification`.
-- [ ] Review all v1.5.26-to-final-candidate changes; a green CI does not certify the whole 780-file application diff.
+- [ ] Review all v1.5.26-to-final-candidate changes; a green CI does not certify the whole 781-path application diff.
 - [ ] Complete all pre-existing backend/Seed/frontend/database, dependency-review, BFF, Browser Acceptance, security and staging/rollback gates on the final SHA.
 - [ ] Retain Connector behavior freeze; unresolved Connector error-transport findings cannot be silently patched under this release task.
 - [ ] After tagging, independently verify all three image digests and exact `publish-images.yml@refs/tags/v1.6.0` Cosign identities, SBOMs, provenance and release attachments. Signing success is insufficient.
 
 Core stays v1.4.0; frontend registry pins stay @gouno/ui 0.4.9 and @gosso/client 0.9.3. No product, security or certification status is changed by this release-documentation preparation.
+
+### November 6 evidence refresh — no release approval
+
+Current main `53d4a7c9eb781b12bc583800fdda3a62af515be2` passed fresh
+[Browser Acceptance, 366 tests](https://github.com/rushairer/gouno-blog/actions/runs/42195398048)
+and [Showcase Parity, 86 tests](https://github.com/rushairer/gouno-blog/actions/runs/42195404351).
+Existing exact-main backend/database/Seed/frontend CI and Gosso v1.7.0 BFF
+acceptance are linked in the candidate manifest. No checkbox above is inferred
+from those signals alone. The original November6 Canonical font failure is historical (resolved November8);
+`blog-admin-ai` remains pending, Admin v0.7.25 remains unpublished, and Staging,
+backup restore and rollback acceptance still lack an identified authorized
+target and receipts. No target tag/image/signature/SBOM or deployment is claimed.
+
+### November 8 resumed closeout
+
+Canonical delivery is now repaired at UI `d17154139bb217be9cd61b140c78db73b1430b3e`, with187 normal Golden cases, both consumer gates, Pages and actual public font-loading verification passed. This does not renew blog-admin-ai; maintainer review remains mandatory.
+
+Upstream Admin's stronger released-Gosso acceptance exposes failed secret rotation in genuine v1.7.0. Initial-secret Blog BFF compatibility does not cover this defect. The local proposed fix is not a published v1.7.1 baseline; full upstream scope authorization/review/CI/release/artifact and downstream compatibility acceptance are pending. Keep all affected release checkboxes open. No authorized Staging, backup restore or rollback receipts have appeared; no target release or image is accepted. See the candidate manifest and Admin final ecosystem audit for evidence.
+
+The November8 backend image scan also detected HIGH CVE-2026-78661 in x/net0.60.0. Candidate remediation pins x/net0.62.0, preserves other dependency baselines and strengthens the CI downgrade floor. A positive/downgrade probe confirms the guard fails closed. Full final-head CI and immutable image scans must pass; do not suppress the finding or reuse the earlier image success.
