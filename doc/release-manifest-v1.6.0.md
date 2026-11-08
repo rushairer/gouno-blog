@@ -11,7 +11,7 @@ The v1.5.26-to-main diff includes new read-only external capability/API Access a
 | Blog backend | Core v1.4.0; patched Go 1.27.x | Final Blog SHA and tagged image pending |
 | Blog frontend | @gouno/ui 0.4.9; @gosso/client 0.9.3; Node 24 LTS | Final tagged image pending |
 | Blog Seed | Patched Go 1.27.x | Final tagged image pending |
-| Gosso | v1.7.0@sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a | Published signature/SBOM/Helm acceptance complete; final Blog BFF compatibility still required |
+| Gosso | v1.7.0@sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a | Published supply-chain receipts exist; initial-secret BFF passes, but real secret-rotation defect blocks full governance acceptance |
 | Gosso Admin | v0.7.25 candidate | Manual Showcase recertification and staging acceptance pending |
 
 ## Artifact inventory to complete after authorized publication
@@ -57,18 +57,12 @@ Parity artifact: `13492445481`, API archive digest
 Download/hash receipts are retained separately; an API digest alone is not a
 claim of independent archive verification or visual approval.
 
-`blog-admin-ai` stays **needs-manual-recertification**. Real Chromium comparison
-against UI main `b706b6c25c6252c7f55500b69eb08e17c1de554b` found broken Canonical
-font delivery: Inter and JetBrains Mono fail in the local source reference and
-public Pages requests under `https://rushairer.github.io/src/fonts/` return 404.
-Product registry fonts load. Do not change Product fonts or golden images to
-hide this difference. The current supplemental review is partial assistant
-inspection, not the required completed manual certification.
+`blog-admin-ai` stays **needs-manual-recertification**. The November6 Canonical font defect was fixed in [UI PR #161](https://github.com/rushairer/gouno-ui/pull/161), merged at `d17154139bb217be9cd61b140c78db73b1430b3e`. [Normal Golden 42206493211](https://github.com/rushairer/gouno-ui/actions/runs/42206493211) passed187; both consumer gates and Pages passed. Real public Chromium on November8 confirmed both font faces loaded via HTTP200 and match published0.4.9 bytes. UI/Client package pins are unchanged. Required direct state review and maintainer certification are still pending; automation cannot sign the ledger.
 
-Admin v0.7.25 is still unpublished; its manual/Staging gates and proposed
-[release-test/smoke fixes in PR #97](https://github.com/rushairer/gosso-admin/pull/97)
-remain upstream blockers. No authorized Staging target, actual backup-restore or
-rollback receipt has been supplied for this closeout. Keep the Connector hold,
-confidential BFF, local Owner authorization and all quality ratchets unchanged.
-A later merged Blog SHA needs its own acceptance; these main receipts do not
-pre-approve a future tag or production deployment.
+## November 8 upstream correctness and operational blockers
+
+Admin v0.7.25 remains unpublished. [Its stronger official-image compatibility check](https://github.com/rushairer/gosso-admin/actions/runs/42203332667) proves Gosso v1.7.0 does not persist rotated Client Secrets: the retired secret authenticates and the returned secret receives invalid_client. Signing/SBOM provenance does not establish feature correctness. Existing Blog BFF success uses initial credentials and does not certify rotation.
+
+A [concrete tested local patch and receipt](https://github.com/rushairer/gosso-admin/pull/97) proposes a narrow dedicated secret CAS, with real database owner/admin/rollback/concurrency regressions and additional race fixes. It is **not an upstream merged or released patch**. Gosso is read-only under the current task; v1.7.1 requires a scope exception and full independent upstream publication/compatibility acceptance. Keep the baseline table on the actual published v1.7.0 until a real replacement is accepted; do not substitute Gosso main/local images.
+
+No authorized Staging target, actual backup-restore or rollback receipt has been supplied. Admin release, manual certification and operational gates remain open. No target Tag, own image digest, signature or SBOM is asserted. Keep Connector behavior freeze, confidential BFF/local Owner authorization and quality ratchets unchanged. Final merged Blog SHA needs its own acceptance. The formal version remains v1.5.26.
