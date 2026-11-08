@@ -8,7 +8,7 @@ The v1.5.26-to-main diff includes new read-only external capability/API Access a
 
 | Component | Required candidate baseline | Published release acceptance |
 | --- | --- | --- |
-| Blog backend | Core v1.4.0; patched Go 1.27.x | Final Blog SHA and tagged image pending |
+| Blog backend | Core v1.4.0; patched Go 1.27.x; x/net v0.62.0 | Final Blog SHA and tagged image pending |
 | Blog frontend | @gouno/ui 0.4.9; @gosso/client 0.9.3; Node 24 LTS | Final tagged image pending |
 | Blog Seed | Patched Go 1.27.x | Final tagged image pending |
 | Gosso | v1.7.0@sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a | Published supply-chain receipts exist; initial-secret BFF passes, but real secret-rotation defect blocks full governance acceptance |
@@ -66,3 +66,7 @@ Admin v0.7.25 remains unpublished. [Its stronger official-image compatibility ch
 A [concrete tested local patch and receipt](https://github.com/rushairer/gosso-admin/pull/97) proposes a narrow dedicated secret CAS, with real database owner/admin/rollback/concurrency regressions and additional race fixes. It is **not an upstream merged or released patch**. Gosso is read-only under the current task; v1.7.1 requires a scope exception and full independent upstream publication/compatibility acceptance. Keep the baseline table on the actual published v1.7.0 until a real replacement is accepted; do not substitute Gosso main/local images.
 
 No authorized Staging target, actual backup-restore or rollback receipt has been supplied. Admin release, manual certification and operational gates remain open. No target Tag, own image digest, signature or SBOM is asserted. Keep Connector behavior freeze, confidential BFF/local Owner authorization and quality ratchets unchanged. Final merged Blog SHA needs its own acceptance. The formal version remains v1.5.26.
+
+## November 8 image-scan security remediation
+
+The documentation-head image run [42440708333](https://github.com/rushairer/gouno-blog/actions/runs/42440708333) newly fails backend HIGH scanning on `golang.org/x/net v0.60.0`, `CVE-2026-78661`. [Official Go advisory GO-2026-6860](https://pkg.go.dev/vuln/GO-2026-6860) fixes HTML parser quadratic resource consumption in v0.62.0. The candidate now pins v0.62.0 with matching verified checksums and raises its fail-closed downgrade floor. Keep unrelated inherited requirements and all scanner thresholds intact. New final-head backend/database/dependency/image gates are required; historical green builds do not certify this update. No production deploy or target release is asserted.
