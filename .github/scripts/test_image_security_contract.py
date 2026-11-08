@@ -21,10 +21,10 @@ class ImageSecurityContractTest(unittest.TestCase):
         self.assertIn("ca-certificates=20261020-r0", backend)
         self.assertIn("tzdata=2026f-r0", backend)
         self.assertIn("ca-certificates=20261020-r0", seed)
-        self.assertIn("zlib=1.3.2-r1", backend)
-        self.assertIn("zlib=1.3.2-r1", seed)
+        self.assertIn("zlib=1.4-r0", backend)
+        self.assertIn("zlib=1.4-r0", seed)
         self.assertIn("pcre2=10.49-r0", frontend)
-        self.assertIn("zlib=1.3.2-r1", frontend)
+        self.assertIn("zlib=1.4-r0", frontend)
         self.assertNotIn("apk add --no-cache ca-certificates tzdata", backend)
         self.assertNotRegex(seed, r"apk --no-cache add ca-certificates(?:\s|$)")
 
