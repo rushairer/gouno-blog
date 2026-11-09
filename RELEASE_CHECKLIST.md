@@ -24,7 +24,7 @@
 
 Candidate: **v1.6.0**, not v1.5.27: the diff after v1.5.26 introduces the read-only external capability gateway, API Access management, provider configuration and guarded reconciliation capabilities in addition to security fixes. No candidate tag has been created.
 
-- [ ] Accept the published Gosso v1.7.0 exact immutable image and rerun confidential-BFF compatibility against that digest; the existing v1.6.1 result is historical evidence only.
+- [ ] Accept the published Gosso v1.7.1 exact immutable image and rerun confidential-BFF compatibility against that digest; the existing v1.6.1 result is historical evidence only.
 - [ ] Complete Gosso Admin upstream release acceptance before any Blog tag.
 - [ ] Renew the `blog-admin-ai` certification through direct state-by-state rendered Showcase/Product review and a parity-sensitive PR. Current ledger status is `needs-manual-recertification`.
 - [ ] Review all v1.5.26-to-final-candidate changes; a green CI does not certify the whole application diff. The [November 9 candidate review inventory](docs/quality/blog-v1.6.0-candidate-review-2026-11-09.md) records the exact range and remaining review limits.

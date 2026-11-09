@@ -19,7 +19,7 @@ acceptance remain mandatory. See the [candidate manifest](doc/release-manifest-v
 ### Changed
 
 - Use published Gouno Core v1.4.0 and its compatible module requirements. Keep exact registry dependencies `@gouno/ui 0.4.9` and `@gosso/client 0.9.3`, with Node 24 LTS (`>=24.15 <25`). Preserve confidential-BFF and Connector contracts.
-- Resolve RFC 7009 revocation through OIDC discovery and reject endpoints outside the configured issuer HTTPS origin. Pin isolated BFF compatibility and production examples to the signature-verified Gosso v1.7.0 image; initial-credential BFF success does not certify its known Client Secret rotation defect.
+- Resolve RFC 7009 revocation through OIDC discovery and reject endpoints outside the configured issuer HTTPS origin. Pin isolated BFF compatibility and production examples to the signature-verified Gosso v1.7.1 image, which fixes Client Secret rotation persistence. Require fresh independent BFF compatibility against that exact released digest.
 - Keep development images on the floating `main` channel; production Compose requires explicit immutable version-and-digest references and file-based secrets. Run Redis unprivileged after a CHOWN-only volume-ownership migration.
 - Lazy-load nine independent public routes while retaining PublicShell/Suspense behavior; enforce a 500 kB ceiling on every emitted JavaScript chunk with missing-output and oversized-chunk regressions.
 - Standardize modal sticky footers and close-button placement, Provider/Embedding table composition, panel insets and titles, and Toast alignment. These changes still require manual-first Showcase recertification.

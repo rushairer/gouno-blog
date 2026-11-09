@@ -11,7 +11,7 @@ The v1.5.26-to-main diff includes new read-only external capability/API Access a
 | Blog backend | Core v1.4.0; patched Go 1.27.x; x/net v0.62.0 | Final Blog SHA and tagged image pending |
 | Blog frontend | @gouno/ui 0.4.9; @gosso/client 0.9.3; Node 24 LTS | Final tagged image pending |
 | Blog Seed | Patched Go 1.27.x | Final tagged image pending |
-| Gosso | v1.7.0@sha256:b88b0475af7633afa8d6fda8ca7c3f4297d235a36e88219d9010818e76ff889a | Published supply-chain receipts exist; initial-secret BFF passes, but real secret-rotation defect blocks full governance acceptance |
+| Gosso | v1.7.1@sha256:cdf81b3e6f532455aa8964e7921355c54e3bfca72bf5910cd21689d87fe80cbb | Official release, exact-identity Cosign, multiarchitecture, SBOM and Helm independently verified; fresh downstream BFF acceptance pending |
 | Gosso Admin | v0.7.25 candidate | Manual Showcase recertification and staging acceptance pending |
 
 ## Artifact inventory to complete after authorized publication
@@ -99,3 +99,20 @@ Admin remains unpublished, its official-Gosso compatibility gate still fails,
 and manual certification and authorized Staging receipts remain absent.
 The v1.6.0 tag/Release and the formal artifact rows above remain pending.
 Any later candidate SHA must obtain its own required checks before tagging.
+
+
+## November 9 Gosso rotation repair publication
+
+The user authorized upstream repair and publication. [Gosso PR54](https://github.com/rushairer/gosso/pull/54)
+merged at `6c8ced618408f3625bbf022b67a08980a26a807d`; full exact-main CI and
+[Release42603651807](https://github.com/rushairer/gosso/actions/runs/42603651807)
+passed. Annotated v1.7.1 and [formal Release](https://github.com/rushairer/gosso/releases/tag/v1.7.1)
+exist; v1.7.0 was preserved. Independently verified release index:
+`sha256:cdf81b3e6f532455aa8964e7921355c54e3bfca72bf5910cd21689d87fe80cbb`.
+Cosign exact `release.yml@refs/tags/v1.7.1` identity/issuer verification, both
+platforms' provenance source SHA, SPDX/CycloneDX JSON, Helm OCI1.7.1 metadata and
+public Go Module Proxy checks pass. Historical read-only/absent-patch blockers
+above are superseded by this publication. Fresh Admin rotation and Blog BFF
+acceptance must use this actual released digest. Neither downstream candidate
+is published; manual certification, authorized Staging and full final acceptance
+remain required. Blog's own formal artifact rows remain PENDING.
