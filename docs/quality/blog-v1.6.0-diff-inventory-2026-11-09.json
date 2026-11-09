@@ -1,0 +1,3285 @@
+{
+  "kind": "release-diff-inventory-not-code-review-approval",
+  "date": "2026-11-09",
+  "base_tag": "v1.5.26",
+  "base_sha": "107ee2e28eb96bda1409926fdb324550bb1bae98",
+  "candidate_sha": "0aee82081676e4c560f7489b5eef8249a6cfc32f",
+  "command": "git diff --name-status --find-renames=80% 107ee2e28eb96bda1409926fdb324550bb1bae98 0aee82081676e4c560f7489b5eef8249a6cfc32f",
+  "entry_count": 810,
+  "status_counts": {
+    "M": 191,
+    "A": 529,
+    "R098": 1,
+    "R083": 1,
+    "R097": 2,
+    "D": 75,
+    "R087": 1,
+    "R100": 7,
+    "R092": 1,
+    "R099": 1,
+    "R094": 1
+  },
+  "raw_output_sha256": "ca31b5411d6908abb80ac2fe05427908325acc9fd0ba4079e09f05c46f1f1b37",
+  "limitations": [
+    "Rename detection is a Git heuristic, not proof that business behavior is unchanged.",
+    "This inventory does not establish manual certification, full source review or release acceptance.",
+    "Any later source SHA needs a refreshed inventory and appropriate exact-SHA acceptance."
+  ],
+  "entries": [
+    {
+      "status": "M",
+      "path": ".env.production.example"
+    },
+    {
+      "status": "A",
+      "path": ".github/CODEOWNERS"
+    },
+    {
+      "status": "A",
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/ISSUE_TEMPLATE/config.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/ISSUE_TEMPLATE/feature_request.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/dependabot.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/pull_request_template.md"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/check_frontend_quality_contract.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/check_go_toolchain_security.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/check_production_redis_security.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/image_build_plan.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/main_writer_publish_contract.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/test_check_frontend_quality_contract.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/test_frontend_image_runtime.sh"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/test_image_build_plan.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/test_image_security_contract.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/test_verify_image_signature.py"
+    },
+    {
+      "status": "A",
+      "path": ".github/scripts/verify_image_signature.sh"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/ci.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/workflows/gosso-release-bff-compat.yml"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/images.yml"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/publish-images.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/workflows/showcase-parity.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/workflows/sync-gouno-ui.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/workflows/ui-browser-acceptance.yml"
+    },
+    {
+      "status": "M",
+      "path": ".gitignore"
+    },
+    {
+      "status": "M",
+      "path": "AGENTS.md"
+    },
+    {
+      "status": "M",
+      "path": "CHANGELOG.md"
+    },
+    {
+      "status": "M",
+      "path": "CONTRIBUTING.md"
+    },
+    {
+      "status": "M",
+      "path": "Caddyfile.production"
+    },
+    {
+      "status": "M",
+      "path": "README.md"
+    },
+    {
+      "status": "M",
+      "path": "RELEASE_CHECKLIST.md"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/.gouno/codegen.yaml"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/.gouno/codegen/module-controller.tmpl"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/.gouno/codegen/module-domain.tmpl"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/.gouno/codegen/module-repository.tmpl"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/.gouno/codegen/module-service.tmpl"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/ARCHITECTURE.md"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/ARCHITECTURE_BRANCH_AUDIT.md"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/ARCHITECTURE_CONVERGENCE.md"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/CHANGELOG.md"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/Dockerfile"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/README.md"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/cmd/gouno/analytics_composition.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/cmd/gouno/architecture_guard_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/cmd/gouno/codegen_policy_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/cmd/gouno/identity_backfill.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/cmd/gouno/identity_backfill_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/cmd/gouno/postversion_composition.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/cmd/gouno/recommendation_composition.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/cmd/gouno/root.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/cmd/gouno/web.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/config/openapi.yaml"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/go.mod"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/go.sum"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/access/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/access/controller/controller_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/access/membership_mutation_integration_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/access/policy.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/access/policy_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/access/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/AGENTS.md"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/approval.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_atomic_operations.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_atomic_operations_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_atomic_pages_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_composition.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_fault_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_fault_recovery_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_page_payload.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_ports.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/approval_post_payload.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/approval_test.go"
+    },
+    {
+      "status": "R098",
+      "path": "blog-backend/internal/agent/controller/agent_controller_test.go",
+      "previous_path": "blog-backend/internal/controller/agent_controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/controller/generation.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/controller/json_transport_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/controller/media.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/controller/media_generation_recovery_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/controller/media_reconciliation_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/controller/ownership_test.go"
+    },
+    {
+      "status": "R083",
+      "path": "blog-backend/internal/agent/controller/provider_import_export_test.go",
+      "previous_path": "blog-backend/internal/controller/provider_import_export_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/controller/template_identity_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/domain/agent.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/domain/media_generation_recovery.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/domain/ownership_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/generation.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/generation_attempt_audit.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/generation_attempt_audit_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/generation_attempt_audit_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/generation_persistence_integration_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/management.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/management_ports.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/management_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/media_generation_attempt_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/media_generation_attempt_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/media_generation_reconciliation_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/media_generation_reconciliation_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/media_generation_reviewed_recovery_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/approval_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/approval_repository_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/approval_run_reconciliation.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/definition_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/generation_audit_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/media_candidate_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/media_candidate_run_support.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/media_candidate_workflow_state.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/media_generation_reconciliation.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/media_generation_recovery.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/run_approval_support.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/run_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/skill_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/starter_definition_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/repository/starter_skill_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/run_failure.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/run_failure_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/run_lifecycle.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/runner.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/agent/runner_ports.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/runner_scope_integration_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/runner_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/agent/scheduler.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/analytics/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/analytics/controller/controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/analytics/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/analytics/repository/repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/analytics/repository/repository_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/analytics/service/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/analytics/service/service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/backchannel_error_contract_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/boundary_contract_hardening_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/authbff/client.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/authbff/client_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/crypto_dependency_floor_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/error_path_coverage_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/authbff/http.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/oidc_tls_backchannel_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/oidc_tls_fixture_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/oidc_tls_flow_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/oidc_tls_http_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/recent_mfa.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/recent_mfa_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/redis_security_boundary_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/authbff/store_fail_closed_coverage_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/community/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/community/controller/json_transport_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/community/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/community/repository/all_comments.go"
+    },
+    {
+      "status": "R097",
+      "path": "blog-backend/internal/community/repository/repository.go",
+      "previous_path": "blog-backend/internal/repository/community_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/community/repository/repository_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/community/service/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/community/service/service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/connector/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/connector/controller/routes.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/connector/service.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/connector/service_integration_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/access_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/agent_connector_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/agent_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/agent_knowledge_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/agent_operations_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/agent_workflow_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/community_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/content_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/content_settings_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/feed_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/feed_controller_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/growth_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/page_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/pagination.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/pagination_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/post_controller.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/post_controller_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/controller/response.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/controllerutil/controller_transport_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/controllerutil/json_error.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/controllerutil/json_error_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/controllerutil/pagination.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/controllerutil/pagination_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/controllerutil/response.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/controllerutil/response_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/controllerutil/retired_controller_boundary_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/dberror/errors.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/dberror/errors_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/dbtx/retired_repository_boundary_test.go"
+    },
+    {
+      "status": "R087",
+      "path": "blog-backend/internal/dbtx/transactor.go",
+      "previous_path": "blog-backend/internal/repository/transaction.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/domain/agent.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/domain/post.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/externalcapability/controller/body_limit_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/externalcapability/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/externalcapability/controller/controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/externalcapability/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/externalcapability/repository/repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/externalcapability/service/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/externalcapability/service/service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/feed/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/feed/controller/controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/feed/controller/ownership_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/identitybackfill/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/knowledge/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/knowledge/controller/controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/knowledge/controller/json_transport_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/knowledge/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/knowledge/job_lease.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/knowledge/job_lease_integration_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/knowledge/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/controller/error_transport_security_test.go"
+    },
+    {
+      "status": "R100",
+      "path": "blog-backend/internal/media/controller/media_type_test.go",
+      "previous_path": "blog-backend/internal/controller/growth_controller_media_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/controller/svg_security.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/controller/svg_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/controller/upload_persistence_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/controller/validation_errors.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/repository/repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/repository/repository_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/service/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/media/service/service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/generation_attempt_audit_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/generation_provider_evidence_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/generation_upstream_request_evidence_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/identity_backfill_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/media_generation_recovery_integration_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/migrations/migrate.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/migrations/migrate_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/085z_identity_backfill_preparation.sql"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/migrations/sql/086_community_principal_identity.sql"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/migrations/sql/088_backfill_ai_principal_identity.sql"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/migrations/sql/089_drop_legacy_identity_columns.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/090_creation_origin_constraints.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/091_post_revision.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/092_ai_provider_vendor.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/093_external_capability_gateway.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/094_generation_attempt_audit.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/095_generation_provider_evidence.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/096_generation_upstream_request_evidence.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/sql/097_media_generation_reviewed_recovery.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/starterpack_test_helper_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/testdata/legacy/086_community_principal_identity.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/testdata/legacy/088_backfill_ai_principal_identity.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/migrations/testdata/legacy/089_drop_legacy_identity_columns.sql"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/notification/repository/system_notification_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/operations/approval_effects.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/operations/approval_effects_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/operations/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/operations/controller/controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/operations/controller/json_transport_security_test.go"
+    },
+    {
+      "status": "R100",
+      "path": "blog-backend/internal/operations/domain/model.go",
+      "previous_path": "blog-backend/internal/domain/operations.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/operations/job_lease.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/operations/job_lease_integration_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/operations/service.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/operations/service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/controller/page_controller.go"
+    },
+    {
+      "status": "R092",
+      "path": "blog-backend/internal/page/controller/page_controller_test.go",
+      "previous_path": "blog-backend/internal/controller/page_controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/controller/page_lookup_security_test.go"
+    },
+    {
+      "status": "R100",
+      "path": "blog-backend/internal/page/domain/page.go",
+      "previous_path": "blog-backend/internal/domain/page.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/repository/approval_transaction.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/repository/page_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/service/approval_transaction.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/service/approval_transaction_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/service/page_lookup_error_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/service/page_lookup_error_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/service/page_save_error_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/service/page_service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/page/service/page_service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/controller/helpers.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/controller/post_controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/controller/post_controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/controller/post_lookup_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/domain/revision.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/repository/approval_transaction.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/repository/post_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/repository/revision_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/restore.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/service/approval_transaction.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/service/approval_transaction_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/service/post_service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/post/service/post_service_test.go"
+    },
+    {
+      "status": "R100",
+      "path": "blog-backend/internal/post/service/publisher.go",
+      "previous_path": "blog-backend/internal/service/publisher.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/controller/controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/coordinator.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/coordinator_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/coordinator_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/ownership_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/repository/repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/repository/repository_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/service/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/postversion/service/service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/AGENTS.md"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/provider/anthropic.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/domain/model_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/provider/gemini.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/provider/http.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/http_security_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/provider/image_live_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/image_no_replay_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/provider/openai.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/openai_negotiation.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/openai_negotiation_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/openai_tool_names.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/openai_tool_names_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/provider/provider.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/provider/provider_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/repository/provider_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/repository/provider_revocation_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/repository/starter.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/text_failure.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/text_failure_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/provider/upstream_request_evidence_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/ratelimit/ratelimit.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/ratelimit/ratelimit_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/recommendation/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/recommendation/controller/controller_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/recommendation/repository/repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/recommendation/repository/repository_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/recommendation/service/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/recommendation/service/service_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/agent_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/agent_repository_integration_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/agent_repository_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/approval_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/category_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/community_repository_integration_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/growth_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/growth_repository_integration_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/media_candidate_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/page_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/post_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/provider_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/system_notification_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/workflow_interaction_repository.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/repository/workflow_starters.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/secretbox/secretbox.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/secretbox/secretbox_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/category_service.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/community_service.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/community_service_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/growth_service.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/page_service.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/page_service_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/post_service.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/post_service_test.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/rate_limiter.go"
+    },
+    {
+      "status": "D",
+      "path": "blog-backend/internal/service/rate_limiter_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/site/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/site/controller/controller_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/site/repository/repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/site/repository/repository_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/site/service/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/site/service/service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/starterpack/coordinator.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/taxonomy/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/taxonomy/controller/controller_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/taxonomy/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/taxonomy/repository/repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/taxonomy/repository/repository_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/taxonomy/service/service.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/taxonomy/service/service_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/testsupport/database.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/testsupport/dbsetup/main.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/testsupport/principal.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/tool/analytics_binding.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/tool/analytics_binding_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/blog_tools.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/content_audit.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/content_audit_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/tool/domain/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/tool/external_content_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/internal_links.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/internal_links_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/tool/knowledge_binding.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/tool/knowledge_binding_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/registry.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/registry_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/related_content.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/tool/related_content_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/controller/controller.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/controller/json_transport_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/controller/ownership_test.go"
+    },
+    {
+      "status": "R099",
+      "path": "blog-backend/internal/workflow/controller/webhook_security_test.go",
+      "previous_path": "blog-backend/internal/controller/webhook_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/dispatch.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/dispatch_execution_integration_test.go"
+    },
+    {
+      "status": "R094",
+      "path": "blog-backend/internal/workflow/domain/model.go",
+      "previous_path": "blog-backend/internal/domain/workflow.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/execution.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/execution_error.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/execution_error_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/interactions.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/interactions_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/media_run_coordinator.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/media_run_coordinator_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/ownership_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/read_models.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/read_models_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/readmodel/model.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/core_starters.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/definition_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/dispatch_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/execution_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/interaction_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/media_run_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/metrics_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/run_admission_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/run_lifecycle_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/run_read_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/scope_repository.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/repository/starters.go"
+    },
+    {
+      "status": "R100",
+      "path": "blog-backend/internal/workflow/repository/starters_test.go",
+      "previous_path": "blog-backend/internal/repository/workflow_starters_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/workflow/resource_query_integration_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/workflow/resources.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/workflow/resources_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/run_admission.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/run_admission_integration_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/run_lifecycle.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/run_lifecycle_integration_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/workflow/schema.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/internal/workflow/schema_reference_security_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/workflow/service.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/workflow/service_test.go"
+    },
+    {
+      "status": "R097",
+      "path": "blog-backend/internal/workflowplan/draft_json_test.go",
+      "previous_path": "blog-backend/internal/controller/workflow_draft_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/workflowplan/plan.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/internal/workflowplan/plan_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/middleware/AGENTS.md"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/middleware/blog_access.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/middleware/blog_access_mfa_navigation_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/middleware/body_limit.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/middleware/csrf.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/middleware/middleware.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/middleware/path_scope.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/middleware/path_scope_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/middleware/recovery.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/middleware/recovery_security_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/middleware/timeout_boundary.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/middleware/timeout_boundary_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/router/agent_controller_ownership_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/router/body_limit_multipart_route_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/router/cors_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/router/csrf_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/router/operations_controller_ownership_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/router/web.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-backend/router/web_test.go"
+    },
+    {
+      "status": "A",
+      "path": "blog-backend/router/workflow_controller_ownership_test.go"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/DESIGN_SYSTEM.md"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/Dockerfile"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/ai-fixtures.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/ai-mock-api.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/ai-refresh-lifecycle.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/ai-run-selection.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/ai-workspace-interactions.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/ai-workspace-matrix.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/core-admin-fixtures.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/core-admin-interactions.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/core-admin-matrix.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/editor-interactions.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/fixtures.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/mfa-popup.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/mock-api.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/package-lock.json"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/package.json"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/playwright.config.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/privileged-access-parity.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/public-fixtures.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/public-interactions.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/public-matrix.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/public-mock-api.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/public-showcase-parity.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/session-fixtures.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/showcase-parity-helpers.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/showcase-parity.config.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/showcase-parity.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/support-interactions.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/support-matrix.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/support-showcase-parity.pw.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/e2e/users-showcase-parity.pw.mjs"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/index.html"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/package-lock.json"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/package.json"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/public/browser-acceptance.svg"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/public/favicon.svg"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/public/theme-bootstrap.js"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-action-grammar-contracts.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-admin-parity-contracts.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-ai-ops-layout-contracts.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-ai-ops-showcase-parity.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-ai-settings-layout-contracts.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-ai-settings-showcase-parity.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-bundle-chunk-budget.mjs"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/scripts/check-css-cascade.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-lint-warning-budget.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-lint-warning-budget.probe.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-privileged-access-parity.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-public-parity-contracts.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-retired-product-classes.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-showcase-parity-certifications.mjs"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/scripts/check-static-chunk-cycles.mjs"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/scripts/check-ui-contracts.mjs"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/App.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/__tests__/App.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/__tests__/mfa.popup.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/api/__tests__/client.mfa.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/api/__tests__/posts.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/api/agent.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/api/client.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/api/externalCapability.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/api/posts.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/ErrorBoundary.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/MarkdownRenderer.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/__tests__/ErrorBoundary.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/__tests__/MarkdownRenderer.test.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/__tests__/ui.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/AISettingsEditorPatterns.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/AdvancedWorkspace.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/AgentForm.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/AgentRunRecords.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/ArticlePreviewModal.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/ConnectorWorkspace.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/DecisionInboxWorkspace.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/DedicatedEditorPatterns.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/EmbeddingForm.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/ExternalAPIWorkspace.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/InboxWorkspace.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/KnowledgeWorkspace.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/OperationsPatterns.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/OperationsWorkspace.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/ProposalPreview.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/ProviderForm.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/SkillForm.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/StatusPill.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/WorkflowInputForm.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/WorkflowLauncher.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/WorkflowMediaCandidates.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/WorkflowRunDetail.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/WorkflowRunRecords.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/WorkflowWorkspace.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/WorkspaceOverview.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/__tests__/AISettingsEditors.canonical.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/AgentForm.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/__tests__/AgentRunRecords.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/ConnectorWorkspace.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/__tests__/DecisionInboxWorkspace.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/__tests__/InboxWorkspace.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/OperationsWorkspace.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/SkillForm.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/StatusPill.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/WorkflowInputForm.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/WorkflowLauncher.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/__tests__/WorkflowRunRecords.master-detail.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/WorkflowRunRecords.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/__tests__/WorkflowWorkspace.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/__tests__/WorkflowWorkspaceCanonicalDetail.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/__tests__/WorkspaceOverview.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/agent/tools/AGENTS.md"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/tools/DistributionDraftConfig.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/tools/KnowledgeSearchConfig.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/tools/LowEngagementConfig.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/tools/RssFetchConfig.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/tools/StalePostsConfig.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/tools/ToolBindingsEditor.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/agent/tools/__tests__/ToolBindingsEditor.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/auth/AGENTS.md"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/auth/GlobalStepUpBoundary.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/auth/StepUpMfaModal.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/auth/SudoBanner.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/auth/SudoGate.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/auth/__tests__/GlobalStepUpBoundary.security.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/auth/__tests__/GlobalStepUpBoundary.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/auth/__tests__/StepUpMfaModal.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/auth/__tests__/SudoBanner.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/auth/__tests__/SudoGate.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/branding/BrandMark.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/editor/AiSuggestionControl.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/editor/ContentEditorFrame.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/editor/EditorFieldChrome.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/editor/EditorMediaSourceDialog.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/editor/EditorWritingDialog.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/editor/editor-ai.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/feedback/AppFeedbackProvider.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/feedback/__tests__/AppFeedbackProvider.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/components/media/MediaDrawerForms.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/patterns/TabPanelLead.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/reading/ArticleTeaser.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/components/reading/DiscoveryIndexLoading.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/taxonomy/CategoryForm.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/AsyncState.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Badge.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Button.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Card.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Dialog.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Feedback.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Form.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Layout.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Modal.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Pagination.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Panel.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Skeleton.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/StatusIndicator.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Tabs.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/Toast.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/classes.ts"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/components/ui/index.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/features/public/usePublicHome.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/hooks/AGENTS.md"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/hooks/__tests__/useFormDraft.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/hooks/__tests__/useSudoMode.storage.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/hooks/__tests__/useSudoMode.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/hooks/sudo-session-store.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/hooks/useFormDraft.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/hooks/useSudoMode.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/i18n.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/i18n/locales/en.json"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/i18n/locales/zh.json"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/index.css"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/layouts/AdminShell.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/layouts/PublicShell.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/layouts/__tests__/AdminShell.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/layouts/__tests__/PublicShell.test.tsx"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/lib/utils.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/main.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/mfa.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/AccountNotifications.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/Archive.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/ArticleIndex.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/Categories.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/CustomPageView.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/Home.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/NotFound.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/PostDetail.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/Settings.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/Tags.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/__tests__/AccountNotifications.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/__tests__/Home.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/__tests__/NotFound.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/__tests__/Pages.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/__tests__/PostDetail.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/__tests__/Settings.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/__tests__/TaxonomyArchive.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/admin/AGENTS.md"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/AIOperations.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/admin/AISettings.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/Categories.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/Comments.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/Dashboard.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/MediaLibrary.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/Notifications.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/PageEditor.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/Pages.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/PostEditor.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/Posts.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/SiteSettings.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/Tags.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/Users.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/admin/__tests__/AIOperations.race.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/admin/__tests__/AIOperations.refresh.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/AIOperations.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/admin/__tests__/AISettings.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/Categories.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/Comments.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/Dashboard.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/MediaLibrary.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/Notifications.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/PageEditor.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/Pages.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/PostEditor.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/admin/__tests__/Posts.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/SiteSettings.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/pages/admin/__tests__/Tags.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/pages/admin/__tests__/Users.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/styles/agent-console.css"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/styles/base.css"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/styles/components.css"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/styles/design-system-alignment.css"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/styles/redesign.css"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/styles/tailwind.css"
+    },
+    {
+      "status": "D",
+      "path": "blog-frontend/src/styles/tokens.css"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/types/agent.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/types/blog.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/types/externalCapability.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/utils/__tests__/ai-information-architecture.test.tsx"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/utils/__tests__/public-route-chunk-budget.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/utils/__tests__/seo-brand-updates.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "blog-frontend/src/utils/__tests__/sudo-parity-contract.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/utils/navigation.tsx"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/src/utils/seo.ts"
+    },
+    {
+      "status": "M",
+      "path": "blog-frontend/vite.config.ts"
+    },
+    {
+      "status": "D",
+      "path": "doc/auth-client-boundary.md"
+    },
+    {
+      "status": "A",
+      "path": "doc/release-manifest-v1.6.0.md"
+    },
+    {
+      "status": "M",
+      "path": "docker-compose.production.yml"
+    },
+    {
+      "status": "M",
+      "path": "docker-compose.yml"
+    },
+    {
+      "status": "R100",
+      "path": "docs/ai-workbench-automation-plan.md",
+      "previous_path": "doc/ai-workbench-automation-plan.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/auth-client-boundary.md"
+    },
+    {
+      "status": "R100",
+      "path": "docs/oidc-bff-split-adr.md",
+      "previous_path": "doc/oidc-bff-split-adr.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/a-plus-closeout-2026-10-21.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/a-plus-transition-2026-11-02.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/access-owner-mutation-2026-10-13.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/adr-q01a-identity-migrations.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/agent-approval-in-doubt-recovery.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/ai-refresh-lifecycle-2026-10-23.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/ai-run-selection-2026-10-23.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/assessment-2026-10-06.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/authbff-fail-closed-80pct-2026-10-14.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/authbff-logout-contract-2026-10-13.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/authbff-signed-oidc-coverage-2026-10-14.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/backend-dependency-crypto-floor-2026-10-29.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/baseline.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/controller-error-boundary-ai-workflow-2026-10-14.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/controller-error-boundary-community-knowledge-operations-2026-10-14.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/controller-error-boundary-media-site-taxonomy-2026-10-15.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/cosign-verification-gate-2026-10-30.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/database-tests.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/dependency-refresh-2026-10-13.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/feed-canonical-origin-2026-10-29.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/frontend-lint-warning-ratchet-2026-10-29.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/frontend-npm-quality-ratchet-2026-10-30.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/frontend-public-route-chunk-budget-2026-10-15.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/go-x509-security-2026-10-21.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/identity-backfill.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/local-recovery-2026-09-14.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/media-generation-attempt-audit.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/media-generation-manual-recovery.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/openai-text-negotiation-2026-10-15.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/openai-tool-names-2026-10-16.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/p2-https-acceptance-2026-09-14.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/page-post-read-errors-2026-10-15.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/prompts.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/react-shared-hook-correctness-2026-10-15.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/recovery-panic-boundary-2026-10-22.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/roadmap.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/seed-playwright-lint-ratchet-2026-10-29.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/step-up-popup-lifecycle-2026-10-21.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/sudo-ui-state-2026-10-22.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/tasks/Q01-ci.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/tasks/Q01a-fresh-install.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/tasks/Q01b-workflow-iterations.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/tasks/Q02-edit-conflicts.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/tasks/Q03-site-metadata.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/tasks/Q04-stage-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/transport-body-limit-mime-2026-10-29.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/undici-audit-2026-10-27.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/quality/workflow-schema-local-reference-2026-10-29.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/MIGRATION.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/PHASE-PROMPTS.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/PLAN.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/SHOWCASE_PARITY_PROTOCOL.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/ai-refresh-review-2026-10-23.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/ai-run-selection-review-2026-10-23.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-ai-manual-parity-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-ai-tool-identifier-overflow-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-ai-workflow-run-selection-recertification-2026-11-02.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-core-wave1-manual-parity-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-core-wave2-manual-parity-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-core-wave3-manual-parity-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-csa-a003-a004-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-csa-a005-pending-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-csa-a005-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-csa-a006-pending-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-csa-a006-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-csa-a007-pending-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-csa-a007-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-dl17-typography-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-showcase-parity-hardening.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-admin-wave3-inspector-logical-direction-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-gouno-ui-0.4.9-recertification.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-public-account-manual-parity-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/blog-public-account-showcase-parity-hardening.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/gosso-showcase-migration-contract.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/gouno-ui-0.2.0-import-audit.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/loading-ownership-audit-2026-09-14.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/markdown-security-recertification-2026-10-06.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/migration.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/page-editor-save-fence-review-2026-10-28.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/post-editor-restore-fence-review-2026-10-29.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/post-editor-save-fence-review-2026-10-28.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/showcase-parity-certifications.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/README.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/TASK-TEMPLATE.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U01a-blog-coverage.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U01b-gosso-test-url.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U01c-shared-ui-validation.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U01d-shared-ui-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U02a-blog-discovery.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U02b-blog-reading.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U02c-blog-public-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U03a-blog-admin-shell.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U03b-blog-editors.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U03c-blog-admin-support.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U03d-blog-admin-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U04a-ai-workspace.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U04b-connector-display.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U04c-ai-connector-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U05a-gosso-auth-account.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U05b-gosso-auth-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U06a-gosso-management.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U06b-gosso-management-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U07a-distribution-build.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U07b-integration-review.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U08a-browser-accessibility.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tasks/U08b-final-cleanup.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/ui-redesign/tool-bindings-json-review-2026-10-27.md"
+    },
+    {
+      "status": "M",
+      "path": "scripts/check-auth-deployment-contract.mjs"
+    },
+    {
+      "status": "A",
+      "path": "scripts/check-db-integration.py"
+    },
+    {
+      "status": "A",
+      "path": "scripts/check-gosso-release-bff-compat.sh"
+    },
+    {
+      "status": "A",
+      "path": "scripts/check-local-recovery.py"
+    },
+    {
+      "status": "M",
+      "path": "scripts/check-production-digest.mjs"
+    },
+    {
+      "status": "A",
+      "path": "scripts/test_check_db_integration.py"
+    },
+    {
+      "status": "M",
+      "path": "seed/Dockerfile"
+    },
+    {
+      "status": "M",
+      "path": "seed/go.mod"
+    },
+    {
+      "status": "M",
+      "path": "seed/go.sum"
+    }
+  ]
+}

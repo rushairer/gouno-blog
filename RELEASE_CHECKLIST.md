@@ -27,7 +27,7 @@ Candidate: **v1.6.0**, not v1.5.27: the diff after v1.5.26 introduces the read-o
 - [ ] Accept the published Gosso v1.7.0 exact immutable image and rerun confidential-BFF compatibility against that digest; the existing v1.6.1 result is historical evidence only.
 - [ ] Complete Gosso Admin upstream release acceptance before any Blog tag.
 - [ ] Renew the `blog-admin-ai` certification through direct state-by-state rendered Showcase/Product review and a parity-sensitive PR. Current ledger status is `needs-manual-recertification`.
-- [ ] Review all v1.5.26-to-final-candidate changes; a green CI does not certify the whole 781-path application diff.
+- [ ] Review all v1.5.26-to-final-candidate changes; a green CI does not certify the whole application diff. The [November 9 candidate review inventory](docs/quality/blog-v1.6.0-candidate-review-2026-11-09.md) records the exact range and remaining review limits.
 - [ ] Complete all pre-existing backend/Seed/frontend/database, dependency-review, BFF, Browser Acceptance, security and staging/rollback gates on the final SHA.
 - [ ] Retain Connector behavior freeze; unresolved Connector error-transport findings cannot be silently patched under this release task.
 - [ ] After tagging, independently verify all three image digests and exact `publish-images.yml@refs/tags/v1.6.0` Cosign identities, SBOMs, provenance and release attachments. Signing success is insufficient.
@@ -53,3 +53,14 @@ Canonical delivery is now repaired at UI `d17154139bb217be9cd61b140c78db73b1430b
 Upstream Admin's stronger released-Gosso acceptance exposes failed secret rotation in genuine v1.7.0. Initial-secret Blog BFF compatibility does not cover this defect. The local proposed fix is not a published v1.7.1 baseline; full upstream scope authorization/review/CI/release/artifact and downstream compatibility acceptance are pending. Keep all affected release checkboxes open. No authorized Staging, backup restore or rollback receipts have appeared; no target release or image is accepted. See the candidate manifest and Admin final ecosystem audit for evidence.
 
 The November8 backend image scan also detected HIGH CVE-2026-78661 in x/net0.60.0. Candidate remediation pins x/net0.62.0, preserves other dependency baselines and strengthens the CI downgrade floor. A positive/downgrade probe confirms the guard fails closed. Full final-head CI and immutable image scans must pass; do not suppress the finding or reuse the earlier image success.
+
+### November 9 status — candidate still unpublished
+
+Security remediation merged as `0aee82081676e4c560f7489b5eef8249a6cfc32f`.
+Its CI, BFF, Browser Acceptance, Showcase Parity and main-channel Publish Images
+runs completed successfully; exact links and their limits are in the
+[candidate manifest](doc/release-manifest-v1.6.0.md#november-9-exact-main-evidence-and-candidate-notes).
+This resolves the November 8 source/image scan failures on that SHA, not the
+remaining upstream, full review, manual or operational gates. No release
+checkbox is promoted from those automated results. Formal v1.6.0 images and
+independent tag-identity verification remain pending.
