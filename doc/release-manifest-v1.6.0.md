@@ -72,3 +72,30 @@ No authorized Staging target, actual backup-restore or rollback receipt has been
 The documentation-head image run [42440708333](https://github.com/rushairer/gouno-blog/actions/runs/42440708333) newly fails backend HIGH scanning on `golang.org/x/net v0.60.0`, `CVE-2026-78661`. [Official Go advisory GO-2026-6860](https://pkg.go.dev/vuln/GO-2026-6860) fixes HTML parser quadratic resource consumption in v0.62.0. The candidate now pins v0.62.0 with matching verified checksums and raises its fail-closed downgrade floor. Keep unrelated inherited requirements and all scanner thresholds intact. New final-head backend/database/dependency/image gates are required; historical green builds do not certify this update. No production deploy or target release is asserted.
 
 The same resumed image run independently finds Critical `CVE-2026-4738` in runtime zlib1.3.2-r1 via Grype. All three runtime Dockerfiles now pin Alpine zlib1.4-r0, confirmed installable on the existing immutable Alpine/Nginx bases; the runtime contract's exact-pin expectations advance with it. [Upstream zlib1.4 release notes](https://zlib.net/) include the fix. Nginx configuration validation passes with the patched package. Both scanners and severity cutoffs remain required. Final source-head multiarchitecture image builds and both scans must pass before acceptance.
+
+## November 9 exact-main evidence and candidate notes
+
+The security fixes were merged through [PR #415](https://github.com/rushairer/gouno-blog/pull/415).
+Audited main is now `0aee82081676e4c560f7489b5eef8249a6cfc32f`.
+The following runs were independently re-queried on November 9: all are
+`completed/success` and name that exact SHA. Earlier sections are historical
+receipts, not the current candidate acceptance summary.
+
+| Exact-main workflow | Verified result and limit |
+| --- | --- |
+| [CI 42441728669](https://github.com/rushairer/gouno-blog/actions/runs/42441728669) | Backend/database/Seed/frontend gates passed. Dependency review is event-skipped on main; the PR review result remains separate. |
+| [Gosso BFF 42441728635](https://github.com/rushairer/gouno-blog/actions/runs/42441728635) | Passed against published v1.7.0; does not exercise its broken rotated credentials. |
+| [Browser 42441728615](https://github.com/rushairer/gouno-blog/actions/runs/42441728615) | 366 passed; not maintainer certification. |
+| [Parity 42441728617](https://github.com/rushairer/gouno-blog/actions/runs/42441728617) | 86 passed; ledger remains needs-manual-recertification. |
+| [Publish Images 42441728746](https://github.com/rushairer/gouno-blog/actions/runs/42441728746) | Main-channel builds, scans, workflow signature verification and SBOM publication passed. These are development artifacts, not v1.6.0 images. |
+
+The [candidate review and reproducible inventory](../docs/quality/blog-v1.6.0-candidate-review-2026-11-09.md)
+records 810 diff entries from v1.5.26 to this main, including 15 detected
+renames. The inventory is not approval of all changed code. Unreleased notes
+are curated against current dependencies and Dockerfiles; historical released
+changelog sections remain byte-for-byte unchanged.
+
+Admin remains unpublished, its official-Gosso compatibility gate still fails,
+and manual certification and authorized Staging receipts remain absent.
+The v1.6.0 tag/Release and the formal artifact rows above remain pending.
+Any later candidate SHA must obtain its own required checks before tagging.
