@@ -31,7 +31,7 @@ func (ctrl *Controller) SaveConnectorProfile(c *gin.Context) {
 		Credential string `json:"credential"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	if err := ctrl.connectors.SaveProfile(c.Request.Context(), &req.Profile, req.Credential); err != nil {
@@ -85,7 +85,7 @@ func (ctrl *Controller) CompleteConnectorOAuth(c *gin.Context) {
 		Provider string `json:"provider"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	var err error
@@ -126,7 +126,7 @@ func (ctrl *Controller) SearchConsoleSummary(c *gin.Context) {
 		EndDate   string `json:"end_date"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	data, err := ctrl.connectors.SearchConsoleSummary(c.Request.Context(), id, req.StartDate, req.EndDate)
@@ -153,7 +153,7 @@ func (ctrl *Controller) QueueConnectorOutbox(c *gin.Context) {
 		Payload   json.RawMessage `json:"payload"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		controllerutil.WriteJSONBindingError(c, err, "")
 		return
 	}
 	item, err := ctrl.connectors.Queue(c.Request.Context(), req.ProfileID, req.Key, req.Payload)
