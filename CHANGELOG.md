@@ -27,6 +27,8 @@ acceptance remain mandatory. See the [candidate manifest](doc/release-manifest-v
 - Run pinned browser acceptance and Showcase Parity on Ubuntu 24.04. Lock and audit the separate browser-acceptance dependency graph; verify Go module contents and pin govulncheck v1.6.0 for reproducible CI.
 
 ### Fixed
+- Restore Canonical PI-02 panel order for API Access, model connections and knowledge settings: context/actions precede MFA feedback; locked actions remain disabled and sensitive management data remains gated.
+- Pin the linter output format so local agent environments retain the same fail-closed warning-count verification as CI. The warning ceiling remains 61.
 
 - Preserve the latest committed Provider/Embedding/Agent form draft across MFA without writing refs during render. Update article title/SEO after site-brand changes and remove stale canonical/JSON-LD metadata.
 - Restore explicit required-stream fallback for text-generation providers, including Responses API; report actual Provider attempt counts. Image generation retains its separate single-dispatch/no-automatic-replay contract.

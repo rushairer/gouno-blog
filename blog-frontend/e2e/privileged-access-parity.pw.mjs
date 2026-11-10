@@ -236,6 +236,18 @@ for (const theme of ["light", "dark"]) {
     await expect(showcase.getByText("高权限操作需要身份验证")).toBeVisible();
     await expect(product.getByText("高权限操作需要身份验证")).toBeVisible();
     await expectGateParity(showcase, product);
+    // PI-02 keeps panel context/actions ahead of whole-panel security feedback.
+    // Locked management data stays absent even though its disabled lead is visible.
+    for (const page of [showcase, product]) {
+      const lead = page.locator('[data-pattern="tab-panel-lead"]');
+      await expect(lead).toBeVisible();
+      await expect(lead.getByRole("button", { name: "创建 API Client", exact: true })).toBeDisabled();
+      const gate = page.locator('[data-slot$="privileged-access-gate"]');
+      const leadBox = await lead.boundingBox();
+      const gateBox = await gate.boundingBox();
+      expect(leadBox.y + leadBox.height).toBeLessThanOrEqual(gateBox.y);
+      await expect(page.getByText("Editorial Reporting SDK", { exact: true })).toBeHidden();
+    }
     expect(externalApiRequests).toEqual([]);
     expect(unknown).toEqual([]);
     expect(unexpectedWrites).toEqual([]);
@@ -247,6 +259,35 @@ for (const theme of ["light", "dark"]) {
     );
     await context.close();
   });
+
+  for (const panel of [
+    { tab: "模型连接", section: "providers" },
+    { tab: "知识库", section: "knowledge" },
+  ]) {
+    test(`AI ${panel.section} locked panel keeps its lead visible and actions disabled (${theme})`, async ({ browser }) => {
+      const { context, showcase, product, unknown, unexpectedWrites } = await openPair(
+        browser, "blog-admin-ai-settings", `/admin/ai-settings?section=${panel.section}`,
+        theme, { activeSudo: false, ai: true },
+      );
+      await showcase.getByRole("tab", { name: panel.tab, exact: true }).click();
+      await chooseShowcaseSecurity(showcase, "已锁定");
+      for (const page of [showcase, product]) {
+        const lead = page.locator('[data-pattern="tab-panel-lead"]');
+        await expect(lead).toBeVisible();
+        const buttons = lead.getByRole("button");
+        await expect(buttons).toHaveCount(3);
+        for (const button of await buttons.all()) await expect(button).toBeDisabled();
+        await expect(page.getByText("高权限操作需要身份验证")).toBeVisible();
+        const gate = page.locator('[data-slot$="privileged-access-gate"]');
+        const leadBox = await lead.boundingBox();
+        const gateBox = await gate.boundingBox();
+        expect(leadBox.y + leadBox.height).toBeLessThanOrEqual(gateBox.y);
+      }
+      expect(unknown).toEqual([]);
+      expect(unexpectedWrites).toEqual([]);
+      await context.close();
+    });
+  }
 
   test(`AI knowledge privileged gate matches Showcase (${theme})`, async ({
     browser,

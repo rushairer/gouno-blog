@@ -49,7 +49,7 @@ v1.5.26 and earlier entries remain unchanged. Important upgrade constraints:
 | Boundary | Relevant current evidence | Remaining release condition |
 | --- | --- | --- |
 | Agent transaction and generation recovery | Recovery runbooks above; database/race CI at the exact audited SHA | Complete final diff review and actual incident/upgrade operating acceptance; tests do not prove Provider delivery/billing |
-| BFF/OIDC and session isolation | [Signed OIDC regressions](authbff-signed-oidc-coverage-2026-10-14.md), [80% fail-closed ratchet](authbff-fail-closed-80pct-2026-10-14.md), exact-main BFF run linked in the manifest | Accept upstream Admin first; initial-secret BFF flow does not cover the Gosso rotation failure |
+| BFF/OIDC and session isolation | [Signed OIDC regressions](authbff-signed-oidc-coverage-2026-10-14.md), [80% fail-closed ratchet](authbff-fail-closed-80pct-2026-10-14.md), exact-main BFF run linked in the manifest | Accept upstream Admin first; Blog BFF and Admin rotation are separately exercised against formally released Gosso v1.7.1; retain final-SHA acceptance |
 | Owner mutation authorization | [Owner concurrency review](access-owner-mutation-2026-10-13.md), real PostgreSQL CI | Review final access-module changes and operator role/rollback scenarios |
 | HTTP errors and body limits | Scoped transport guards and handler fault tests; root AGENTS distinguishes direct guards from indirect paths | Finish capability-by-capability review; frozen Connector findings are unresolved risks, not silently waived |
 | Workflow Schema resources | [Local-reference review](workflow-schema-local-reference-2026-10-29.md); current compiler rejects external loaders and tests both authoring and execution against a readable file | Retain local-fragment behavior and reject external resource loading on final SHA |
@@ -72,7 +72,7 @@ intermediate candidate notes are not current runtime requirements.
 | State | Current conclusion |
 | --- | --- |
 | Code Ready | Not fully accepted: source security fixes merged, full release diff review still open |
-| CI Ready | Automated main gates passed at 0aee8208; any later release SHA needs its own checks |
+| CI Ready | Exact main 1bbd1025 passed CI42605601742 and released-Gosso BFF42605601789; any later release SHA needs its own checks |
 | Manual Certification Ready | No; blog-admin-ai is needs-manual-recertification |
 | Staging Ready | No identified authorized target or actual restore/rollback receipts |
 | Release Published | No; formal release remains v1.5.26, v1.6.0 is absent |
@@ -80,9 +80,14 @@ intermediate candidate notes are not current runtime requirements.
 | Release Complete | **No** |
 
 See the [candidate manifest](../../doc/release-manifest-v1.6.0.md#november-9-exact-main-evidence-and-candidate-notes)
-for exact run URLs. Admin PR97 still fails real secret-rotation acceptance
-against the signed Gosso v1.7.0 image. A local Gosso repair proposal is not an
-upstream publication; the task's read-only upstream scope has not been changed.
+for historical run URLs. Gosso v1.7.1 is now formally released at
+6c8ced618408f3625bbf022b67a08980a26a807d, with independently verified index
+`sha256:cdf81b3e6f532455aa8964e7921355c54e3bfca72bf5910cd21689d87fe80cbb`.
+[Final-main BFF42605601789](https://github.com/rushairer/gouno-blog/actions/runs/42605601789)
+and [Admin rotation42763310175](https://github.com/rushairer/gosso-admin/actions/runs/42763310175)
+pass against this released baseline. The earlier upstream read-only scope and
+unpublished patch blockers are resolved. Admin itself remains unpublished,
+with required approving review, manual certification and Staging gates open.
 The existing published compatibility matrix must retain actual formal versions.
 
 Five new dependency PRs (#416–#420) were observed open on November 9. They are
