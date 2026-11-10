@@ -29,6 +29,10 @@ func bindAgentJSON(c *gin.Context, value any) error {
 		return err
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		// Preserve streaming size-limit errors for the fixed HTTP 413 response.
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf("request body must contain one JSON object")
 	}
 	return binding.Validator.ValidateStruct(value)
