@@ -34,7 +34,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GOSSO_RELEASE_VERSION: "1.7.0"
+  GOSSO_RELEASE_VERSION: "1.7.1"
   GOSSO_RELEASE_DIGEST: "sha256:cdf81b3e6f532455aa8964e7921355c54e3bfca72bf5910cd21689d87fe80cbb"
   GOSSO_RELEASE_IMAGE: ghcr.io/rushairer/gosso:v1.7.1@sha256:cdf81b3e6f532455aa8964e7921355c54e3bfca72bf5910cd21689d87fe80cbb
 

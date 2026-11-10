@@ -667,6 +667,19 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
     expect(productFingerprint).toEqual(showcaseFingerprint);
     expect(productFingerprint.minHeight).toBe("36px");
 
+    if (["API Access", "模型连接", "知识库"].includes(tab)) {
+      for (const page of [showcase, product]) {
+        const lead = page.locator('[data-pattern="tab-panel-lead"]');
+        const gate = page.locator('[data-slot$="privileged-access-gate"]');
+        const leadBox = await lead.boundingBox();
+        const gateBox = await gate.boundingBox();
+        expect(leadBox.y + leadBox.height).toBeLessThanOrEqual(gateBox.y);
+        for (const button of await lead.getByRole("button").all()) {
+          await expect(button).toBeEnabled();
+        }
+      }
+    }
+
     await pairScreenshot(
       showcase,
       product,

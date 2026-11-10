@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useSudoMode } from "../../hooks/useSudoMode";
 import {
   Bot,
   CirclePause,
@@ -212,6 +213,7 @@ export function AdvancedWorkspace({
   onRefresh,
   formatDateTime,
 }: AdvancedWorkspaceProps) {
+  const { isSudoActive } = useSudoMode();
   const providerFileInputRef = useRef<HTMLInputElement>(null);
   const skillFileInputRef = useRef<HTMLInputElement>(null);
   const providerMap = new Map(providers.map((item) => [item.id, item]));
@@ -731,6 +733,47 @@ export function AdvancedWorkspace({
 
       {!editingAgent && !editingSkill && advancedSection === "providers" ? (
         <div data-pattern="settings-composition" className="contents">
+          <TabPanelLead
+            description={
+              locale === "zh"
+                ? "管理模型连接、密钥状态以及文本与图片生成的默认用途。"
+                : "Manage model connections, credential state, and default usage for text and image generation."
+            }
+            actions={
+              <>
+                <Button
+                  disabled={!isSudoActive}
+                  size="small"
+                  variant="outline"
+                  type="button"
+                  onClick={() => void onExportProviders()}
+                  icon={<Download />}
+                >
+                  {labels.exportProviders}
+                </Button>
+                <Button
+                  disabled={!isSudoActive}
+                  size="small"
+                  variant="outline"
+                  type="button"
+                  onClick={() => providerFileInputRef.current?.click()}
+                  icon={<Upload />}
+                >
+                  {labels.importProviders}
+                </Button>
+                <Button
+                  disabled={!isSudoActive}
+                  size="small"
+                  variant="solid"
+                  color="primary"
+                  onClick={() => onEditProvider("new")}
+                  icon={<Plus />}
+                >
+                  {locale === "zh" ? "添加模型连接" : labels.createProvider}
+                </Button>
+              </>
+            }
+          />
           <SudoGate
             title="模型连接与密钥保护"
             description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
@@ -744,44 +787,7 @@ export function AdvancedWorkspace({
                 hidden
                 onChange={(event) => void onImportProviders(event)}
               />
-              <TabPanelLead
-                description={
-                  locale === "zh"
-                    ? "管理模型连接、密钥状态以及文本与图片生成的默认用途。"
-                    : "Manage model connections, credential state, and default usage for text and image generation."
-                }
-                actions={
-                  <>
-                    <Button
-                      size="small"
-                      variant="outline"
-                      type="button"
-                      onClick={() => void onExportProviders()}
-                      icon={<Download />}
-                    >
-                      {labels.exportProviders}
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outline"
-                      type="button"
-                      onClick={() => providerFileInputRef.current?.click()}
-                      icon={<Upload />}
-                    >
-                      {labels.importProviders}
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="solid"
-                      color="primary"
-                      onClick={() => onEditProvider("new")}
-                      icon={<Plus />}
-                    >
-                      {locale === "zh" ? "添加模型连接" : labels.createProvider}
-                    </Button>
-                  </>
-                }
-              />
+
               <Card padding="base">
                 <div className="flex flex-col gap-4">
                   <div>
@@ -970,13 +976,7 @@ export function AdvancedWorkspace({
 
       {!editingAgent && !editingSkill && advancedSection === "api-access" ? (
         <div data-pattern="settings-composition" className="contents">
-          <SudoGate
-            title="External API Client 与长期密钥保护"
-            description="创建、修改、轮换或撤销服务端 API Client 会改变外部访问权限，需要近期多因素身份认证。"
-            actionLabel="解锁以管理 API Access"
-          >
-            <ExternalAPIWorkspace locale={locale} />
-          </SudoGate>
+          <ExternalAPIWorkspace locale={locale} />
         </div>
       ) : null}
 

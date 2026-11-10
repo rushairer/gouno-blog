@@ -46,7 +46,10 @@ export function enforceOxlintBudget(output, budget = maxAllowedWarnings) {
 function run() {
   // npm-run adds the pinned local node_modules/.bin to PATH. No global or
   // unreviewed linter fallback is permitted.
-  const result = spawnSync("oxlint", [], {
+  // Oxlint may auto-select the agent format inside Codex, which omits the
+  // required summary. Pin its human format so the same fail-closed count
+  // contract applies in local agents and GitHub Actions.
+  const result = spawnSync("oxlint", ["--format", "default"], {
     cwd: frontendRoot,
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,

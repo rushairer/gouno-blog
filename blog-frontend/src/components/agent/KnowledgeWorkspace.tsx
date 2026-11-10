@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSudoMode } from "../../hooks/useSudoMode";
 import { DatabaseZap, Edit2, Plus, RefreshCw, Trash2 } from "lucide-react";
 import {
   Alert,
@@ -62,57 +63,60 @@ export function KnowledgeWorkspace({
   formatDateTime,
 }: KnowledgeWorkspaceProps) {
   const [query, setQuery] = useState("");
+  const { isSudoActive } = useSudoMode();
 
   return (
     <div data-pattern="settings-composition" className="contents">
+      <TabPanelLead
+        description={
+          locale === "zh"
+            ? "仅索引已发布文章；这里同时展示索引内容、检索证据和 Embedding 配置。"
+            : "Only published content is indexed. Inspect indexed content, retrieval evidence, and embedding configuration here."
+        }
+        actions={
+          <>
+            <Button
+              disabled={!isSudoActive}
+              size="small"
+              variant="outline"
+              type="button"
+              onClick={() => void onRetryIndex()}
+              icon={<RefreshCw />}
+            >
+              {locale === "zh" ? "重试失败任务" : "Retry failed"}
+            </Button>
+            <Button
+              disabled={!isSudoActive}
+              size="small"
+              variant="outline"
+              type="button"
+              onClick={() => void onRebuildIndex()}
+              icon={<DatabaseZap />}
+            >
+              {locale === "zh" ? "全量重建" : "Rebuild all"}
+            </Button>
+            <Button
+              disabled={!isSudoActive}
+              size="small"
+              variant="solid"
+              color="primary"
+              type="button"
+              onClick={() => onEditEmbedding("new")}
+              icon={<Plus />}
+            >
+              {locale === "zh"
+                ? "添加 Embedding 模型"
+                : "Add embedding profile"}
+            </Button>
+          </>
+        }
+      />
       <SudoGate
         title="知识库与向量模型保护"
         description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"
         actionLabel="解锁以管理知识库"
       >
         <div className="flex flex-col gap-5">
-          <TabPanelLead
-            description={
-              locale === "zh"
-                ? "仅索引已发布文章；这里同时展示索引内容、检索证据和 Embedding 配置。"
-                : "Only published content is indexed. Inspect indexed content, retrieval evidence, and embedding configuration here."
-            }
-            actions={
-              <>
-                <Button
-                  size="small"
-                  variant="outline"
-                  type="button"
-                  onClick={() => void onRetryIndex()}
-                  icon={<RefreshCw />}
-                >
-                  {locale === "zh" ? "重试失败任务" : "Retry failed"}
-                </Button>
-                <Button
-                  size="small"
-                  variant="outline"
-                  type="button"
-                  onClick={() => void onRebuildIndex()}
-                  icon={<DatabaseZap />}
-                >
-                  {locale === "zh" ? "全量重建" : "Rebuild all"}
-                </Button>
-                <Button
-                  size="small"
-                  variant="solid"
-                  color="primary"
-                  type="button"
-                  onClick={() => onEditEmbedding("new")}
-                  icon={<Plus />}
-                >
-                  {locale === "zh"
-                    ? "添加 Embedding 模型"
-                    : "Add embedding profile"}
-                </Button>
-              </>
-            }
-          />
-
           <TabPanelFeedback>
             {indexStatus.failed > 0 ? (
               <Alert
