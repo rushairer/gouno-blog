@@ -42,6 +42,8 @@ manual Showcase certification and external Staging acceptance are not asserted.
 
 ### Security
 
+- Build Backend and Seed with digest-pinned Go 1.27.4 and enforce its minimum patch floor for [GO-2026-6859](https://pkg.go.dev/vuln/GO-2026-6859), the HTTP/1 MaxBytesReader header-race denial of service. Runtime/API behavior and existing body-limit tests remain unchanged.
+
 - Redact JSON decoder and validator details in the four Connector JSON administration endpoints. Keep strict single-object decoding and reject oversized streamed bodies, including trailing whitespace, with a fixed HTTP 413 before service dispatch. OAuth, credentials, delivery and Sandbox business behavior remain frozen.
 - Commit Agent approval effects and final reviewer status in the same PostgreSQL transaction for article drafts/revisions/tags, Page drafts/updates, editorial tasks/replies, content/media candidates, distribution proposals and operational suggestions. Preserve trusted provenance, uniqueness and final-SQL revision/timestamp fences. Quarantine uncertain commits and legacy failures instead of replaying approved effects; see the [incident recovery runbook](docs/quality/agent-approval-in-doubt-recovery.md).
 - Fence image generation by exact persisted attempt, preserve media bytes/metadata on ambiguous database commits, and quarantine Provider errors/timeouts as `outcome_uncertain`. Claimed or previously attempted generations require independent investigation and an append-only, separately authorized recovery decision; cancellation cannot silently make them retryable. See the [manual recovery runbook](docs/quality/media-generation-manual-recovery.md). Audit identifiers do not prove Provider idempotency, delivery or billing outcome.
