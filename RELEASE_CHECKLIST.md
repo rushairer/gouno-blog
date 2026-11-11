@@ -72,3 +72,15 @@ The patched source uses Go 1.27.4 and independently verified formal Gosso v1.7.2
 ## November 11 verified Admin release input
 
 GOSSO Admin v0.7.25 is formally published at `4545495bcdc518af65cc6c15a9695b9ef5df5e19`. Separate [artifact acceptance 42997051605](https://github.com/rushairer/gouno-doc/actions/runs/42997051605) passes for all three versioned images, exact Cosign identity, SBOM assets, both architectures and declared source provenance. Production examples now use the actual frontend and Seed version-plus-digest references; no floating candidate image is substituted. Manual certification and Staging remain unverified under the documented maintainer exception. This fulfills the upstream publication ordering; final Blog main checks and its own tagged artifacts remain mandatory.
+
+## November 11 actual v1.6.0 publication receipt
+
+- [x] Annotated v1.6.0 points to accepted source `0e8c527dcae40f931898930483fb24a00a840232`; existing tags remain immutable.
+- [x] Exact-source CI, PostgreSQL integration, Seed, frontend/coverage, race/vet/govulncheck, BFF, Browser Acceptance, automated Showcase Parity and image gates pass.
+- [x] [Tagged publication](https://github.com/rushairer/gouno-blog/actions/runs/42999093507) and [independent acceptance](https://github.com/rushairer/gouno-doc/actions/runs/42999630031) complete successfully for all three versioned images.
+- [x] Actual immutable digest, exact Cosign identity/issuer, SPDX/CycloneDX asset hashes/formats and both architectures/source provenance are recorded in [the completed manifest](doc/release-manifest-v1.6.0.md) and [permanent receipt](docs/quality/release-evidence-2026-11-11/independent-verification.json).
+- [ ] Manual Showcase certification: unverified, waived for publication only.
+- [ ] External Staging/target upgrade/recovery/rollback/operator acceptance: unverified, waived for publication only.
+- [ ] Production deployment: not requested or performed.
+
+Publication is complete under the explicit maintainer exception; full original operational certification is not claimed. Historical checklist rows retain their actual status. This documentation update does not move the release tag.

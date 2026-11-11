@@ -1,39 +1,52 @@
-# Gouno Blog v1.6.0 candidate release manifest
+# Gouno Blog v1.6.0 verified release manifest
 
-Current status (November 11): **candidate / not yet published**. Gosso v1.7.2 and GOSSO Admin v0.7.25 have completed formal publication and separate immutable-artifact verification. Final Blog commit checks and its own versioned images remain pending. Manual Showcase certification and external Staging are unverified under the [explicit maintainer publication exception](../docs/quality/release-exception-2026-11-11.md); they are not marked passed. Historical dated sections below retain their original scope. No production deployment is authorized.
+Current status (2026-11-11): **formally published; independent artifact acceptance passed under the maintainer publication exception**. Manual Showcase certification and external Staging remain unverified. Production was not deployed. Historical preparation receipts below are not current release status.
 
-## Version decision and dependencies
+## Release identity
 
-The v1.5.26-to-main diff includes new read-only external capability/API Access administration, provider configuration and guarded image-recovery capabilities, alongside security fixes. A backward-compatible minor v1.6.0 is appropriate; a patch-only v1.5.27 would omit the new capability distinction. Complete API/migration review remains required before final acceptance.
+- [GitHub Release](https://github.com/rushairer/gouno-blog/releases/tag/v1.6.0); annotated `v1.6.0` points to `0e8c527dcae40f931898930483fb24a00a840232`.
+- [Tagged publication workflow](https://github.com/rushairer/gouno-blog/actions/runs/42999093507): completed/success.
+- [Separate independent verification](https://github.com/rushairer/gouno-doc/actions/runs/42999630031): completed/success.
+- [Permanent machine-readable receipt](../docs/quality/release-evidence-2026-11-11/independent-verification.json) records immutable digests, release attachment hashes, exact identities, architectures and provenance qualification.
+- This post-publication documentation commit does not rewrite the validated tag.
 
-| Component | Required candidate baseline | Published release acceptance |
+## Compatible published dependencies
+
+| Component | Accepted baseline |
+| --- | --- |
+| Core | v1.4.0 |
+| Gosso | v1.7.2@sha256:bf398c6c2129da2f68c030dece3ceb52f8f5a7a6036a58b797c8e3f0619b5e90; independently verified; exact-source Blog BFF acceptance passed |
+| GOSSO Admin | v0.7.25, source4545495bcdc518af65cc6c15a9695b9ef5df5e19; frontend/Seed production examples pin actual independently accepted digests |
+| Frontend packages | @gouno/ui0.4.9; @gosso/client0.9.3; unchanged exact registry pins and integrity-bearing locks |
+| Build toolchains | Go1.27.4 Backend/Seed; Node24 LTS >=24.15 and <25 |
+
+## Actual immutable release artifacts
+
+| Versioned OCI image | Cosign | SBOM / provenance |
 | --- | --- | --- |
-| Blog backend | Core v1.4.0; patched Go 1.27.x; x/net v0.62.0 | Final Blog SHA and tagged image pending |
-| Blog frontend | @gouno/ui 0.4.9; @gosso/client 0.9.3; Node 24 LTS | Final tagged image pending |
-| Blog Seed | Patched Go 1.27.x | Final tagged image pending |
-| Gosso | v1.7.2@sha256:bf398c6c2129da2f68c030dece3ceb52f8f5a7a6036a58b797c8e3f0619b5e90 | Formal patched release; exact-identity signature, both architectures, patched toolchain SBOM, signed CycloneDX attestation, Helm OCI and Go Proxy independently verified. Final Blog BFF acceptance follows this digest. |
-| Gosso Admin | [v0.7.25](https://github.com/rushairer/gosso-admin/releases/tag/v0.7.25), source `4545495bcdc518af65cc6c15a9695b9ef5df5e19` | [Independent acceptance 42997051605](https://github.com/rushairer/gouno-doc/actions/runs/42997051605) verifies frontend, identity-admin variant and Seed digests, exact Cosign identity, SPDX/CycloneDX, both architectures and declared source provenance. Manual certification and Staging remain waived/unverified. |
+| `ghcr.io/rushairer/gouno-blog-backend:v1.6.0@sha256:40db53e72d8eef94848fd4b8d1b335265b3c2ca4c0f7c8e105c05a146418dcab` | Verified exact tag workflow identity and issuer | SPDX + CycloneDX hashes/formats verified; amd64 + arm64 declared source provenance verified |
+| `ghcr.io/rushairer/gouno-blog-frontend:v1.6.0@sha256:7896ed1fdf16a3df2c58c5ebc76f580b39b2fc34d8eaae9fa585dae8fc52af1c` | Verified exact tag workflow identity and issuer | SPDX + CycloneDX hashes/formats verified; amd64 + arm64 declared source provenance verified |
+| `ghcr.io/rushairer/gouno-blog-seed:v1.6.0@sha256:278195d6fe9b0af79b036f78f30cc2f3fb776eb02ba47b69145fa4350fc86daa` | Verified exact tag workflow identity and issuer | SPDX + CycloneDX hashes/formats verified; amd64 + arm64 declared source provenance verified |
 
-## Artifact inventory to complete after authorized publication
+All three Cosign identities are exactly `https://github.com/rushairer/gouno-blog/.github/workflows/publish-images.yml@refs/tags/v1.6.0`; issuer is exactly `https://token.actions.githubusercontent.com`. Independent verification checks the signed immutable digest after publication, not signing-step success. Local-directory BuildKit provenance cross-checks declared VCS source/revision in metadata, root request arguments and OCI labels; it is not a Git material content-hash or hermetic-build claim.
 
-| OCI repository | Intended tag | Immutable digest | Exact Cosign identity | SBOM/provenance |
-| --- | --- | --- | --- | --- |
-| ghcr.io/rushairer/gouno-blog-backend | v1.6.0 | PENDING | publish-images.yml@refs/tags/v1.6.0 | PENDING |
-| ghcr.io/rushairer/gouno-blog-frontend | v1.6.0 | PENDING | publish-images.yml@refs/tags/v1.6.0 | PENDING |
-| ghcr.io/rushairer/gouno-blog-seed | v1.6.0 | PENDING | publish-images.yml@refs/tags/v1.6.0 | PENDING |
+## Exact release-source automated acceptance
 
-Each full identity is `https://github.com/rushairer/gouno-blog/.github/workflows/publish-images.yml@refs/tags/v1.6.0`; issuer must equal `https://token.actions.githubusercontent.com`. Verify each image **by digest** after signing, then retain verification JSON, SPDX/CycloneDX documents, provenance and workflow URLs. Never replace PENDING with main-channel digests.
+- [Blog Showcase Parity](https://github.com/rushairer/gouno-blog/actions/runs/42997883601): completed/success, exact tag source `0e8c527dcae40f931898930483fb24a00a840232`.
+- [UI Browser Acceptance](https://github.com/rushairer/gouno-blog/actions/runs/42997872284): completed/success, exact tag source `0e8c527dcae40f931898930483fb24a00a840232`.
+- [Gosso Release BFF Compatibility](https://github.com/rushairer/gouno-blog/actions/runs/42997862192): completed/success, exact tag source `0e8c527dcae40f931898930483fb24a00a840232`.
+- [CI](https://github.com/rushairer/gouno-blog/actions/runs/42997862051): completed/success, exact tag source `0e8c527dcae40f931898930483fb24a00a840232`.
+- [Publish Images](https://github.com/rushairer/gouno-blog/actions/runs/42997862088): completed/success, exact tag source `0e8c527dcae40f931898930483fb24a00a840232`.
 
-## Final Blog acceptance and publication exception
+The PR also passes dependency review, image scans and complete CI before merge. Existing race/vet/govulncheck, database integration, coverage/security ratchets and signature regression gates were retained. Version1.6.0 includes real compatible functionality (External Capability/API Access, Provider configuration, governed AI recovery) alongside security fixes; no patch-only downgrade or new product development was introduced for closeout.
 
-- Exact final-SHA backend, Seed, frontend, database integration with no skipped required tests, race, vet, govulncheck, dependency review, BFF, browser and image-security gates.
-- Manual-first `blog-admin-ai` certification remains unverified under the owner exception. Green automated parity does not renew certification.
-- Action-by-action approval and recovery limitations tracked in [issue #338](https://github.com/rushairer/gouno-blog/issues/338). Atomic local effects and read-only reconciliation do not establish Provider-side exactly-once execution or billing. The historical cancel/reclaim bypass was remediated; do not report it as an unresolved current vulnerability.
-- Review Owner advisory-lock authorization, HTTP error redaction/body caps, OIDC session/PKCE/logout handling and in-document-only JSON Schema references on the final candidate.
-- Preserve the Connector product hold. Any unresolved Connector risk must be disclosed and resolved through separately named authorization, never silently changed here.
-- External Staging, target backup/upgrade/rollback and operator acceptance remain unverified under the explicit publication exception. Immutable upstream references are now verified. No production deployment is authorized.
+## Explicitly outstanding operational certification
 
-Keep actual deployment configuration and secrets outside this manifest. Add the completed immutable artifact evidence in a post-publication documentation commit without moving the validated tag.
+[The maintainer exception](../docs/quality/release-exception-2026-11-11.md) authorizes publication only. `blog-admin-ai` remains needs-manual-recertification; external Staging, actual target upgrade/recovery/rollback and operator sign-off are unverified. No unchecked item is relabeled passed. Confidential BFF, browser token isolation, local Owner authority and Connector business freeze remain intact. Public read-only observation of an older online main deployment is not target-image acceptance.
+
+## Historical preparation evidence
+
+The following dated sections preserve their original pre-publication scope; candidate, PENDING, blocked and older upstream statements there are historical. Current release identity and immutable artifact rows are above.
 
 ## November 6 final-closeout verification
 

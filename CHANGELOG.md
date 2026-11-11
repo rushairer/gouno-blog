@@ -5,6 +5,10 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Record the actual v1.6.0 immutable image digests, independent signature/SBOM/provenance verification and explicit remaining operational publication exception in the release manifest.
+
 ## [1.6.0] - 2026-11-11
 
 See the [release manifest](doc/release-manifest-v1.6.0.md). Publication is

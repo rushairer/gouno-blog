@@ -1,0 +1,143 @@
+{
+  "repo": "rushairer/gouno-blog",
+  "tag": "v1.6.0",
+  "sha": "0e8c527dcae40f931898930483fb24a00a840232",
+  "release_url": "https://github.com/rushairer/gouno-blog/releases/tag/v1.6.0",
+  "assets": [
+    {
+      "name": "backend.digest.txt",
+      "sha256": "fbb1d037579e24dd8bf615c6114e1e714080b2863a76fc57d0636c498d3aa320",
+      "api_digest_verified": true
+    },
+    {
+      "name": "frontend.digest.txt",
+      "sha256": "7a0d2c70e2bd8d7464767221feab9517f29043bc879d5254404ada550c00f477",
+      "api_digest_verified": true
+    },
+    {
+      "name": "sbom-backend-0e8c527dcae40f931898930483fb24a00a840232.cyclonedx.json",
+      "sha256": "839dee15dea942ce3501904c2b048d1e39c0715fc38f33c69a6446514be7c30a",
+      "api_digest_verified": true
+    },
+    {
+      "name": "sbom-backend-0e8c527dcae40f931898930483fb24a00a840232.spdx.json",
+      "sha256": "cbade047de10d61c1affe8fed1c0afef07c6fd1c5ced96ec03d9f5c945bda2af",
+      "api_digest_verified": true
+    },
+    {
+      "name": "sbom-frontend-0e8c527dcae40f931898930483fb24a00a840232.cyclonedx.json",
+      "sha256": "316f7f7adb54a7beb03575c6209161efa076ddc78a491c940626a01a212d290e",
+      "api_digest_verified": true
+    },
+    {
+      "name": "sbom-frontend-0e8c527dcae40f931898930483fb24a00a840232.spdx.json",
+      "sha256": "7cf03437cfc4f7bd81498ee9709cdff33ccce1f420e005b35fc60ad2d5edf3d6",
+      "api_digest_verified": true
+    },
+    {
+      "name": "sbom-seed-0e8c527dcae40f931898930483fb24a00a840232.cyclonedx.json",
+      "sha256": "b0dae48ccbcadfd7b466cd245085cc2c7a1054988de440d35a3078f148b5ab64",
+      "api_digest_verified": true
+    },
+    {
+      "name": "sbom-seed-0e8c527dcae40f931898930483fb24a00a840232.spdx.json",
+      "sha256": "6038b1ace40e19103cae2cfc8b37ae368cfd59f553a223985327caaadbfcc707",
+      "api_digest_verified": true
+    },
+    {
+      "name": "seed.digest.txt",
+      "sha256": "6a2ea9c5804d97b98fe28a9aa82405e6db59efdc11eeafff2bceabb346488624",
+      "api_digest_verified": true
+    }
+  ],
+  "images": [
+    {
+      "kind": "backend",
+      "image": "ghcr.io/rushairer/gouno-blog-backend@sha256:40db53e72d8eef94848fd4b8d1b335265b3c2ca4c0f7c8e105c05a146418dcab",
+      "tag_resolves_to_digest": true,
+      "cosign_identity": "https://github.com/rushairer/gouno-blog/.github/workflows/publish-images.yml@refs/tags/v1.6.0",
+      "cosign_verified": true,
+      "sbom_formats": [
+        "CycloneDX",
+        "SPDX"
+      ],
+      "platforms": [
+        {
+          "arch": "amd64",
+          "digest": "sha256:18c3a4c30e85e214778a1603d2532438ae3f83cc70fb4b9ef91ca40f86f56740",
+          "source_sha": "0e8c527dcae40f931898930483fb24a00a840232",
+          "qualification": "Local-directory build: declared VCS source/revision cross-checked in BuildKit metadata, root request args and OCI labels; not a Git material content-hash claim."
+        },
+        {
+          "arch": "arm64",
+          "digest": "sha256:1d0d82009ff1ccb8a3788d9ccd39726667d2d77c80966b35baa149ea07855eff",
+          "source_sha": "0e8c527dcae40f931898930483fb24a00a840232",
+          "qualification": "Local-directory build: declared VCS source/revision cross-checked in BuildKit metadata, root request args and OCI labels; not a Git material content-hash claim."
+        }
+      ]
+    },
+    {
+      "kind": "frontend",
+      "image": "ghcr.io/rushairer/gouno-blog-frontend@sha256:7896ed1fdf16a3df2c58c5ebc76f580b39b2fc34d8eaae9fa585dae8fc52af1c",
+      "tag_resolves_to_digest": true,
+      "cosign_identity": "https://github.com/rushairer/gouno-blog/.github/workflows/publish-images.yml@refs/tags/v1.6.0",
+      "cosign_verified": true,
+      "sbom_formats": [
+        "CycloneDX",
+        "SPDX"
+      ],
+      "platforms": [
+        {
+          "arch": "amd64",
+          "digest": "sha256:dac2abbd726c35c15caa202ee16c90218b0174c561a42a482306d211eb5858bf",
+          "source_sha": "0e8c527dcae40f931898930483fb24a00a840232",
+          "qualification": "Local-directory build: declared VCS source/revision cross-checked in BuildKit metadata, root request args and OCI labels; not a Git material content-hash claim."
+        },
+        {
+          "arch": "arm64",
+          "digest": "sha256:753dbef681861d8d3fcbe7cf7bc9b4eba99ddbebb0ffe3cd8cfc199291069ad2",
+          "source_sha": "0e8c527dcae40f931898930483fb24a00a840232",
+          "qualification": "Local-directory build: declared VCS source/revision cross-checked in BuildKit metadata, root request args and OCI labels; not a Git material content-hash claim."
+        }
+      ]
+    },
+    {
+      "kind": "seed",
+      "image": "ghcr.io/rushairer/gouno-blog-seed@sha256:278195d6fe9b0af79b036f78f30cc2f3fb776eb02ba47b69145fa4350fc86daa",
+      "tag_resolves_to_digest": true,
+      "cosign_identity": "https://github.com/rushairer/gouno-blog/.github/workflows/publish-images.yml@refs/tags/v1.6.0",
+      "cosign_verified": true,
+      "sbom_formats": [
+        "CycloneDX",
+        "SPDX"
+      ],
+      "platforms": [
+        {
+          "arch": "amd64",
+          "digest": "sha256:4092483e2d0680e739d89bcdaedb8d0d1357a1eaae9a040eb096506ed615432f",
+          "source_sha": "0e8c527dcae40f931898930483fb24a00a840232",
+          "qualification": "Local-directory build: declared VCS source/revision cross-checked in BuildKit metadata, root request args and OCI labels; not a Git material content-hash claim."
+        },
+        {
+          "arch": "arm64",
+          "digest": "sha256:dd36c57ab73c9246bde1cf2ceccacf452dc783ec95710587994bfa2f8a7373ba",
+          "source_sha": "0e8c527dcae40f931898930483fb24a00a840232",
+          "qualification": "Local-directory build: declared VCS source/revision cross-checked in BuildKit metadata, root request args and OCI labels; not a Git material content-hash claim."
+        }
+      ]
+    }
+  ],
+  "manual_certification": "not verified; maintainer publication exception",
+  "staging": "not verified; maintainer publication exception",
+  "production_deployed": false,
+  "publication_workflow": {
+    "id": 42999093507,
+    "url": "https://github.com/rushairer/gouno-blog/actions/runs/42999093507",
+    "sha": "0e8c527dcae40f931898930483fb24a00a840232"
+  },
+  "independent_verifier": {
+    "repo": "rushairer/gouno-doc",
+    "source_sha": "db1ffc4d2ea933f74f18308a21f0561907114bb7",
+    "run_id": "42999630031"
+  }
+}
