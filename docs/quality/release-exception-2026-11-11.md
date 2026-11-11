@@ -23,7 +23,8 @@ an unperformed check passed**. Prior reviewed source baseline: `ff5f2198a83faef7
   The existing isolated recovery receipt retains its original limited scope.
 - Existing checklist rows for unperformed work remain unchecked. This exception
   does not change runtime security controls, tests, thresholds or repository rules.
-- Existing independently reviewed PR #97 was merged before this exception.
+- Earlier Admin PR #97 was merged before this exception; its review status is
+  not inferred from merge status.
   Any further independent approval absent from this metadata PR is explicitly
   part of the requested publication exception; GitHub-enforced rules remain intact.
 
