@@ -68,3 +68,7 @@ independent tag-identity verification remain pending.
 ## November 11 release disposition
 
 The patched source uses Go 1.27.4 and independently verified formal Gosso v1.7.2. Final automated checks and versioned image verification remain required; prior main-channel successes are historical. Manual certification and external Staging remain unverified under [the explicit publication exception](docs/quality/release-exception-2026-11-11.md); no unchecked operational item is inferred to have passed.
+
+## November 11 verified Admin release input
+
+GOSSO Admin v0.7.25 is formally published at `4545495bcdc518af65cc6c15a9695b9ef5df5e19`. Separate [artifact acceptance 42997051605](https://github.com/rushairer/gouno-doc/actions/runs/42997051605) passes for all three versioned images, exact Cosign identity, SBOM assets, both architectures and declared source provenance. Production examples now use the actual frontend and Seed version-plus-digest references; no floating candidate image is substituted. Manual certification and Staging remain unverified under the documented maintainer exception. This fulfills the upstream publication ordering; final Blog main checks and its own tagged artifacts remain mandatory.

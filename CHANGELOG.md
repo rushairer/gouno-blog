@@ -20,6 +20,8 @@ manual Showcase certification and external Staging acceptance are not asserted.
 
 ### Changed
 
+- Pin production examples to the independently verified formal GOSSO Admin v0.7.25 frontend and Seed digests. Keep actual production deployment and manual/Staging certification separate from publication.
+
 - Use published Gouno Core v1.4.0 and its compatible module requirements. Keep exact registry dependencies `@gouno/ui 0.4.9` and `@gosso/client 0.9.3`, with Node 24 LTS (`>=24.15 <25`). Preserve confidential-BFF and Connector contracts.
 - Resolve RFC 7009 revocation through OIDC discovery and reject endpoints outside the configured issuer HTTPS origin. Pin isolated BFF compatibility and production examples to the signature-verified Gosso v1.7.2 image, which fixes Client Secret rotation persistence. Require fresh independent BFF compatibility against that exact released digest.
 - Keep development images on the floating `main` channel; production Compose requires explicit immutable version-and-digest references and file-based secrets. Run Redis unprivileged after a CHOWN-only volume-ownership migration.

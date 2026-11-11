@@ -1,6 +1,6 @@
 # Gouno Blog v1.6.0 candidate release manifest
 
-Status: **blocked / unpublished**. This is a preparation inventory, not a production deployment authorization or a verified release manifest. No v1.6.0 tag, release image digest, signature or SBOM is asserted here.
+Current status (November 11): **candidate / not yet published**. Gosso v1.7.2 and GOSSO Admin v0.7.25 have completed formal publication and separate immutable-artifact verification. Final Blog commit checks and its own versioned images remain pending. Manual Showcase certification and external Staging are unverified under the [explicit maintainer publication exception](../docs/quality/release-exception-2026-11-11.md); they are not marked passed. Historical dated sections below retain their original scope. No production deployment is authorized.
 
 ## Version decision and dependencies
 
@@ -12,7 +12,7 @@ The v1.5.26-to-main diff includes new read-only external capability/API Access a
 | Blog frontend | @gouno/ui 0.4.9; @gosso/client 0.9.3; Node 24 LTS | Final tagged image pending |
 | Blog Seed | Patched Go 1.27.x | Final tagged image pending |
 | Gosso | v1.7.2@sha256:bf398c6c2129da2f68c030dece3ceb52f8f5a7a6036a58b797c8e3f0619b5e90 | Formal patched release; exact-identity signature, both architectures, patched toolchain SBOM, signed CycloneDX attestation, Helm OCI and Go Proxy independently verified. Final Blog BFF acceptance follows this digest. |
-| Gosso Admin | v0.7.25 candidate | Manual Showcase recertification and staging acceptance pending |
+| Gosso Admin | [v0.7.25](https://github.com/rushairer/gosso-admin/releases/tag/v0.7.25), source `4545495bcdc518af65cc6c15a9695b9ef5df5e19` | [Independent acceptance 42997051605](https://github.com/rushairer/gouno-doc/actions/runs/42997051605) verifies frontend, identity-admin variant and Seed digests, exact Cosign identity, SPDX/CycloneDX, both architectures and declared source provenance. Manual certification and Staging remain waived/unverified. |
 
 ## Artifact inventory to complete after authorized publication
 
@@ -24,14 +24,14 @@ The v1.5.26-to-main diff includes new read-only external capability/API Access a
 
 Each full identity is `https://github.com/rushairer/gouno-blog/.github/workflows/publish-images.yml@refs/tags/v1.6.0`; issuer must equal `https://token.actions.githubusercontent.com`. Verify each image **by digest** after signing, then retain verification JSON, SPDX/CycloneDX documents, provenance and workflow URLs. Never replace PENDING with main-channel digests.
 
-## Acceptance still required
+## Final Blog acceptance and publication exception
 
 - Exact final-SHA backend, Seed, frontend, database integration with no skipped required tests, race, vet, govulncheck, dependency review, BFF, browser and image-security gates.
-- Direct rendered manual-first review and a PR renewing `blog-admin-ai`; green automated parity does not renew certification.
+- Manual-first `blog-admin-ai` certification remains unverified under the owner exception. Green automated parity does not renew certification.
 - Action-by-action approval and recovery limitations tracked in [issue #338](https://github.com/rushairer/gouno-blog/issues/338). Atomic local effects and read-only reconciliation do not establish Provider-side exactly-once execution or billing. The historical cancel/reclaim bypass was remediated; do not report it as an unresolved current vulnerability.
 - Review Owner advisory-lock authorization, HTTP error redaction/body caps, OIDC session/PKCE/logout handling and in-document-only JSON Schema references on the final candidate.
 - Preserve the Connector product hold. Any unresolved Connector risk must be disclosed and resolved through separately named authorization, never silently changed here.
-- Identify staging configuration, backups, rollback points and immutable upstream images; complete the root release checklist. No production target is authorized by this task.
+- External Staging, target backup/upgrade/rollback and operator acceptance remain unverified under the explicit publication exception. Immutable upstream references are now verified. No production deployment is authorized.
 
 Keep actual deployment configuration and secrets outside this manifest. Add the completed immutable artifact evidence in a post-publication documentation commit without moving the validated tag.
 
