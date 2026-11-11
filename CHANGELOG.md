@@ -5,9 +5,11 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-Release candidate: **v1.6.0**, not a published release. Upstream Admin acceptance,
-manual-first Showcase recertification, full candidate review and Staging/rollback
-acceptance remain mandatory. See the [candidate manifest](doc/release-manifest-v1.6.0.md).
+## [1.6.0] - 2026-11-11
+
+See the [release manifest](doc/release-manifest-v1.6.0.md). Publication is
+maintainer-authorized under the [documented release exception](docs/quality/release-exception-2026-11-11.md);
+manual Showcase certification and external Staging acceptance are not asserted.
 
 ### Added
 
