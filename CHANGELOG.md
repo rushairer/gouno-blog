@@ -5,9 +5,11 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-Release candidate: **v1.6.0**, not a published release. Upstream Admin acceptance,
-manual-first Showcase recertification, full candidate review and Staging/rollback
-acceptance remain mandatory. See the [candidate manifest](doc/release-manifest-v1.6.0.md).
+## [1.6.0] - 2026-11-11
+
+See the [release manifest](doc/release-manifest-v1.6.0.md). Publication is
+maintainer-authorized under the [documented release exception](docs/quality/release-exception-2026-11-11.md);
+manual Showcase certification and external Staging acceptance are not asserted.
 
 ### Added
 
@@ -18,8 +20,10 @@ acceptance remain mandatory. See the [candidate manifest](doc/release-manifest-v
 
 ### Changed
 
+- Pin production examples to the independently verified formal GOSSO Admin v0.7.25 frontend and Seed digests. Keep actual production deployment and manual/Staging certification separate from publication.
+
 - Use published Gouno Core v1.4.0 and its compatible module requirements. Keep exact registry dependencies `@gouno/ui 0.4.9` and `@gosso/client 0.9.3`, with Node 24 LTS (`>=24.15 <25`). Preserve confidential-BFF and Connector contracts.
-- Resolve RFC 7009 revocation through OIDC discovery and reject endpoints outside the configured issuer HTTPS origin. Pin isolated BFF compatibility and production examples to the signature-verified Gosso v1.7.1 image, which fixes Client Secret rotation persistence. Require fresh independent BFF compatibility against that exact released digest.
+- Resolve RFC 7009 revocation through OIDC discovery and reject endpoints outside the configured issuer HTTPS origin. Pin isolated BFF compatibility and production examples to the signature-verified Gosso v1.7.2 image, which fixes Client Secret rotation persistence. Require fresh independent BFF compatibility against that exact released digest.
 - Keep development images on the floating `main` channel; production Compose requires explicit immutable version-and-digest references and file-based secrets. Run Redis unprivileged after a CHOWN-only volume-ownership migration.
 - Lazy-load nine independent public routes while retaining PublicShell/Suspense behavior; enforce a 500 kB ceiling on every emitted JavaScript chunk with missing-output and oversized-chunk regressions.
 - Standardize modal sticky footers and close-button placement, Provider/Embedding table composition, panel insets and titles, and Toast alignment. These changes still require manual-first Showcase recertification.
@@ -27,7 +31,7 @@ acceptance remain mandatory. See the [candidate manifest](doc/release-manifest-v
 - Run pinned browser acceptance and Showcase Parity on Ubuntu 24.04. Lock and audit the separate browser-acceptance dependency graph; verify Go module contents and pin govulncheck v1.6.0 for reproducible CI.
 
 ### Fixed
-- Align released-Gosso BFF test version labels/defaults with the already pinned immutable v1.7.1 digest.
+- Align released-Gosso BFF test version labels/defaults with the already pinned immutable v1.7.2 digest.
 - Restore Canonical PI-02 panel order for API Access, model connections and knowledge settings: context/actions precede MFA feedback; locked actions remain disabled and sensitive management data remains gated.
 - Pin the linter output format so local agent environments retain the same fail-closed warning-count verification as CI. The warning ceiling remains 61.
 
@@ -40,6 +44,8 @@ acceptance remain mandatory. See the [candidate manifest](doc/release-manifest-v
 
 ### Security
 
+- Build Backend and Seed with digest-pinned Go 1.27.4 and enforce its minimum patch floor for [GO-2026-6859](https://pkg.go.dev/vuln/GO-2026-6859), the HTTP/1 MaxBytesReader header-race denial of service. Runtime/API behavior and existing body-limit tests remain unchanged.
+
 - Redact JSON decoder and validator details in the four Connector JSON administration endpoints. Keep strict single-object decoding and reject oversized streamed bodies, including trailing whitespace, with a fixed HTTP 413 before service dispatch. OAuth, credentials, delivery and Sandbox business behavior remain frozen.
 - Commit Agent approval effects and final reviewer status in the same PostgreSQL transaction for article drafts/revisions/tags, Page drafts/updates, editorial tasks/replies, content/media candidates, distribution proposals and operational suggestions. Preserve trusted provenance, uniqueness and final-SQL revision/timestamp fences. Quarantine uncertain commits and legacy failures instead of replaying approved effects; see the [incident recovery runbook](docs/quality/agent-approval-in-doubt-recovery.md).
 - Fence image generation by exact persisted attempt, preserve media bytes/metadata on ambiguous database commits, and quarantine Provider errors/timeouts as `outcome_uncertain`. Claimed or previously attempted generations require independent investigation and an append-only, separately authorized recovery decision; cancellation cannot silently make them retryable. See the [manual recovery runbook](docs/quality/media-generation-manual-recovery.md). Audit identifiers do not prove Provider idempotency, delivery or billing outcome.
@@ -49,7 +55,7 @@ acceptance remain mandatory. See the [candidate manifest](doc/release-manifest-v
 - Redact unexpected database, Provider, Redis, filesystem and JSON-decoder failures at audited HTTP boundaries using typed safe responses. Preserve existing validation text, status codes, post conflict codes, body limits and hidden-draft behavior. Distinguish confirmed missing Article/Page rows from infrastructure failures and reject impossible Page IDs before SQL. Connector behavior remains frozen; the direct AST guard does not certify every indirect error path.
 - Restrict Workflow JSON Schema references to their embedded document; reject external filesystem/network resources during authoring and execution while retaining local-fragment validation.
 - Patch backend `golang.org/x/net` to v0.62.0 with verified checksums and a fail-closed dependency floor, covering `CVE-2026-78661` / [GO-2026-6860](https://pkg.go.dev/vuln/GO-2026-6860) and the earlier HTTP/2 advisories. Keep compatible crypto/sys/term/text requirements; never downgrade to the intermediate v0.60.0 candidate.
-- Use Go 1.27.3, digest-pinned builders, patched musl and fail-closed toolchain guards. Retain `go-jose/v4 v4.1.6` and Tink v2.9.0 with negative dependency-floor probes; refresh AWS SDK, miniredis and Seed crypto without weakening token/keyset contracts.
+- Use Go 1.27.4, digest-pinned builders, patched musl and fail-closed toolchain guards. Retain `go-jose/v4 v4.1.6` and Tink v2.9.0 with negative dependency-floor probes; refresh AWS SDK, miniredis and Seed crypto without weakening token/keyset contracts.
 - Pin runtime zlib to Alpine 1.4-r0 for all three images, including the `CVE-2026-4738` fix. Keep the minimal Nginx slim frontend runtime with pinned pcre2, patched backend/Seed certificate/timezone packages, immutable base digests and non-root execution. Earlier full-Nginx package lists and zlib 1.3.2-r1 pins are superseded.
 - Gate locally built and published immutable images with pinned Trivy and Grype scans. After signing each backend/frontend/Seed digest, fail closed on Cosign verification against the exact trusted GitHub workflow identity and OIDC issuer before recording digests. Require signature false-green regressions, SPDX/CycloneDX SBOMs and independent release verification; a successful signing step is insufficient.
 - Exercise disposable PostgreSQL migrations, rollback, concurrency and historical upgrades in CI; enforce frontend quality/coverage/build, dependency review and signature/deployment-contract regressions without lowering existing gates.

@@ -24,7 +24,7 @@
 
 Candidate: **v1.6.0**, not v1.5.27: the diff after v1.5.26 introduces the read-only external capability gateway, API Access management, provider configuration and guarded reconciliation capabilities in addition to security fixes. No candidate tag has been created.
 
-- [ ] Accept the published Gosso v1.7.1 exact immutable image and rerun confidential-BFF compatibility against that digest; the existing v1.6.1 result is historical evidence only.
+- [ ] Accept the published Gosso v1.7.2 exact immutable image and rerun confidential-BFF compatibility against that digest; the existing v1.6.1 result is historical evidence only.
 - [ ] Complete Gosso Admin upstream release acceptance before any Blog tag.
 - [ ] Renew the `blog-admin-ai` certification through direct state-by-state rendered Showcase/Product review and a parity-sensitive PR. Current ledger status is `needs-manual-recertification`.
 - [ ] Review all v1.5.26-to-final-candidate changes; a green CI does not certify the whole application diff. The [November 9 candidate review inventory](docs/quality/blog-v1.6.0-candidate-review-2026-11-09.md) records the exact range and remaining review limits.
@@ -64,3 +64,11 @@ This resolves the November 8 source/image scan failures on that SHA, not the
 remaining upstream, full review, manual or operational gates. No release
 checkbox is promoted from those automated results. Formal v1.6.0 images and
 independent tag-identity verification remain pending.
+
+## November 11 release disposition
+
+The patched source uses Go 1.27.4 and independently verified formal Gosso v1.7.2. Final automated checks and versioned image verification remain required; prior main-channel successes are historical. Manual certification and external Staging remain unverified under [the explicit publication exception](docs/quality/release-exception-2026-11-11.md); no unchecked operational item is inferred to have passed.
+
+## November 11 verified Admin release input
+
+GOSSO Admin v0.7.25 is formally published at `4545495bcdc518af65cc6c15a9695b9ef5df5e19`. Separate [artifact acceptance 42997051605](https://github.com/rushairer/gouno-doc/actions/runs/42997051605) passes for all three versioned images, exact Cosign identity, SBOM assets, both architectures and declared source provenance. Production examples now use the actual frontend and Seed version-plus-digest references; no floating candidate image is substituted. Manual certification and Staging remain unverified under the documented maintainer exception. This fulfills the upstream publication ordering; final Blog main checks and its own tagged artifacts remain mandatory.
