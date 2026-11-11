@@ -21,7 +21,7 @@ manual Showcase certification and external Staging acceptance are not asserted.
 ### Changed
 
 - Use published Gouno Core v1.4.0 and its compatible module requirements. Keep exact registry dependencies `@gouno/ui 0.4.9` and `@gosso/client 0.9.3`, with Node 24 LTS (`>=24.15 <25`). Preserve confidential-BFF and Connector contracts.
-- Resolve RFC 7009 revocation through OIDC discovery and reject endpoints outside the configured issuer HTTPS origin. Pin isolated BFF compatibility and production examples to the signature-verified Gosso v1.7.1 image, which fixes Client Secret rotation persistence. Require fresh independent BFF compatibility against that exact released digest.
+- Resolve RFC 7009 revocation through OIDC discovery and reject endpoints outside the configured issuer HTTPS origin. Pin isolated BFF compatibility and production examples to the signature-verified Gosso v1.7.2 image, which fixes Client Secret rotation persistence. Require fresh independent BFF compatibility against that exact released digest.
 - Keep development images on the floating `main` channel; production Compose requires explicit immutable version-and-digest references and file-based secrets. Run Redis unprivileged after a CHOWN-only volume-ownership migration.
 - Lazy-load nine independent public routes while retaining PublicShell/Suspense behavior; enforce a 500 kB ceiling on every emitted JavaScript chunk with missing-output and oversized-chunk regressions.
 - Standardize modal sticky footers and close-button placement, Provider/Embedding table composition, panel insets and titles, and Toast alignment. These changes still require manual-first Showcase recertification.
@@ -29,7 +29,7 @@ manual Showcase certification and external Staging acceptance are not asserted.
 - Run pinned browser acceptance and Showcase Parity on Ubuntu 24.04. Lock and audit the separate browser-acceptance dependency graph; verify Go module contents and pin govulncheck v1.6.0 for reproducible CI.
 
 ### Fixed
-- Align released-Gosso BFF test version labels/defaults with the already pinned immutable v1.7.1 digest.
+- Align released-Gosso BFF test version labels/defaults with the already pinned immutable v1.7.2 digest.
 - Restore Canonical PI-02 panel order for API Access, model connections and knowledge settings: context/actions precede MFA feedback; locked actions remain disabled and sensitive management data remains gated.
 - Pin the linter output format so local agent environments retain the same fail-closed warning-count verification as CI. The warning ceiling remains 61.
 
@@ -53,7 +53,7 @@ manual Showcase certification and external Staging acceptance are not asserted.
 - Redact unexpected database, Provider, Redis, filesystem and JSON-decoder failures at audited HTTP boundaries using typed safe responses. Preserve existing validation text, status codes, post conflict codes, body limits and hidden-draft behavior. Distinguish confirmed missing Article/Page rows from infrastructure failures and reject impossible Page IDs before SQL. Connector behavior remains frozen; the direct AST guard does not certify every indirect error path.
 - Restrict Workflow JSON Schema references to their embedded document; reject external filesystem/network resources during authoring and execution while retaining local-fragment validation.
 - Patch backend `golang.org/x/net` to v0.62.0 with verified checksums and a fail-closed dependency floor, covering `CVE-2026-78661` / [GO-2026-6860](https://pkg.go.dev/vuln/GO-2026-6860) and the earlier HTTP/2 advisories. Keep compatible crypto/sys/term/text requirements; never downgrade to the intermediate v0.60.0 candidate.
-- Use Go 1.27.3, digest-pinned builders, patched musl and fail-closed toolchain guards. Retain `go-jose/v4 v4.1.6` and Tink v2.9.0 with negative dependency-floor probes; refresh AWS SDK, miniredis and Seed crypto without weakening token/keyset contracts.
+- Use Go 1.27.4, digest-pinned builders, patched musl and fail-closed toolchain guards. Retain `go-jose/v4 v4.1.6` and Tink v2.9.0 with negative dependency-floor probes; refresh AWS SDK, miniredis and Seed crypto without weakening token/keyset contracts.
 - Pin runtime zlib to Alpine 1.4-r0 for all three images, including the `CVE-2026-4738` fix. Keep the minimal Nginx slim frontend runtime with pinned pcre2, patched backend/Seed certificate/timezone packages, immutable base digests and non-root execution. Earlier full-Nginx package lists and zlib 1.3.2-r1 pins are superseded.
 - Gate locally built and published immutable images with pinned Trivy and Grype scans. After signing each backend/frontend/Seed digest, fail closed on Cosign verification against the exact trusted GitHub workflow identity and OIDC issuer before recording digests. Require signature false-green regressions, SPDX/CycloneDX SBOMs and independent release verification; a successful signing step is insufficient.
 - Exercise disposable PostgreSQL migrations, rollback, concurrency and historical upgrades in CI; enforce frontend quality/coverage/build, dependency review and signature/deployment-contract regressions without lowering existing gates.
