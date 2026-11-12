@@ -18,6 +18,8 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 
 跨仓库的身份 SDK、Blog transport、Admin service 与 React 页面职责见 [`docs/auth-client-boundary.md`](docs/auth-client-boundary.md)。该文档是长期边界；带日期的审计报告仅作为历史快照。
 
+全量文档导航与历史/现行资料边界见 [文档索引](docs/README.md)。
+
 当前代码及生产部署模板的 **As-Is 架构图**见 [docs/architecture/README.md](docs/architecture/README.md)（内含可维护的 SVG、实际调用链和边界）；生产模板不等于已验证的线上状态。
 
 持续质量改进见 [A+ 质量路线图](docs/quality/roadmap.md)，包含评审基线、分阶段任务卡、验收要求和[新会话启动提示词](docs/quality/prompts.md)。

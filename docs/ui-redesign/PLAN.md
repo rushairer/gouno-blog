@@ -1,4 +1,6 @@
-# Gouno 产品家族 UI 重构执行计划
+# Gouno 产品家族 UI 重构执行计划（历史阶段计划）
+
+> **历史基线，非当前工作队列（2026-11-12）**：本文件的 U01–U08 `planned`、`hold` 等状态反映初期跨仓迁移阶段，不代表目前 `main` 的未完成项目。后续 Gouno UI 已收录 Gosso Admin、Blog Admin 和 Public Blog 三个完整对比语料，并以源代码、[认证台账](showcase-parity-certifications.json)及 [Gouno UI 主线治理](https://github.com/rushairer/gouno-ui/blob/main/docs/canonical-showcase-audit.md)为现行证据。连接器行为仍以业务仓库安全约束为准。本页和任务卡保留为原始阶段性计划，不再自动按 U01a 顺序派发新任务。
 
 ## 工作方式
 

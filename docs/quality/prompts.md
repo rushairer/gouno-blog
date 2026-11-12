@@ -1,4 +1,6 @@
-# 新会话启动提示词
+# 新会话启动提示词（历史质量工作流提示词）
+
+> 此处保留 2026 年 9 月质量计划阶段的工作提示，不能直接代表当前 `main` 的待办状态。现行入口参见 [文档索引](../README.md)、[当前架构](../architecture/README.md)和 [已发布 v1.6.0 清单](../releases/release-manifest-v1.6.0.md)。
 
 先阅读 [路线图](roadmap.md)。Q01/Q01a/Q01b 已通过本地验收，下一步为 Q02。前置计划与 Q01/Q01a 已在 `codex/q01-ci` 的 `c1c6158`，Q01b 修复和状态更新仍未提交。新 worktree 必须完整取得这些改动，不能仅从该 HEAD 或 main 开始。
 
