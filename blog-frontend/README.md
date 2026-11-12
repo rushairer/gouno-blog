@@ -1,74 +1,38 @@
 # Gouno Blog Frontend
 
-React + TypeScript + Vite single-page app for the Gouno Blog portal. It serves the public blog feed, article pages, comments, account settings, and the admin content workspace. Authentication is delegated to GOSSO through OIDC/OAuth2.
+React 19 + TypeScript + Vite single-page application. **Public Blog** (`/` and public routes) and **Blog Admin** (`/admin/*`) are two route groups within **one frontend application**, not two separately deployed SPAs.
 
-## Local Development
+See [the current As-Is architecture SVG and source inventory](../docs/architecture/README.md).
 
-Install dependencies:
+## Authentication: server-side confidential BFF
+
+- `src/auth.ts` configures `@gosso/client` with `sessionMode: "cookie"`, `sessionProfileEndpoint: "/api/me/blog-session"`, `sessionRefreshEndpoint: "/api/auth/refresh"`, `authorizeEndpoint: "/api/auth/login"` and `logoutEndpoint: "/api/auth/logout"`.
+- The browser navigates to same-origin `GET /api/auth/login`; **the Go backend `internal/authbff`** creates PKCE/state/nonce, redirects to GOSSO, receives **`GET /api/auth/callback`**, exchanges the code and verifies ID tokens. The SPA does **not** handle OAuth `/callback` and does not receive provider tokens.
+- Blog session is an opaque host-only Secure/HttpOnly Cookie backed by encrypted Redis data. The readable `__Host-blog-csrf` Cookie exists only for CSRF header matching; it is not a provider token.
+- The GOSSO login/password/MFA/Passkey UI lives on the SSO origin in `gosso-admin-frontend`, not in Blog.
+- `src/api/client.ts` exports a thin `Proxy` around the SDK client; it adds a one-time MFA step-up/retry for eligible privileged AI API calls. `src/api/posts.ts` and other domain APIs use `apiClient`; React pages must not duplicate protocol/transport logic.
+- The `Admin` route guard reads Blog-local membership/permissions (from `/api/me/blog-session`) and provides UI gating. **Only the Go backend's authorization middleware is security-authoritative**. The Blog does not derive its permissions from GOSSO's global admin role.
+
+## Local development
 
 ```bash
 npm ci
-```
-
-Start the Vite dev server:
-
-```bash
 npm run dev
 ```
 
-The full local product is accessed through the root Docker Compose Caddy gateway at `https://blog.dev.local`. Run `./scripts/setup-local-tls.sh` from the repository root before starting Compose. The gateway proxies:
+The full integrated app is served through the repository-root Caddy HTTPS Compose gateway at `https://blog.dev.local`. Paths other than Blog APIs/media/feed/sitemap go to `blog-frontend:8081`; `/api/*` is routed to `blog-backend:8082`. The callback URI is `https://blog.dev.local/api/auth/callback`, handled by Go.
 
-- `/` to this frontend
-- `/api/` to `blog-backend`
-- `/callback` back to this SPA for OIDC callback handling
+`VITE_GOSSO_ISSUER` optionally configures the public issuer for an appropriately provisioned deployment. **Do not put confidential client IDs/secrets, OAuth verifier, Token exchange details or BFF callback settings in `VITE_*` browser variables.** The server uses `BLOG_OIDC_*` and secured runtime secrets.
 
-## Environment Variables
-
-The app works behind the gateway without extra frontend configuration. Override these only when connecting to a different GOSSO issuer or OAuth client:
+## Commands
 
 ```bash
-VITE_GOSSO_ISSUER=https://sso.dev.local
-VITE_GOSSO_CLIENT_ID=blog-bff
+npm run lint
+npm run lint:ui
+npm run test:run
+npm run build
 ```
 
-The redirect URI is derived from the current browser origin as `${window.location.origin}/callback`.
+Refer to `package.json` and `package-lock.json` for exact `@gosso/client` and `@gouno/ui` versions instead of copying historical version numbers. Any changes to cookie/callback/CSRF/refresh/MFA/logout contracts require cross-repository regression verification.
 
-## Authentication and SDK
-
-The frontend uses `@gosso/client` in Cookie session mode. Access and refresh tokens remain HttpOnly and are never persisted in browser-readable storage. The SDK stores only short-lived PKCE state and the minimal server-provided UI profile in `sessionStorage`, sends the identity CSRF token where required, and refreshes the Cookie session once after an application API returns `401`.
-
-`src/api/client.ts` is the only Blog transport. Authenticated requests delegate to the SDK; anonymous Blog requests own only same-origin credentials and `blog_csrf_token`. Pages and components call domain APIs and do not parse envelopes or construct protocol requests. Do not replace this integration with hand-written identity, refresh, CSRF, WebAuthn, or account-self-service logic.
-
-Public releases require an exact npm SemVer and registry integrity. This branch
-uses trusted-publisher stable release `@gosso/client@0.9.0` for
-integration validation. See
-[`../doc/auth-client-boundary.md`](../doc/auth-client-boundary.md).
-
-## Available Scripts
-
-```bash
-npm run dev       # start local development server
-npm run lint      # run oxlint
-npm run test:run  # run Vitest once
-npm run test      # run Vitest in watch mode
-npm run build     # type-check and build production assets
-npm run preview   # preview built assets
-```
-
-## MVP Behavior
-
-- Public feed loads paginated posts from `/api/posts?page=&pageSize=`.
-- Tags load from `/api/tags`; the selected tag is sent to the backend as `tag`.
-- Article pages resolve by slug and load comments using the resolved numeric post ID.
-- Article content supports a small Markdown subset: headings, paragraphs, bullet lists, links, inline code, bold, emphasis, and fenced code blocks.
-- Admin workspace requires a logged-in account with the `admin` role and redirects through GOSSO when access is missing.
-
-## Testing Notes
-
-The test suite uses React Testing Library and Vitest. Current coverage focuses on:
-
-- Cookie-session auth, CSRF propagation, and admin role detection
-- login/MFA behavior
-- feed pagination and client-side search
-- article markdown rendering and comment posting
-- admin access redirect and save error handling
+Source and Compose inspections are not live-production certification. Validate actual HTTPS redirect, host-only cookies, CSRF, concurrent refresh/logout and role-scoped APIs in representative integration tests.
