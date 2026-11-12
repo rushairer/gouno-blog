@@ -24,7 +24,7 @@
 - 保留独立域 confidential BFF；浏览器不得获得原始 Provider Token。
 - 本地身份与权限、近期 MFA、刷新/注销竞争和审计边界不得降级。
 - 本地 HTTPS 使用 `blog.dev.local` / `sso.dev.local` 的标准 443 端口，禁止使用 8443。
-- 开发镜像遵守 main/local 通道；生产的一方应用镜像默认跟随 main，只有用户明确指定时才固定版本，同时继续遵守 Secret 文件契约。
+- 开发镜像遵守 main/local 通道；生产的一方应用镜像必须按 `docker-compose.production.yml` 显式指定不可变 digest，不使用浮动 `main`，同时遵守 Secret 文件契约。
 - Connector 处于设计冻结期；本路线图不授权其行为、路由、迁移或工作区改造，也不增加业务事件向其自动投递。
 - 沿用项目 SemVer 与 CHANGELOG 约定；质量工作不自动触发版本升级、镜像发布或生产部署。
 - 默认采用模块化单体。新框架、微服务、共享组件包或大规模目录搬迁必须有具体收益证据。
@@ -70,7 +70,7 @@ Q04 后复核后续顺序与大小，任务过大时拆成带相同前缀的子�
 
 ### Q05：安全与身份验证
 
-建立控制—实现—测试矩阵，覆盖 BFF 回调/注销重放、刷新与注销竞争、MFA freshness、角色/资源越权、SSRF、媒体主动内容、审批重放和工具范围。优先补缺失验证，按已证实问题做最小修复。检查 `doc/auth-client-boundary.md` 中 transport API、CSRF 命名、后台门禁说明与实现的差异，不能把差异直接定性为漏洞。
+建立控制—实现—测试矩阵，覆盖 BFF 回调/注销重放、刷新与注销竞争、MFA freshness、角色/资源越权、SSRF、媒体主动内容、审批重放和工具范围。优先补缺失验证，按已证实问题做最小修复。检查 `docs/auth-client-boundary.md` 中 transport API、CSRF 命名、后台门禁说明与实现的差异，不能把差异直接定性为漏洞。
 
 区分 miniredis 单测与真实 Redis 多实例/并发验证。沿用现有安全包目标：Auth BFF 80%、Provider 75%、Secretbox 85%，按同口径覆盖率逐步提高门槛；不能以百分比代替竞争、拒绝和重放场景。涉及 GoSSO/SDK 变化时另列跨仓任务、兼容矩阵和回归，不盲目升级到仓库最新版本。
 
