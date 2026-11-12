@@ -73,6 +73,9 @@ The upstream/default `suite` generator is not redefined by this project. Capabil
 
 ## Architecture
 
+The current deployment is **one Go/Gin process** containing both `internal/authbff` (confidential OAuth/OIDC BFF) and capability-owned Blog APIs; the IdP is a separate GOSSO service. See the [As-Is architecture and SVG](../docs/architecture/README.md).
+
+
 For this complex backend the primary ownership boundary is a business capability, with implementation layers inside that capability:
 
 ```text
@@ -193,6 +196,9 @@ internal/article_revision/
 本项目不会重定义上游/默认 `suite` 的语义；Capability Module 使用独立的项目级 `module` 命令。
 
 ## 架构
+
+当前 Blog 后端是**同一个 Go/Gin 进程**：其中内嵌 `internal/authbff` Confidential BFF 和按 Capability 组织的业务 API，并非两个后端微服务；GOSSO 是独立身份服务。参见[当前架构说明与 SVG](../docs/architecture/README.md)。
+
 
 复杂 Blog 后端以业务 Capability 作为第一层 ownership boundary，再在 Capability 内部组织实现层：
 
