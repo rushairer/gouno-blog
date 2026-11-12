@@ -1,24 +1,18 @@
 # 身份客户端与业务请求边界
 
-本文是 Blog、GOSSO Admin 与 `@gosso/client` 的长期架构约束。实现与本文冲突时，以当前公共契约和安全基线为准；历史审计记录仅用于追溯。
+本文是 Blog、GOSSO Admin 与 `@gosso/client` 的长期架构约束。当前源码与部署层级见 [As-Is 架构图](architecture/README.md)。实现与本文冲突时，以当前公共契约和安全基线为准；历史审计记录仅用于追溯。
 
 ## 所有权
 
 ### `@gosso/client`
 
-SDK 唯一负责 OAuth/OIDC、PKCE、身份 CSRF、Cookie/Token Session、刷新锁、登录与登出、统一身份错误，以及 Profile、密码、邮箱、MFA、Passkey、Session 和密码重置等账户自助协议。消费者不得复制端点、请求体、WebAuthn 编解码、响应 envelope 或刷新逻辑。
+SDK 提供普通 SPA 所需的 OAuth/OIDC + PKCE、身份 CSRF、Cookie/Token Session、刷新锁、登录与登出、统一身份错误及账户自助协议。**Blog 使用 SDK 的 BFF 模式**：前端 SDK 只处理同源 Session API、API 调用、导航和用户态；`blog-backend/internal/authbff` 才是 Confidential OAuth Client，负责服务端 state/nonce/PKCE、code 交换、Token 验证、存储及会话。消费者不得重复实现身份协议、WebAuthn 编解码或刷新逻辑。
 
-OAuth verifier 和 state 必须来自 Web Crypto。缺少 CSPRNG 时 SDK 明确失败，不写入 flow storage，也不发起跳转。刷新锁 owner 只是非安全的并发标识，不得用于认证、Token 或 CSRF。
+普通 SPA 模式的 verifier/state 必须来自 Web Crypto，缺少 CSPRNG 时应明确失败；Blog BFF 模式则在 Go 服务端生成这些安全随机值，浏览器不持有 verifier。刷新锁 owner 仅用于并发协调，不得用于认证、Token 或 CSRF。
 
 ### Blog transport
 
-`blog-frontend/src/api/client.ts` 是 Blog 唯一 transport：
-
-- `authenticatedApiFetch` 将已认证请求交给 SDK；
-- `optionalApiFetch` 只表示身份可选，不吞掉网络、认证、HTTP 或解析错误；
-- `publicApiFetch` 只处理 Blog 的同源匿名业务请求、`credentials: same-origin` 与 `blog_csrf_token`。
-
-Blog 的 envelope 解析只在该文件发生。React 页面和组件只能调用 `postsApi`、`pagesApi`、`commentsApi`、`agentApi`、`workflowApi`、`connectorApi`、`operationsApi` 等领域 API，不得直接调用 transport。
+当前 `blog-frontend/src/api/client.ts` 导出包装 `gossoClient` 的 `apiClient` Proxy 与 `apiFetch`；Proxy 仅在特定高权限 AI 操作遇到近期 MFA 错误时发起一次 step-up 并最多重试一次。实际 transport、会话刷新、CSRF、响应处理仍由 SDK 负责。`src/api/posts.ts` 等领域 API 调用 `apiClient.get/post/put/delete`，页面不得自建身份协议或解析链路；浏览器 Blog API 保持同源。`/api/external/v1/*` 是独立机器 API Key 入口，非 Blog 浏览器登录的替代方案。
 
 ### Admin services
 
@@ -28,12 +22,7 @@ GOSSO Admin 的管理员账号、OAuth client、审计和系统状态属于管�
 
 页面只拥有展示、表单校验、交互和本地化状态。协议地址、请求体、Cookie、Token、CSRF、envelope 与认证错误分类不属于页面职责。
 
-`/admin/*` 由应用根部的单一访问门禁控制：它通过 Blog 的
-`/api/me/blog-session` 读取 Blog 后端的本地成员资格、角色和权限摘要；只有具备
-`site.manage` 权限的成员可以渲染完整后台框架。Blog 只请求最小 OAuth scope
-`openid profile email`；OAuth scope、SSO 全局角色和页面 profile 缓存均不得作为
-Blog 授权依据。前端门禁只避免暴露工作区；所有管理 API 仍必须由后端本地授权
-中间件拒绝未授权请求。
+`/admin/*` 在 `blog-frontend/src/App.tsx` 由根路由 `Admin` / `RequireAuth` 门禁保护，要求有效 Blog 成员；各页面按 `requiredPermissions` 检查，例如文章管理为 `content.author` 或 `content.manage`，站点设置为 `site.manage`，成员管理为 `members.manage`。**不是整个后台统一要求 `site.manage`**。SDK 从 `/api/me/blog-session` 获取 Blog 本地成员和权限摘要；前端门禁只是 UX 防护，后端 `RequireBlogPermission`/`RequireAnyBlogPermission` 仍必须独立授权。Blog OAuth scope 只含 `openid profile email`，GOSSO 管理角色和前端缓存都不是 Blog 业务授权来源。
 
 Blog 以不可变的 `(issuer, subject)` 投影 SSO 身份；成员资格、固定角色
 `owner/admin/editor/author/moderator`、权限版本和授权审计均保存在 Blog 数据库。
@@ -77,8 +66,7 @@ Git SSH URL 或浮动版本。当前验证版本以各消费者 `package.json` �
 容易漂移的版本号。消费者依赖更新必须晚于 SDK 稳定版发布，并在无 SSH 凭据的干净目录中
 通过 `npm ci`。
 
-生产的一方应用镜像默认跟随 `main`，只有用户明确指定时才固定 release tag 或 digest；
-第三方基础镜像仍固定 digest。SDK 的 breaking change 必须按 SemVer 提供迁移说明。
+开发 Compose 可按开发模板跟随 `main`；**生产** `docker-compose.production.yml` 中的第一方镜像必须显式配置不可变 digest，不允许 `:main` fallback。第三方基础镜像按生产模板固定 digest。SDK breaking change 必须按 SemVer 提供迁移说明。
 Blog、GOSSO Admin 与 `@gosso/client` 的跨仓身份契约变更必须同时执行各自 quality checks
 与 Blog authentication deployment contract。
 
