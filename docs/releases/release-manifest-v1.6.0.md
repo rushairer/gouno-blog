@@ -7,7 +7,7 @@ Current status (2026-11-11): **formally published; independent artifact acceptan
 - [GitHub Release](https://github.com/rushairer/gouno-blog/releases/tag/v1.6.0); annotated `v1.6.0` points to `0e8c527dcae40f931898930483fb24a00a840232`.
 - [Tagged publication workflow](https://github.com/rushairer/gouno-blog/actions/runs/42999093507): completed/success.
 - [Separate independent verification](https://github.com/rushairer/gouno-doc/actions/runs/42999630031): completed/success.
-- [Permanent machine-readable receipt](../docs/quality/release-evidence-2026-11-11/independent-verification.json) records immutable digests, release attachment hashes, exact identities, architectures and provenance qualification.
+- [Permanent machine-readable receipt](../quality/release-evidence-2026-11-11/independent-verification.json) records immutable digests, release attachment hashes, exact identities, architectures and provenance qualification.
 - This post-publication documentation commit does not rewrite the validated tag.
 
 ## Compatible published dependencies
@@ -42,7 +42,7 @@ The PR also passes dependency review, image scans and complete CI before merge. 
 
 ## Explicitly outstanding operational certification
 
-[The maintainer exception](../docs/quality/release-exception-2026-11-11.md) authorizes publication only. `blog-admin-ai` remains needs-manual-recertification; external Staging, actual target upgrade/recovery/rollback and operator sign-off are unverified. No unchecked item is relabeled passed. Confidential BFF, browser token isolation, local Owner authority and Connector business freeze remain intact. Public read-only observation of an older online main deployment is not target-image acceptance.
+[The maintainer exception](../quality/release-exception-2026-11-11.md) authorizes publication only. `blog-admin-ai` remains needs-manual-recertification; external Staging, actual target upgrade/recovery/rollback and operator sign-off are unverified. No unchecked item is relabeled passed. Confidential BFF, browser token isolation, local Owner authority and Connector business freeze remain intact. Public read-only observation of an older online main deployment is not target-image acceptance.
 
 ## Historical preparation evidence
 
@@ -102,7 +102,7 @@ receipts, not the current candidate acceptance summary.
 | [Parity 42441728617](https://github.com/rushairer/gouno-blog/actions/runs/42441728617) | 86 passed; ledger remains needs-manual-recertification. |
 | [Publish Images 42441728746](https://github.com/rushairer/gouno-blog/actions/runs/42441728746) | Main-channel builds, scans, workflow signature verification and SBOM publication passed. These are development artifacts, not v1.6.0 images. |
 
-The [candidate review and reproducible inventory](../docs/quality/blog-v1.6.0-candidate-review-2026-11-09.md)
+The [candidate review and reproducible inventory](../quality/blog-v1.6.0-candidate-review-2026-11-09.md)
 records 810 diff entries from v1.5.26 to this main, including 15 detected
 renames. The inventory is not approval of all changed code. Unreleased notes
 are curated against current dependencies and Dockerfiles; historical released

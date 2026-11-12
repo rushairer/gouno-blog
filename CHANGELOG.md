@@ -11,7 +11,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [1.6.0] - 2026-11-11
 
-See the [release manifest](doc/release-manifest-v1.6.0.md). Publication is
+See the [release manifest](docs/releases/release-manifest-v1.6.0.md). Publication is
 maintainer-authorized under the [documented release exception](docs/quality/release-exception-2026-11-11.md);
 manual Showcase certification and external Staging acceptance are not asserted.
 

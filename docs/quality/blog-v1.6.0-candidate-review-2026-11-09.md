@@ -79,7 +79,7 @@ intermediate candidate notes are not current runtime requirements.
 | Production Deployed | Not performed or asserted |
 | Release Complete | **No** |
 
-See the [candidate manifest](../../doc/release-manifest-v1.6.0.md#november-9-exact-main-evidence-and-candidate-notes)
+See the [candidate manifest](../releases/release-manifest-v1.6.0.md#november-9-exact-main-evidence-and-candidate-notes)
 for historical run URLs. Gosso v1.7.1 is now formally released at
 6c8ced618408f3625bbf022b67a08980a26a807d, with independently verified index
 `sha256:cdf81b3e6f532455aa8964e7921355c54e3bfca72bf5910cd21689d87fe80cbb`.

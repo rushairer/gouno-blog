@@ -1,7 +1,9 @@
 # Release Checklist
 
+> **Current release baseline (2026-11-12):** [v1.6.0 is formally published](https://github.com/rushairer/gouno-blog/releases/tag/v1.6.0), with independent image acceptance recorded in [the immutable release manifest](docs/releases/release-manifest-v1.6.0.md). The November 6–9 candidate checklists and statements such as “no tag has been created” below are **historical pre-publication evidence only**, not actionable current release blockers. Manual Showcase recertification, external Staging acceptance and production rollout remain unverified; release publication does not imply these passed. For future releases, re-run the generic checklist against the new exact tag and CI artifacts.
+
 - [ ] Root CHANGELOG, version tag, image tags, and compatibility matrix agree.
-- [ ] `doc/release-manifest-v1.6.0.md` contains immutable digests for every
+- [ ] `docs/releases/release-manifest-v1.6.0.md` contains immutable digests for every
   already-published downstream application image; Blog's own target rows remain
   blocked until the tag workflow publishes and attaches their digest files.
 - [ ] Backend, seed, frontend, dependency, and vulnerability gates pass.
@@ -20,7 +22,7 @@
 - [ ] Isolated containers, networks, volumes, and temporary files are removed.
 
 
-## November 2026 ecosystem release candidate
+## Historical November 2026 ecosystem release candidate (superseded by v1.6.0 publication)
 
 Candidate: **v1.6.0**, not v1.5.27: the diff after v1.5.26 introduces the read-only external capability gateway, API Access management, provider configuration and guarded reconciliation capabilities in addition to security fixes. No candidate tag has been created.
 
@@ -59,7 +61,7 @@ The November8 backend image scan also detected HIGH CVE-2026-78661 in x/net0.60.
 Security remediation merged as `0aee82081676e4c560f7489b5eef8249a6cfc32f`.
 Its CI, BFF, Browser Acceptance, Showcase Parity and main-channel Publish Images
 runs completed successfully; exact links and their limits are in the
-[candidate manifest](doc/release-manifest-v1.6.0.md#november-9-exact-main-evidence-and-candidate-notes).
+[candidate manifest](docs/releases/release-manifest-v1.6.0.md#november-9-exact-main-evidence-and-candidate-notes).
 This resolves the November 8 source/image scan failures on that SHA, not the
 remaining upstream, full review, manual or operational gates. No release
 checkbox is promoted from those automated results. Formal v1.6.0 images and
@@ -78,7 +80,7 @@ GOSSO Admin v0.7.25 is formally published at `4545495bcdc518af65cc6c15a9695b9ef5
 - [x] Annotated v1.6.0 points to accepted source `0e8c527dcae40f931898930483fb24a00a840232`; existing tags remain immutable.
 - [x] Exact-source CI, PostgreSQL integration, Seed, frontend/coverage, race/vet/govulncheck, BFF, Browser Acceptance, automated Showcase Parity and image gates pass.
 - [x] [Tagged publication](https://github.com/rushairer/gouno-blog/actions/runs/42999093507) and [independent acceptance](https://github.com/rushairer/gouno-doc/actions/runs/42999630031) complete successfully for all three versioned images.
-- [x] Actual immutable digest, exact Cosign identity/issuer, SPDX/CycloneDX asset hashes/formats and both architectures/source provenance are recorded in [the completed manifest](doc/release-manifest-v1.6.0.md) and [permanent receipt](docs/quality/release-evidence-2026-11-11/independent-verification.json).
+- [x] Actual immutable digest, exact Cosign identity/issuer, SPDX/CycloneDX asset hashes/formats and both architectures/source provenance are recorded in [the completed manifest](docs/releases/release-manifest-v1.6.0.md) and [permanent receipt](docs/quality/release-evidence-2026-11-11/independent-verification.json).
 - [ ] Manual Showcase certification: unverified, waived for publication only.
 - [ ] External Staging/target upgrade/recovery/rollback/operator acceptance: unverified, waived for publication only.
 - [ ] Production deployment: not requested or performed.
