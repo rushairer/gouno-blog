@@ -1,6 +1,8 @@
 # OIDC/BFF 独立域拆分决策
 
-状态：已批准，实施中。生产变更仍需逐次批准。
+状态：已批准；独立域 BFF 已在当前 `main` 源码和 Caddy/Compose **生产模板**中实现。线上实际运行环境是否与模板一致，仍需独立验收。生产变更仍需逐次批准。
+
+实际组件边界参见 [当前 As-Is 架构](architecture/README.md)。
 
 ## 标准边界
 
@@ -34,7 +36,7 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
   `https://blog.example.com/api/auth/backchannel-logout`。
 - Scope：`openid profile email`。
 - RFC 8707 resource/audience：`https://blog.example.com/api`。
-- CMS 使用独立 Client、secret、redirect URI、resource、权限和业务 Cookie。
+- 未来如部署 CMS，必须使用独立 Client、secret、redirect URI、resource、权限与业务 Cookie；目前 `Caddyfile.production` 将 CMS 域设为 **404 预留**，并非已部署服务。
 
 ## 迁移与身份连续性
 
@@ -49,7 +51,7 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
   验证后重新注册 Passkey。
 - 独立域拆分是目标拓扑；不支持恢复为单域名部署。全局退出只结束当前中心 SSO
   session。“退出所有设备”是独立操作。
-- 第一阶段复用身份数据库，不执行物理迁库。
+- 当前生产 Compose 模板共用一个 PostgreSQL 服务实例，但初始化 `gosso` 和 `blog` 两个**逻辑独立数据库**；Blog 代码不能直接读取 GOSSO 账户数据，身份通过 OIDC/JWKS 投影为 Blog 本地主体与权限。
 
 ## 本地拓扑门禁
 
