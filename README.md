@@ -16,7 +16,9 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 
 ## 🏗️ 架构设计
 
-跨仓库的身份 SDK、Blog transport、Admin service 与 React 页面职责见 [`doc/auth-client-boundary.md`](doc/auth-client-boundary.md)。该文档是长期边界；带日期的审计报告仅作为历史快照。
+跨仓库的身份 SDK、Blog transport、Admin service 与 React 页面职责见 [`docs/auth-client-boundary.md`](docs/auth-client-boundary.md)。该文档是长期边界；带日期的审计报告仅作为历史快照。
+
+当前代码及生产部署模板的 **As-Is 架构图**见 [docs/architecture/README.md](docs/architecture/README.md)（内含可维护的 SVG、实际调用链和边界）；生产模板不等于已验证的线上状态。
 
 持续质量改进见 [A+ 质量路线图](docs/quality/roadmap.md)，包含评审基线、分阶段任务卡、验收要求和[新会话启动提示词](docs/quality/prompts.md)。
 
@@ -28,7 +30,7 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
   - `https://sso.dev.local/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
   - `https://sso.dev.local/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
 * **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；唯一登录 UI 由 `sso.dev.local`（生产 `sso.io84.com`）下的 GOSSO 托管前端提供，业务前端不实现凭据表单。
-* **blog-backend**：博客 API 后端与 Confidential BFF，使用 `gouno` Web 框架开发，执行 OIDC 授权码 + PKCE 交换并维护同域 `__Host-*` Cookie 会话；向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限；内置受控 AI Agent Runner、Workflow 引擎、Cron Scheduler、Blog Tools 与人工审批。
+* **blog-backend**：单个 Go/Gin 后端部署进程同时包含 Blog 业务 API 和 `internal/authbff` Confidential BFF 模块。BFF 负责服务端 Authorization Code + PKCE、ID Token 验证、Redis/AEAD 会话和同域 `__Host-*` Cookie；Blog 的管理权限由本地 Membership/Permission 决定，不能直接授予 GOSSO 全局管理角色。进程还包含 Agent Runner、Workflow、Scheduler、Blog Tools 与人工审批。
 * **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示、`/admin` 博客管理控制台和 `/admin/ai-ops` AI 运营控制台。
 
 ---
@@ -44,12 +46,13 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 ├── docker-compose.production.yml # 无密生产部署模板
 ├── Caddyfile                  # 本地 Caddy HTTPS 反向代理配置
 ├── Caddyfile.production       # 生产 Caddy HTTPS 反向代理配置
-├── doc/                       # 架构边界、AI 工作台和发布记录
+├── docs/                      # 现行架构图、安全边界、质量与 UI 文档
+├── doc/                       # 历史发布材料
 ├── init.sql                   # 数据库初始化脚本
 ├── seed/                      # 博客 OAuth client 一次性初始化镜像
 ├── scripts/                   # 本地 TLS 等辅助脚本
 ├── keys/                      # 本地 GOSSO RSA 私钥目录（不提交）
-├── blog-backend/              # 博客后端微服务 (GoUno)
+├── blog-backend/              # 一个 Go/Gin 进程：Confidential BFF + Blog 业务 API
 └── blog-frontend/             # 博客前端门户 (React)
 ```
 
@@ -145,7 +148,7 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 - 使用本地默认管理员账户登录：
   - 用户名：`admin`
   - 密码：`admin123`
-- 登录成功后，如果服务端会话包含 blog 管理所需角色，即可在博客后台发布和管理文章。
+- 登录成功后，Blog 后端依本地 `(issuer, subject)` 对应的有效成员身份及具体权限判定可用的后台功能；GOSSO 全局 `admin` 角色不直接授予 Blog 管理权限。
 - 已登录 GOSSO 身份管理控制台后再次访问博客后台，会通过同一身份中心会话静默完成 blog 授权码流程；若 Blog 会话过期，SDK 会通过受保护的 Cookie 刷新流程恢复会话。
 
 ### 6. 使用外部身份服务
@@ -221,7 +224,7 @@ BLOG_AGENT_MASTER_KEY_VERSION=2
 
 第三方公网 Provider 无需预先加入名单：只要域名解析结果全部为公网地址并使用 HTTPS，即可直接保存。Clash/Mihomo 等代理为域名返回的 `198.18.0.0/15` Fake-IP 也受支持，但直接填写该网段的 IP 仍不会被视为公网。`ai_agents.allowed_upstream_hosts` 用于显式授权自托管、局域网或本机 Provider；本地开发时，名单内的回环地址也可以使用 HTTP。链路本地、metadata、未指定和组播地址始终禁止，DNS 会在保存及每次建连时重新校验，上游重定向也会被拒绝。
 
-结构化输入、运行范围、自动化路线和发布边界参见 [AI 工作台自动化设计](./doc/ai-workbench-automation-plan.md)；管理 API 可在 Swagger 的 `/admin/ai-workflows`、`/admin/ai-resources/{type}` 和 `/admin/ai-workflow-runs/{id}/resources` 下查看。
+结构化输入、运行范围、自动化路线和发布边界参见 [AI 工作台自动化设计](./docs/ai-workbench-automation-plan.md)；管理 API 可在 Swagger 的 `/admin/ai-workflows`、`/admin/ai-resources/{type}` 和 `/admin/ai-workflow-runs/{id}/resources` 下查看。
 
 ### 11. 多架构与 ARM64 支持
 
@@ -232,12 +235,12 @@ BLOG_AGENT_MASTER_KEY_VERSION=2
 ## 📘 开发者集成指南
 
 在基于该架构进行深入的前后端业务开发时，请务必阅读：
-👉 [GOSSO & GoUno 前后端集成开发指南与最佳实践](./retrospective.md)
+👉 [当前架构图及认证链路](./docs/architecture/README.md) · [身份边界规范](./docs/auth-client-boundary.md) · [历史集成复盘](./retrospective.md)
 
 主要内容包括：
-1. 同源网关的路由配置要点。
-2. 后端服务如何动态读取 JWKS 校验 Access Token 以及实现 RBAC。
-3. 前端 SPA 对 Base64Url JWT 的健壮解码方案与防无限重定向实践。
+1. Caddy 独立域及同源网关的实际路由。
+2. 内嵌 Go BFF 的登录回调、服务端 Token 管理与 Blog 本地权限。
+3. 前端 `@gosso/client` BFF Cookie 模式、Admin 路由权限和登录重定向；Blog 前端不持有或解析 OAuth Token。
 
 ## 开发与生产部署边界
 
