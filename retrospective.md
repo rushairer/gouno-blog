@@ -1,4 +1,7 @@
-# GOSSO & GoUno 前后端集成开发指南与最佳实践
+# GOSSO & GoUno 早期前后端集成复盘（历史）
+
+> **历史材料，非现行实现规范（2026-11-12）**：本文旧式 JWT/SPA `/callback`/SSO 全局角色和敏感环境变量描述仅供追溯，**不可直接复制到当前 Blog 代码**。当前已采用 Go `internal/authbff` Confidential BFF：前端无 OAuth Token，授权码回调 `/api/auth/callback`、Token 交换与存储在服务端；Blog 权限来自本地 Membership/Permission；生产敏感配置通过 Secrets 管理。请优先使用 [As-Is 架构图](docs/architecture/README.md)、[身份边界](docs/auth-client-boundary.md) 和 [OIDC/BFF ADR](docs/oidc-bff-split-adr.md)。
+
 
 本文档总结了在基于 **GOSSO (SSO 身份提供商)**、**GoUno (后端服务框架)** 以及 **React (前端 SPA)** 架构下进行前后端开发时的核心注意事项与最佳实践，帮助开发团队规避常见陷阱。
 
