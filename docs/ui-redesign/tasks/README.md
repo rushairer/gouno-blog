@@ -25,14 +25,7 @@
 | [U03d](U03d-blog-admin-review.md) | Blog Admin 阶段复核 | U03b、U03c |
 | [U04a](U04a-ai-workspace.md) | AI 工作台 | U03d |
 | [U04b](U04b-connector-display.md) | Connector 展示层 | U04a |
-| [U04c](U04c-ai-connector-review.md) | AI/Connector 阶段复核 | U04a、U04b |
-| [U05a](U05a-gosso-auth-account.md) | gosso-admin 认证与账户 | U01d |
-| [U05b](U05b-gosso-auth-review.md) | 认证阶段复核 | U05a |
-| [U06a](U06a-gosso-management.md) | gosso-admin 系统管理 | U05b |
-| [U06b](U06b-gosso-management-review.md) | 管理阶段复核 | U06a |
-| [U07a](U07a-distribution-build.md) | 分发、构建、Docker | U04c、U06b |
-| [U07b](U07b-integration-review.md) | 集成阶段复核 | U07a |
-| [U08a](U08a-browser-accessibility.md) | 浏览器、响应式、无障碍 QA | U07b |
-| [U08b](U08b-final-cleanup.md) | 清理、证据和最终验收 | U08a |
 
-每张卡都要求先核对当前基线；任务卡的 `结果` 段落由执行会话填写，不由计划编制者预先宣称完成。
+**已清理无执行结果的过时占位任务卡（2026-11-12）**：U04c、U05a、U05b、U06a、U06b、U07a、U07b、U08a、U08b 的旧文件内容全部是 `planned` / `未执行` 模板，没有完成证明，且这些早期迁移阶段已被后续独立治理路线取代。原文件可通过 [迁移前的 Git 历史](https://github.com/rushairer/gouno-blog/tree/99a7d10e78a23511fd9edf7968e471537168a948/docs/ui-redesign/tasks) 回溯；**删除模板不代表任务已经通过验收或具体功能一定存在**。当前的缺陷必须从实际代码及最新认证台账重新确认后建立新的任务。
+
+保留的卡片是当时的阶段性执行记录；其中的历史状态和结果不应覆盖现行认证台账。
