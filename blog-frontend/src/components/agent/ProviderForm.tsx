@@ -302,7 +302,7 @@ export function ProviderForm({
 
   const protocolFields =
     value.provider_type === "openai" ? (
-      <FormGrid columns={2}>
+      <FormGrid columns={1}>
         <Field label={labels.protocolMode || "接口协议模式"}>
           <Select
             value={value.protocol_mode || "chat_completions"}
@@ -346,7 +346,7 @@ export function ProviderForm({
         </Field>
       </FormGrid>
     ) : value.provider_type === "gemini" ? (
-      <FormGrid columns={2}>
+      <FormGrid columns={1}>
         <Field label={labels.protocolMode || "接口协议模式"}>
           <Select
             value={value.protocol_mode || "generate_content"}
@@ -430,12 +430,15 @@ export function ProviderForm({
           />
         ) : null}
 
-        <div className="grid gap-5 xl:grid-cols-2">
+        <div
+          data-layout="drawer-vertical-section-stack"
+          className="flex min-w-0 flex-col gap-5"
+        >
           <AISettingsEditorSection
             title="连接身份"
             description="连接名称与供应商只表达产品身份；具体请求格式由接口协议单独决定。"
           >
-            <FormGrid columns={2}>
+            <FormGrid columns={1}>
               <Field label={labels.providerName}>
                 <Input
                   required
@@ -465,7 +468,7 @@ export function ProviderForm({
             description="接口协议、端点和模型共同决定运行时请求；供应商身份不再替代协议选择。"
           >
             <div className="flex flex-col gap-5">
-              <FormGrid columns={2}>
+              <FormGrid columns={1}>
                 <Field label={labels.providerProtocol || "接口协议"}>
                   <Select
                     value={value.provider_type}
@@ -515,7 +518,7 @@ export function ProviderForm({
 
               {protocolFields}
 
-              <FormGrid columns={2}>
+              <FormGrid columns={1}>
                 <Field
                   label={labels.timeout}
                   hint="图片生成模型建议设为 900 秒；最长 1800 秒。"
@@ -556,7 +559,7 @@ export function ProviderForm({
           title="凭据与状态"
           description="API Key 只用于服务端连接；编辑已有连接时留空即可保留当前凭据。"
         >
-          <FormGrid columns={2}>
+          <FormGrid columns={1}>
             <Field
               label={`${labels.apiKey}${initial ? ` · ${labels.leaveBlank}` : ""}`}
             >

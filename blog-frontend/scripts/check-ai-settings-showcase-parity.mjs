@@ -218,16 +218,36 @@ requireBlog(
   editorPatterns,
   "contextual editor header typography",
 );
-for (const [text, label] of [
+for (const [source, label] of [
   [forms[2], "ProviderForm"],
   [forms[3], "EmbeddingForm"],
   [connectorWorkspace, "ConnectorWorkspace"],
 ]) {
   requireBlog(
-    "grid gap-5 xl:grid-cols-2",
-    text,
-    `${label} contextual two-column layout`,
+    'data-layout="drawer-vertical-section-stack"',
+    source,
+    `${label} contextual vertical section stack`,
   );
+  if (source.includes('<div className="grid gap-5 xl:grid-cols-2">')) {
+    failures.push(`${label} reintroduced viewport-driven Drawer section columns`);
+  }
+}
+for (const marker of [
+  'data-layout="drawer-vertical-section-stack"',
+  '<FormGrid columns={1}>',
+]) {
+  if (!canonicalEditors.includes(marker)) {
+    failures.push(`Canonical Showcase AI Settings editors lost narrow Drawer rule: ${marker}`);
+  }
+}
+const externalWorkspace = await readBlog("src/components/agent/ExternalAPIWorkspace.tsx");
+requireBlog(
+  'data-layout="drawer-vertical-section-stack"',
+  externalWorkspace,
+  "API Client contextual vertical sections",
+);
+if (externalWorkspace.includes('<div className="grid gap-5 xl:grid-cols-2">')) {
+  failures.push("API Client reintroduced viewport-driven Drawer section columns");
 }
 
 for (const [index, path] of [
