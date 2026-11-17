@@ -131,7 +131,10 @@ export function EmbeddingForm({
           />
         ) : null}
 
-        <div data-layout="drawer-vertical-section-stack" className="flex min-w-0 flex-col gap-5">
+        <div
+          data-layout="drawer-vertical-section-stack"
+          className="flex min-w-0 flex-col gap-5"
+        >
           <AISettingsEditorSection
             title={locale === "zh" ? "索引模型" : "Index model"}
             description={
