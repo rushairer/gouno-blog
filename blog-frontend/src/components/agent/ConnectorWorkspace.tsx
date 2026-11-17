@@ -446,7 +446,10 @@ export function ConnectorWorkspace({
               data-pattern="editor-form-composition"
               onSubmit={saveProfile}
             >
-              <div data-layout="drawer-vertical-section-stack" className="flex min-w-0 flex-col gap-5">
+              <div
+                data-layout="drawer-vertical-section-stack"
+                className="flex min-w-0 flex-col gap-5"
+              >
                 <AISettingsEditorSection
                   title={zh ? "连接身份" : "Connection identity"}
                   description={
