@@ -430,7 +430,10 @@ export function ProviderForm({
           />
         ) : null}
 
-        <div data-layout="drawer-vertical-section-stack" className="flex min-w-0 flex-col gap-5">
+        <div
+          data-layout="drawer-vertical-section-stack"
+          className="flex min-w-0 flex-col gap-5"
+        >
           <AISettingsEditorSection
             title="连接身份"
             description="连接名称与供应商只表达产品身份；具体请求格式由接口协议单独决定。"
