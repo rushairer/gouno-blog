@@ -302,7 +302,7 @@ export function ProviderForm({
 
   const protocolFields =
     value.provider_type === "openai" ? (
-      <FormGrid columns={2}>
+      <FormGrid columns={1}>
         <Field label={labels.protocolMode || "接口协议模式"}>
           <Select
             value={value.protocol_mode || "chat_completions"}
@@ -346,7 +346,7 @@ export function ProviderForm({
         </Field>
       </FormGrid>
     ) : value.provider_type === "gemini" ? (
-      <FormGrid columns={2}>
+      <FormGrid columns={1}>
         <Field label={labels.protocolMode || "接口协议模式"}>
           <Select
             value={value.protocol_mode || "generate_content"}
