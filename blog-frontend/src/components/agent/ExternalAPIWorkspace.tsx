@@ -649,7 +649,10 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                       data-pattern="editor-form-composition"
                       className="flex flex-col gap-5"
                     >
-                      <div data-layout="drawer-vertical-section-stack" className="flex min-w-0 flex-col gap-5">
+                      <div
+                        data-layout="drawer-vertical-section-stack"
+                        className="flex min-w-0 flex-col gap-5"
+                      >
                         <AISettingsEditorSection
                           title={zh ? "Client 身份" : "Client identity"}
                           description={
