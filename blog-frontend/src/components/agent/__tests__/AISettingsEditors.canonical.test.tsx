@@ -149,19 +149,33 @@ describe("AI Settings canonical editors", () => {
 
   it("renders contextual Provider sections in a vertical Drawer-safe order", () => {
     const { container } = render(
-      <ProviderForm labels={providerLabels} onSave={vi.fn()} onCancel={vi.fn()} surface="drawer" />,
+      <ProviderForm
+        labels={providerLabels}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+        surface="drawer"
+      />,
     );
     const stack = container.querySelector('[data-layout="drawer-vertical-section-stack"]');
     expect(stack).toBeInTheDocument();
     expect(stack?.className).toContain("flex-col");
     expect(stack?.className).not.toContain("grid-cols-2");
-    expect(stack?.querySelectorAll(':scope > [data-pattern="editor-form-section"]')).toHaveLength(2);
-    expect(container.querySelectorAll('[data-pattern="editor-form-section"]')).toHaveLength(3);
+    expect(
+      stack?.querySelectorAll(':scope > [data-pattern="editor-form-section"]'),
+    ).toHaveLength(2);
+    expect(
+      container.querySelectorAll('[data-pattern="editor-form-section"]'),
+    ).toHaveLength(3);
   });
 
   it("renders contextual Embedding sections in the same vertical grammar", () => {
     const { container } = render(
-      <EmbeddingForm locale="zh" onSave={vi.fn()} onCancel={vi.fn()} surface="drawer" />,
+      <EmbeddingForm
+        locale="zh"
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+        surface="drawer"
+      />,
     );
     const stack = container.querySelector('[data-layout="drawer-vertical-section-stack"]');
     expect(stack).toBeInTheDocument();
