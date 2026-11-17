@@ -131,7 +131,7 @@ export function EmbeddingForm({
           />
         ) : null}
 
-        <div className="grid gap-5 xl:grid-cols-2">
+        <div data-layout="drawer-vertical-section-stack" className="flex min-w-0 flex-col gap-5">
           <AISettingsEditorSection
             title={locale === "zh" ? "索引模型" : "Index model"}
             description={
@@ -153,7 +153,7 @@ export function EmbeddingForm({
                   }
                 />
               </Field>
-              <FormGrid columns={2}>
+              <FormGrid columns={1}>
                 <Field label={labels.model}>
                   <Input
                     className="font-mono"
@@ -210,7 +210,7 @@ export function EmbeddingForm({
                   }
                 />
               </Field>
-              <FormGrid columns={2}>
+              <FormGrid columns={1}>
                 <Field
                   label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}
                 >

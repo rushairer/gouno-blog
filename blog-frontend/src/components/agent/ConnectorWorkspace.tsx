@@ -446,7 +446,7 @@ export function ConnectorWorkspace({
               data-pattern="editor-form-composition"
               onSubmit={saveProfile}
             >
-              <div className="grid gap-5 xl:grid-cols-2">
+              <div data-layout="drawer-vertical-section-stack" className="flex min-w-0 flex-col gap-5">
                 <AISettingsEditorSection
                   title={zh ? "连接身份" : "Connection identity"}
                   description={
@@ -456,7 +456,7 @@ export function ConnectorWorkspace({
                   }
                 >
                   <div className="flex flex-col gap-5">
-                    <FormGrid columns={2}>
+                    <FormGrid columns={1}>
                       <Field
                         label={zh ? "Profile 名称" : "Profile name"}
                         required

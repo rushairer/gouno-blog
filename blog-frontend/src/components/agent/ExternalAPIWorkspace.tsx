@@ -649,7 +649,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                       data-pattern="editor-form-composition"
                       className="flex flex-col gap-5"
                     >
-                      <div className="grid gap-5 xl:grid-cols-2">
+                      <div data-layout="drawer-vertical-section-stack" className="flex min-w-0 flex-col gap-5">
                         <AISettingsEditorSection
                           title={zh ? "Client 身份" : "Client identity"}
                           description={
@@ -758,7 +758,7 @@ export function ExternalAPIWorkspace({ locale }: { locale: Locale }) {
                               : "No external capabilities are currently grantable."}
                           </Text>
                         ) : (
-                          <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="grid gap-3">
                             {capabilities.map((capability) => {
                               const checked = selectedCapabilities.includes(
                                 capability.name,

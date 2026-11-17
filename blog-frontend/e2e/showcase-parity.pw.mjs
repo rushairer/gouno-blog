@@ -820,6 +820,18 @@ test("AI Settings tab leads and section rhythm match Showcase", async ({
       pattern: "editor-form-section",
     });
 
+    // A 720px Drawer stays narrow even in a wide desktop viewport.
+    for (const dialog of [showcaseDialog, productDialog]) {
+      const sections = dialog.locator('[data-layout="drawer-vertical-section-stack"] > [data-pattern="editor-form-section"]');
+      await expect(sections).toHaveCount(2);
+      const upper = await sections.nth(0).boundingBox();
+      const lower = await sections.nth(1).boundingBox();
+      if (!upper || !lower) throw new Error(`Missing vertical Drawer sections: ${tab}`);
+      expect(Math.abs(upper.x - lower.x)).toBeLessThan(2);
+      expect(lower.y).toBeGreaterThanOrEqual(upper.y + upper.height);
+      expect(upper.width).toBeGreaterThan(400);
+    }
+
     await pairScreenshot(
       showcase,
       product,

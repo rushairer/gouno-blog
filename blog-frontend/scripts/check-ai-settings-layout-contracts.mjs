@@ -189,13 +189,17 @@ for (const path of [
   "src/components/agent/ProviderForm.tsx",
   "src/components/agent/EmbeddingForm.tsx",
   "src/components/agent/ConnectorWorkspace.tsx",
+  "src/components/agent/ExternalAPIWorkspace.tsx",
 ]) {
   const text = await source(path);
   requireText(
     text,
-    "grid gap-5 xl:grid-cols-2",
-    `${path}: contextual editor must preserve the canonical two-column section layout`,
+    'data-layout="drawer-vertical-section-stack"',
+    `${path}: contextual Drawer sections must follow the canonical vertical stack`,
   );
+  if (text.includes('<div className="grid gap-5 xl:grid-cols-2">')) {
+    failures.push(`${path}: viewport-wide two-column Drawer sections are prohibited`);
+  }
 }
 
 for (const path of [
