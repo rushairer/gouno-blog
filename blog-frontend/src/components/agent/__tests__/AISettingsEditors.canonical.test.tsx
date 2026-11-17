@@ -156,7 +156,9 @@ describe("AI Settings canonical editors", () => {
         surface="drawer"
       />,
     );
-    const stack = container.querySelector('[data-layout="drawer-vertical-section-stack"]');
+    const stack = container.querySelector(
+      '[data-layout="drawer-vertical-section-stack"]',
+    );
     expect(stack).toBeInTheDocument();
     expect(stack?.className).toContain("flex-col");
     expect(stack?.className).not.toContain("grid-cols-2");
@@ -177,10 +179,14 @@ describe("AI Settings canonical editors", () => {
         surface="drawer"
       />,
     );
-    const stack = container.querySelector('[data-layout="drawer-vertical-section-stack"]');
+    const stack = container.querySelector(
+      '[data-layout="drawer-vertical-section-stack"]',
+    );
     expect(stack).toBeInTheDocument();
     expect(stack?.className).toContain("flex-col");
-    expect(stack?.querySelectorAll(':scope > [data-pattern="editor-form-section"]')).toHaveLength(2);
+    expect(
+      stack?.querySelectorAll(':scope > [data-pattern="editor-form-section"]'),
+    ).toHaveLength(2);
   });
 
   it("groups Embedding configuration into index semantics and connectivity", () => {
