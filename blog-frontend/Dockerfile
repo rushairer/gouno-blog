@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Static serving does not use the full image's XML, njs or image-filter modules.
-FROM nginx:1.30.7-alpine-slim@sha256:8c950211a641ec5b23f265450517001f6bcca533666120ebe36cb4cff3d00a55
+FROM nginx:1.31.0-alpine-slim@sha256:241b0d0fe06250e026e7a35a008d022c9a1d3bec19442d65cc33b84d0b5dd64d
 
 RUN apk add --no-cache libcrypto3=3.5.9-r1 libssl3=3.5.9-r1 pcre2=10.49-r0 zlib=1.4-r0 \
     && mkdir -p /etc/nginx/snippets \
