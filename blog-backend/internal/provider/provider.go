@@ -109,7 +109,6 @@ func (p *HTTPProvider) Generate(ctx context.Context, req Request) (Result, error
 	}
 	return result, err
 }
-}
 
 // GenerateImage dispatches image generation requests to the configured provider (OpenAI, Anthropic, or Gemini).
 func (p *HTTPProvider) GenerateImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
