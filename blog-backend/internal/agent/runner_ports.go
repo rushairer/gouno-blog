@@ -9,6 +9,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/provider"
 	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
+	"go.uber.org/zap"
 )
 
 // RunnerManagement exposes only the model and versioned execution inputs
@@ -58,13 +59,13 @@ type RunnerRunLifecycle interface {
 }
 
 type RunLifecycleRunStore interface {
-	FinishRun(context.Context, int64, domain.AgentRunStatus, string, int64, int64, *string, *string) error
+	FinishRunTx(context.Context, *sql.Tx, int64, domain.AgentRunStatus, string, int64, int64, *string, *string) error
 	LockRunStatus(context.Context, *sql.Tx, int64) (domain.AgentRunStatus, error)
 	DeleteRunTx(context.Context, *sql.Tx, int64) error
 }
 
 type RunLifecycleMediaStore interface {
-	SyncRunTokenUsage(context.Context, int64, int64, int64) error
+	SyncRunTokenUsageTx(context.Context, *sql.Tx, int64, int64, int64) error
 	DeleteBySourceRunTx(context.Context, *sql.Tx, int64) error
 }
 
@@ -75,4 +76,5 @@ type RunnerDependencies struct {
 	MediaCandidates RunnerMediaCandidateStore
 	Notifications   RunnerNotificationWriter
 	Lifecycle       RunnerRunLifecycle
+	Logger          *zap.Logger
 }

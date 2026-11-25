@@ -1127,8 +1127,8 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 						stepOutput = agentRun
 						totalInput += agentRun.InputTokens
 						totalOutput += agentRun.OutputTokens
-						if agentRun.Status == domain.AgentRunFailed || agentRun.Status == domain.AgentRunCancelled {
-							err = agentRunExecutionError(agentRun)
+						if outcomeErr := agentRunOutcomeError(agentRun); outcomeErr != nil {
+							err = outcomeErr
 						} else {
 							awaiting = awaiting || agentRun.Status == domain.AgentRunAwaitingApproval
 						}

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -196,6 +197,8 @@ type modelBoundaryRuns struct {
 	starts   int
 	usages   int
 	toolRows int
+	claimErr error
+	usageErr error
 }
 
 func (s *modelBoundaryRuns) GetRun(context.Context, int64) (*domain.AgentRun, error) {
@@ -204,7 +207,7 @@ func (s *modelBoundaryRuns) GetRun(context.Context, int64) (*domain.AgentRun, er
 
 func (s *modelBoundaryRuns) StartRun(context.Context, int64) error {
 	s.starts++
-	return nil
+	return s.claimErr
 }
 
 func (s *modelBoundaryRuns) MonthlyTokenUsage(context.Context, int64) (int64, error) {
@@ -213,6 +216,10 @@ func (s *modelBoundaryRuns) MonthlyTokenUsage(context.Context, int64) (int64, er
 
 func (s *modelBoundaryRuns) RecordUsage(context.Context, *domain.UsageEvent) error {
 	s.usages++
+	return s.usageErr
+}
+
+func (s *modelBoundaryRuns) SaveRunCitations(context.Context, int64, []domain.AgentCitation) error {
 	return nil
 }
 
@@ -269,8 +276,10 @@ func TestRunnerRejectsUnadvertisedBatchBeforeAnyToolSideEffect(t *testing.T) {
 			}}
 			versionID := int64(9)
 			runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID}}
+			lifecycle := &recordingRunLifecycle{}
+			notifications := &recordingRunNotifications{}
 			runner := &Runner{
-				runs: runs, tools: registry,
+				runs: runs, tools: registry, lifecycle: lifecycle, notifications: notifications,
 				management: &modelBoundaryManagement{
 					agent: &domain.Agent{ID: 2, MonthlyTokenBudget: 10000},
 					skill: &domain.AgentSkill{Capabilities: []string{"read", "proposal", "content.create_post", "media.create_image_task", "external.read"}, MaxSteps: tc.steps, MaxInputTokens: 10000, MaxOutputTokens: 100},
@@ -280,6 +289,9 @@ func TestRunnerRejectsUnadvertisedBatchBeforeAnyToolSideEffect(t *testing.T) {
 			err := runner.execute(context.Background(), 1, tc.preview)
 			if !errors.Is(err, tool.ErrUnauthorized) || executed != 0 || runs.toolRows != 0 || runs.usages != 1 || runs.starts != 1 || len(client.requests) != 1 {
 				t.Fatalf("boundary failure: err=%v effects=%d rows=%d usage=%d starts=%d requests=%d", err, executed, runs.toolRows, runs.usages, runs.starts, len(client.requests))
+			}
+			if lifecycle.calls != 1 || lifecycle.status != domain.AgentRunFailed || lifecycle.inputTokens != 10 || lifecycle.outputTokens != 3 || notifications.calls != 1 {
+				t.Fatalf("failed-run evidence lost: %#v notifications=%d", lifecycle, notifications.calls)
 			}
 			offered := client.requests[0].Tools
 			if len(offered) != len(tc.wantOffered) {
@@ -324,5 +336,138 @@ func TestRunnerOwnedWriteHandlersRejectMisclassifiedDefinitions(t *testing.T) {
 				t.Fatalf("misclassified write handler %s: result=%s proposal=%#v err=%v", name, result, proposal, err)
 			}
 		}
+	}
+}
+
+type recordingRunLifecycle struct {
+	RunnerRunLifecycle
+	calls                     int
+	status                    domain.AgentRunStatus
+	inputTokens, outputTokens int64
+	finishErr                 error
+	boundedContext            bool
+}
+
+func (s *recordingRunLifecycle) FinishRun(ctx context.Context, _ int64, status domain.AgentRunStatus, _ string, input, output int64, _, _ *string) error {
+	s.calls++
+	s.status, s.inputTokens, s.outputTokens = status, input, output
+	deadline, ok := ctx.Deadline()
+	s.boundedContext = ok && ctx.Err() == nil && time.Until(deadline) <= runFinalizationTimeout
+	return s.finishErr
+}
+
+type recordingRunNotifications struct {
+	calls int
+}
+
+func (s *recordingRunNotifications) Create(context.Context, int64, string, string, string, string, string) error {
+	s.calls++
+	return nil
+}
+
+func TestRunnerUnacknowledgedClaimNeverDispatchesOrFinishes(t *testing.T) {
+	for _, cause := range []error{sql.ErrNoRows, errors.New("claim acknowledgement lost"), context.Canceled} {
+		runs := &modelBoundaryRuns{claimErr: cause}
+		lifecycle := &recordingRunLifecycle{}
+		runner := &Runner{runs: runs, lifecycle: lifecycle}
+		err := runner.execute(context.Background(), 7, false)
+		if !errors.Is(err, cause) || runs.starts != 1 || lifecycle.calls != 0 || runs.usages != 0 || runs.toolRows != 0 {
+			t.Fatalf("failed claim changed execution: err=%v starts=%d finishes=%d", err, runs.starts, lifecycle.calls)
+		}
+	}
+}
+
+func TestRunnerPreservesUsageOnFailureAndNeverRewritesUnconfirmedFinish(t *testing.T) {
+	for _, terminalErr := range []error{nil, errors.New("terminal commit acknowledgement lost")} {
+		usageErr := errors.New("usage acknowledgement lost")
+		versionID := int64(9)
+		runs := &modelBoundaryRuns{
+			run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID},
+			usageErr: usageErr,
+		}
+		client := &modelBoundaryProvider{result: provider.Result{Text: "answer", InputTokens: 11, OutputTokens: 4}}
+		lifecycle := &recordingRunLifecycle{finishErr: terminalErr}
+		notifications := &recordingRunNotifications{}
+		runner := &Runner{
+			runs: runs, tools: tool.New(), lifecycle: lifecycle, notifications: notifications,
+			management: &modelBoundaryManagement{
+				agent: &domain.Agent{ID: 2, MonthlyTokenBudget: 1000},
+				skill: &domain.AgentSkill{MaxSteps: 1, MaxInputTokens: 10000, MaxOutputTokens: 100},
+				client: client,
+			},
+		}
+		err := runner.execute(context.Background(), 1, false)
+		wantNotifications := 1
+		if terminalErr != nil {
+			wantNotifications = 0
+			if !errors.Is(err, terminalErr) {
+				t.Fatalf("terminal error lost: %v", err)
+			}
+		}
+		if !errors.Is(err, usageErr) || lifecycle.calls != 1 || !lifecycle.boundedContext ||
+			lifecycle.status != domain.AgentRunFailed || lifecycle.inputTokens != 11 || lifecycle.outputTokens != 4 ||
+			notifications.calls != wantNotifications || len(client.requests) != 1 {
+			t.Fatalf("failure evidence: err=%v lifecycle=%#v notifications=%d", err, lifecycle, notifications.calls)
+		}
+	}
+}
+
+func TestRunnerFinalizationUsesBoundedContextAfterWorkerCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	versionID := int64(9)
+	runs := &modelBoundaryRuns{
+		run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID},
+		usageErr: context.Canceled,
+	}
+	lifecycle := &recordingRunLifecycle{}
+	client := &cancellingModelProvider{cancel: cancel}
+	runner := &Runner{
+		runs: runs, tools: tool.New(), lifecycle: lifecycle, notifications: &recordingRunNotifications{},
+		management: &modelBoundaryManagement{
+			agent: &domain.Agent{ID: 2, MonthlyTokenBudget: 1000},
+			skill: &domain.AgentSkill{MaxSteps: 1, MaxInputTokens: 10000, MaxOutputTokens: 100},
+			client: client,
+		},
+	}
+	err := runner.execute(ctx, 1, false)
+	if !errors.Is(err, context.Canceled) || lifecycle.calls != 1 || !lifecycle.boundedContext ||
+		lifecycle.inputTokens != 8 || lifecycle.outputTokens != 2 {
+		t.Fatalf("cancelled worker lost terminal evidence: err=%v lifecycle=%#v", err, lifecycle)
+	}
+}
+
+type cancellingModelProvider struct {
+	cancel context.CancelFunc
+}
+
+func (*cancellingModelProvider) Name() string { return "test" }
+func (*cancellingModelProvider) Model() string { return "test" }
+
+func (p *cancellingModelProvider) Generate(context.Context, provider.Request) (provider.Result, error) {
+	p.cancel()
+	return provider.Result{Text: "answer", InputTokens: 8, OutputTokens: 2}, nil
+}
+
+func TestRunnerSuccessfulOutcomeNeverRewrittenAfterUnacknowledgedCommit(t *testing.T) {
+	commitErr := errors.New("success commit acknowledgement lost")
+	versionID := int64(9)
+	runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID}}
+	client := &modelBoundaryProvider{result: provider.Result{Text: "answer", InputTokens: 12, OutputTokens: 6}}
+	lifecycle := &recordingRunLifecycle{finishErr: commitErr}
+	notifications := &recordingRunNotifications{}
+	runner := &Runner{
+		runs: runs, tools: tool.New(), lifecycle: lifecycle, notifications: notifications,
+		management: &modelBoundaryManagement{
+			agent: &domain.Agent{ID: 2, MonthlyTokenBudget: 1000},
+			skill: &domain.AgentSkill{MaxSteps: 1, MaxInputTokens: 10000, MaxOutputTokens: 100},
+			client: client,
+		},
+	}
+	err := runner.execute(context.Background(), 1, false)
+	if !errors.Is(err, commitErr) || lifecycle.calls != 1 || lifecycle.status != domain.AgentRunSucceeded ||
+		lifecycle.inputTokens != 12 || lifecycle.outputTokens != 6 || notifications.calls != 0 ||
+		runs.usages != 1 || len(client.requests) != 1 {
+		t.Fatalf("unconfirmed success was rewritten or replayed: err=%v lifecycle=%#v notifications=%d", err, lifecycle, notifications.calls)
 	}
 }

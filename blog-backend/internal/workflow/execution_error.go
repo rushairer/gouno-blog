@@ -16,3 +16,16 @@ func agentRunExecutionError(run *domain.AgentRun) error {
 	}
 	return fmt.Errorf("Agent run %d %s: %s", run.ID, run.Status, message)
 }
+
+// A returned worker is not evidence of a completed Agent run. In particular,
+// a lost claim/finalization acknowledgement may leave a nonterminal row.
+func agentRunOutcomeError(run *domain.AgentRun) error {
+	switch run.Status {
+	case domain.AgentRunSucceeded, domain.AgentRunAwaitingApproval:
+		return nil
+	case domain.AgentRunFailed, domain.AgentRunCancelled:
+		return agentRunExecutionError(run)
+	default:
+		return fmt.Errorf("Agent run %d did not reach confirmed completion; inspect its state before retrying", run.ID)
+	}
+}

@@ -12,6 +12,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Fence Agent execution on an acknowledged one-way claim; persist terminal status and media usage atomically, reject duplicate/stale completion, and preserve observed failed-run tokens. Include active and failed usage in monthly budget checks without double-counting the ledger and aggregates. Do not treat nonterminal Agent runs as completed Workflow model steps.
 - Enforce actual per-turn Agent Tool authority before dispatch, including synthesis-only final turns and a read/propose-only Dry-run; retain normal publication and strict Workflow scope. Restrict generic text generation retries to typed HTTP 429 responses and stop on ambiguous outcomes instead of matching arbitrary error strings. Require explicit typed Anthropic compatibility rejections at each negotiation transition and classify native cross-provider HTTP failures.
 - Constrain machine-client Tool execution to a dedicated external read-only catalog and dispatch contract. Reject stale or misconfigured grants for write, proposal, Agent-only and unbound Tools. Own and return detached Tool authority metadata to prevent accidental cross-consumer mutation.
 - Atomically initialize Redis-backed interaction and external API rate-limit counters with finite fixed-window TTLs. Repair legacy persistent counters without restoring consumed quota; preserve existing caller-specific fallback policies and reject unconfirmed limiter decisions.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
@@ -56,18 +57,37 @@ func (r *RunRepository) StartRun(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	if affected, _ := result.RowsAffected(); affected == 0 {
+	return requireRunTransition(result)
+}
+
+// FinishRunTx closes only a running execution. Approval reconciliation owns
+// its separate awaiting_approval transition. The caller coordinates media
+// usage in the same transaction; a failure cannot partially finish the run.
+func (r *RunRepository) FinishRunTx(ctx context.Context, tx *sql.Tx, id int64, status domain.AgentRunStatus, summary string, inputTokens, outputTokens int64, errorCode, errorMessage *string) error {
+	switch status {
+	case domain.AgentRunSucceeded, domain.AgentRunFailed, domain.AgentRunAwaitingApproval, domain.AgentRunCancelled:
+	default:
+		return errors.New("invalid Agent execution terminal status")
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE ai_agent_runs SET
+		status=$2, output_summary=$3, input_tokens=$4, output_tokens=$5,
+		error_code=$6, error_message=$7, finished_at=NOW()
+		WHERE id=$1 AND status='running'`, id, status, summary, inputTokens, outputTokens, errorCode, errorMessage)
+	if err != nil {
+		return err
+	}
+	return requireRunTransition(result)
+}
+
+func requireRunTransition(result sql.Result) error {
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
 		return sql.ErrNoRows
 	}
 	return nil
-}
-
-func (r *RunRepository) FinishRun(ctx context.Context, id int64, status domain.AgentRunStatus, summary string, inputTokens, outputTokens int64, errorCode, errorMessage *string) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE ai_agent_runs SET
-		status=$2, output_summary=$3, input_tokens=$4, output_tokens=$5,
-		error_code=$6, error_message=$7, finished_at=NOW()
-		WHERE id=$1`, id, status, summary, inputTokens, outputTokens, errorCode, errorMessage)
-	return err
 }
 
 func (r *RunRepository) SaveRunCitations(ctx context.Context, id int64, citations []domain.AgentCitation) error {
@@ -75,8 +95,11 @@ func (r *RunRepository) SaveRunCitations(ctx context.Context, id int64, citation
 	if err != nil {
 		return err
 	}
-	_, err = r.db.ExecContext(ctx, `UPDATE ai_agent_runs SET citations=$2 WHERE id=$1`, id, raw)
-	return err
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_agent_runs SET citations=$2 WHERE id=$1 AND status='running'`, id, raw)
+	if err != nil {
+		return err
+	}
+	return requireRunTransition(result)
 }
 
 func (r *RunRepository) GetRun(ctx context.Context, id int64) (*domain.AgentRun, error) {
@@ -124,9 +147,18 @@ func (r *RunRepository) DailyRunCount(ctx context.Context, agentID int64) (int, 
 
 func (r *RunRepository) MonthlyTokenUsage(ctx context.Context, agentID int64) (int64, error) {
 	var total int64
-	err := r.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(input_tokens + output_tokens), 0)
-		FROM ai_agent_runs WHERE agent_id=$1 AND created_at >= date_trunc('month', NOW())
-		AND status IN ('succeeded', 'awaiting_approval')`, agentID).Scan(&total)
+	// Count all current-month runs, including active and failed executions.
+	// The per-run maximum reconciles durable usage rows with legacy or
+	// terminal aggregate counters without counting the same model turn twice.
+	err := r.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(
+		GREATEST(r.input_tokens, COALESCE(u.input_tokens, 0), 0) +
+		GREATEST(r.output_tokens, COALESCE(u.output_tokens, 0), 0)), 0)
+		FROM ai_agent_runs r
+		LEFT JOIN LATERAL (
+			SELECT SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens
+			FROM ai_usage_events WHERE run_id=r.id
+		) u ON TRUE
+		WHERE r.agent_id=$1 AND r.created_at >= date_trunc('month', NOW())`, agentID).Scan(&total)
 	return total, err
 }
 

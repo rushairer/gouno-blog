@@ -20,6 +20,7 @@ import (
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/tool"
+	"go.uber.org/zap"
 )
 
 var (
@@ -44,6 +45,7 @@ type Runner struct {
 	mediaCandidates RunnerMediaCandidateStore
 	notifications   RunnerNotificationWriter
 	lifecycle       RunnerRunLifecycle
+	logger          *zap.Logger
 	management      RunnerManagement
 	tools           *tool.Registry
 	posts           *postservice.PostService
@@ -53,7 +55,7 @@ func NewRunner(deps RunnerDependencies, management RunnerManagement, tools *tool
 	return &Runner{
 		runs: deps.Runs, approvals: deps.Approvals, workflowScopes: deps.WorkflowScopes,
 		mediaCandidates: deps.MediaCandidates, notifications: deps.Notifications, lifecycle: deps.Lifecycle,
-		management: management, tools: tools, posts: posts,
+		management: management, tools: tools, posts: posts, logger: deps.Logger,
 	}
 }
 
@@ -152,18 +154,62 @@ func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentT
 }
 
 func (r *Runner) Execute(ctx context.Context, runID int64) {
-	r.executeAndFinish(ctx, runID, false)
+	_ = r.execute(ctx, runID, false)
 }
 
 func (r *Runner) ExecutePreview(ctx context.Context, runID int64) {
-	r.executeAndFinish(ctx, runID, true)
+	_ = r.execute(ctx, runID, true)
 }
 
-func (r *Runner) executeAndFinish(ctx context.Context, runID int64, dryRun bool) {
-	if err := r.execute(ctx, runID, dryRun); err != nil {
-		code, message := runFailureDetails(err)
-		_ = r.lifecycle.FinishRun(ctx, runID, domain.AgentRunFailed, "", 0, 0, &code, &message)
-		r.notifyRunFailure(ctx, runID, message)
+const runFinalizationTimeout = 5 * time.Second
+
+type runExecutionOutcome struct {
+	status                    domain.AgentRunStatus
+	summary                   string
+	inputTokens, outputTokens int64
+}
+
+// execute is the single owner of claim and terminalization. A claim failure
+// (including a lost acknowledgement) cannot authorize dispatch OR a failure
+// transition. A claimed run is never automatically reclaimed or replayed.
+func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
+	if err := r.runs.StartRun(ctx, runID); err != nil {
+		r.logRunStorageFailure(runID, "claim")
+		return err
+	}
+
+	outcome := runExecutionOutcome{}
+	runErr := r.executeClaimed(ctx, runID, dryRun, &outcome)
+	var errorCode, errorMessage *string
+	if runErr != nil {
+		code, message := runFailureDetails(runErr)
+		errorCode, errorMessage = &code, &message
+		outcome.status = domain.AgentRunFailed
+		outcome.summary = ""
+	}
+
+	// Terminal evidence may outlive a cancelled worker, but must remain bounded.
+	// Never retry or rewrite a terminal transaction after an uncertain commit.
+	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), runFinalizationTimeout)
+	finishErr := r.lifecycle.FinishRun(finishCtx, runID, outcome.status, outcome.summary,
+		outcome.inputTokens, outcome.outputTokens, errorCode, errorMessage)
+	cancel()
+	if finishErr != nil {
+		r.logRunStorageFailure(runID, "finish")
+		return errors.Join(runErr, finishErr)
+	}
+	if errorMessage != nil {
+		notifyCtx, cancelNotify := context.WithTimeout(context.WithoutCancel(ctx), runFinalizationTimeout)
+		defer cancelNotify()
+		r.notifyRunFailure(notifyCtx, runID, *errorMessage)
+	}
+	return runErr
+}
+
+func (r *Runner) logRunStorageFailure(runID int64, phase string) {
+	if r.logger != nil {
+		// No database error, provider body, credentials, or prompt in diagnostics.
+		r.logger.Warn("agent run persistence not acknowledged", zap.Int64("run_id", runID), zap.String("phase", phase))
 	}
 }
 
@@ -255,7 +301,7 @@ func validateModelToolCalls(offered []provider.ToolDefinition, calls []provider.
 	return nil
 }
 
-func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
+func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, outcome *runExecutionOutcome) error {
 	run, err := r.runs.GetRun(ctx, runID)
 	if err != nil {
 		return err
@@ -276,15 +322,11 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	if err != nil {
 		return err
 	}
-	if err := r.runs.StartRun(ctx, runID); err != nil {
-		return err
-	}
 	userInput := "Run your configured blog operation now."
 	if len(run.Input) > 0 && string(run.Input) != "{}" {
 		userInput += "\nRuntime input: " + string(run.Input)
 	}
 	messages := []provider.Message{{Role: "user", Content: userInput}}
-	var inputTokens, outputTokens int64
 	hasApproval := false
 	finalText := ""
 	citationLedger := make(map[string]domain.AgentCitation)
@@ -341,8 +383,10 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 		if attempts > 1 {
 			finalText = fmt.Sprintf("Provider request recovered after %d attempts.", attempts)
 		}
-		inputTokens += result.InputTokens
-		outputTokens += result.OutputTokens
+		// Keep observed usage even when later validation, Tool execution or
+		// usage persistence fails. It is not an upstream billing guarantee.
+		outcome.inputTokens += result.InputTokens
+		outcome.outputTokens += result.OutputTokens
 		usage := &domain.UsageEvent{
 			RunID: run.ID, RequestID: requestID, Provider: run.Provider, Model: run.Model,
 			InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, CompletedAt: time.Now().UTC(),
@@ -457,7 +501,8 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	if err := r.runs.SaveRunCitations(ctx, run.ID, citations); err != nil {
 		return err
 	}
-	return r.lifecycle.FinishRun(ctx, run.ID, status, finalText, inputTokens, outputTokens, nil, nil)
+	outcome.status, outcome.summary = status, finalText
+	return nil
 }
 
 type effectiveRunLimits struct {
