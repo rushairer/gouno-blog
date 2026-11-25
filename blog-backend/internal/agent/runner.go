@@ -322,7 +322,8 @@ func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, o
 	if err != nil {
 		return err
 	}
-	if profile == nil || profile.ID <= 0 || client == nil {
+	if profile == nil || profile.ID <= 0 || client == nil ||
+		string(profile.ProviderType) != client.Name() || profile.Model != client.Model() {
 		return provider.ErrTextDispatchStartUnconfirmed
 	}
 	userInput := "Run your configured blog operation now."
@@ -392,7 +393,7 @@ func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, o
 		outcome.inputTokens += result.InputTokens
 		outcome.outputTokens += result.OutputTokens
 		usage := &domain.UsageEvent{
-			RunID: run.ID, RequestID: requestID, Provider: client.Name(), Model: client.Model(),
+			RunID: run.ID, RequestID: requestID, Provider: profile.ProviderType, Model: client.Model(),
 			InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, CompletedAt: time.Now().UTC(),
 		}
 		if err := r.runs.RecordUsage(ctx, usage); err != nil {

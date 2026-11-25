@@ -236,7 +236,7 @@ type modelBoundaryProvider struct {
 	result   provider.Result
 }
 
-func (*modelBoundaryProvider) Name() string { return "test" }
+func (*modelBoundaryProvider) Name() string { return "openai" }
 func (*modelBoundaryProvider) Model() string { return "test" }
 
 func (p *modelBoundaryProvider) Generate(_ context.Context, request provider.Request) (provider.Result, error) {
@@ -444,7 +444,7 @@ type cancellingModelProvider struct {
 	cancel context.CancelFunc
 }
 
-func (*cancellingModelProvider) Name() string { return "test" }
+func (*cancellingModelProvider) Name() string { return "openai" }
 func (*cancellingModelProvider) Model() string { return "test" }
 
 func (p *cancellingModelProvider) Generate(context.Context, provider.Request) (provider.Result, error) {
@@ -473,7 +473,7 @@ func TestRunnerSuccessfulOutcomeNeverRewrittenAfterUnacknowledgedCommit(t *testi
 		runs.usages != 1 || len(client.requests) != 1 {
 		t.Fatalf("unconfirmed success was rewritten or replayed: err=%v lifecycle=%#v notifications=%d", err, lifecycle, notifications.calls)
 	}
-	if runs.lastUsage == nil || runs.lastUsage.Provider != client.Name() || runs.lastUsage.Model != client.Model() {
+	if runs.lastUsage == nil || string(runs.lastUsage.Provider) != client.Name() || runs.lastUsage.Model != client.Model() {
 		t.Fatalf("usage attributed to queued rather than actual client: %#v", runs.lastUsage)
 	}
 }
