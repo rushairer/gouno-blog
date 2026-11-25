@@ -25,23 +25,29 @@ func RetryableTextRejection(err error) bool {
 
 func TextFailureCode(err error) string {
 	var requestErr *openAITextRequestError
-	if !errors.As(err, &requestErr) {
-		return ""
+	hasOpenAIContext := errors.As(err, &requestErr)
+	cause := err
+	if hasOpenAIContext {
+		if requestErr.disabled {
+			return "provider_stream_disabled"
+		}
+		cause = requestErr.cause
 	}
-	if requestErr.disabled {
-		return "provider_stream_disabled"
-	}
-	if errors.Is(requestErr.cause, context.DeadlineExceeded) {
+	if errors.Is(cause, context.DeadlineExceeded) {
 		return "provider_timeout"
 	}
-	if errors.Is(requestErr.cause, context.Canceled) {
+	if errors.Is(cause, context.Canceled) {
 		return "provider_request_cancelled"
 	}
 	var upstreamErr *upstreamHTTPError
-	if !errors.As(requestErr.cause, &upstreamErr) {
-		return "provider_request_failed"
+	if !errors.As(cause, &upstreamErr) {
+		var transportErr *upstreamTransportError
+		if hasOpenAIContext || errors.As(cause, &transportErr) {
+			return "provider_request_failed"
+		}
+		return ""
 	}
-	if requestErr.stream && requiresStreamingFallback(requestErr.cause) {
+	if hasOpenAIContext && requestErr.stream && requiresStreamingFallback(cause) {
 		return "provider_stream_rejected"
 	}
 	switch upstreamErr.StatusCode {
@@ -51,7 +57,8 @@ func TextFailureCode(err error) string {
 				Param string `json:"param"`
 			} `json:"error"`
 		}
-		if json.Unmarshal([]byte(upstreamErr.Body), &decoded) == nil && openAIToolNameParameter.MatchString(decoded.Error.Param) {
+		if (hasOpenAIContext || upstreamErr.Provider == "openai") &&
+			json.Unmarshal([]byte(upstreamErr.Body), &decoded) == nil && openAIToolNameParameter.MatchString(decoded.Error.Param) {
 			return "provider_tool_name_invalid"
 		}
 		return "provider_request_invalid"

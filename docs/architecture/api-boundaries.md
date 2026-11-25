@@ -24,7 +24,7 @@ Registration owns copies of mutable schema, surface and scope metadata. Catalog,
 
 Runner consumes only the model and locked Skill version inputs from Agent Management. It checks all returned Tool names against the actual request's offered definitions before dispatching any call. The last synthesis turn cannot execute Tools, stale grants cannot cross the Agent surface, and preview does not execute write-risk Tools or persist approvals. Normal-run publication, strict scope and approval contracts remain unchanged. Dry-run still records execution/usage and may consume Provider resources.
 
-Agent-level retries use a typed HTTP 429 rejection, not substring matching. Timeouts, transport/decode errors and 5xx are not automatically replayed. Existing explicit text protocol negotiation is separate; neither an HTTP rejection nor local usage evidence guarantees provider-side billing behavior. Agent run claim/terminal fencing, persisted failed-run token totals and complete per-attempt Provider evidence remain separate audit work.
+Agent-level retries use a typed HTTP 429 rejection, not substring matching. Timeouts, transport/decode errors and 5xx are not automatically replayed. Existing explicit text protocol negotiation is separate; Anthropic thinking/tool-choice negotiation requires an explicit typed compatibility rejection at each transition and stops after unrelated failures. Typed HTTP failure codes are shared across OpenAI, Anthropic and Gemini. Neither an HTTP rejection nor local usage evidence guarantees provider-side billing behavior. Agent run claim/terminal fencing, persisted failed-run token totals and complete per-attempt Provider evidence remain separate audit work.
 
 ## Audit semantics
 
