@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Document existing public Page reads and published tag summaries with their actual response envelopes; unify duplicate Post path templates in OpenAPI without changing runtime URLs or numeric write requirements, and check these contracts against registered Gin routes.
 - Record the actual v1.6.0 immutable image digests, independent signature/SBOM/provenance verification and explicit remaining operational publication exception in the release manifest.
 
 ### Security
