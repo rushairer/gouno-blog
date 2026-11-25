@@ -20,10 +20,12 @@ func NewRunLifecycle(transactor *dbtx.Transactor, runs RunLifecycleRunStore, med
 }
 
 func (l *RunLifecycle) FinishRun(ctx context.Context, id int64, status domain.AgentRunStatus, summary string, inputTokens, outputTokens int64, errorCode, errorMessage *string) error {
-	if err := l.runs.FinishRun(ctx, id, status, summary, inputTokens, outputTokens, errorCode, errorMessage); err != nil {
-		return err
-	}
-	return l.media.SyncRunTokenUsage(ctx, id, inputTokens, outputTokens)
+	return l.transactor.Run(ctx, func(tx *sql.Tx) error {
+		if err := l.runs.FinishRunTx(ctx, tx, id, status, summary, inputTokens, outputTokens, errorCode, errorMessage); err != nil {
+			return err
+		}
+		return l.media.SyncRunTokenUsageTx(ctx, tx, id, inputTokens, outputTokens)
+	})
 }
 
 func (l *RunLifecycle) DeleteRun(ctx context.Context, runID int64) error {

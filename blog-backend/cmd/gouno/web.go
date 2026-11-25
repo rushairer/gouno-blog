@@ -361,7 +361,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 		runner := agentservice.NewRunner(agentservice.RunnerDependencies{
 			Runs: agentRunRepo, Approvals: agentApprovalRepo, WorkflowScopes: workflowScopeRepo,
-			MediaCandidates: agentMediaCandidateRepo, Notifications: notificationRepo, Lifecycle: runLifecycle,
+			MediaCandidates: agentMediaCandidateRepo, Notifications: notificationRepo, Lifecycle: runLifecycle, Logger: cfg.Logger,
 		}, management, toolRegistry, postSvc)
 		generation := agentservice.NewGenerationService(generationAuditRepo, management, mediaSvc, mediaStore)
 		approvals := agentservice.NewApprovalService(agentservice.ApprovalServiceDependencies{

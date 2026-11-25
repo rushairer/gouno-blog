@@ -85,3 +85,19 @@ func (store *failureStepStore) FailRun(_ context.Context, _ int64, code, message
 func (store *failureStepStore) FailureNotificationTarget(context.Context, int64) (*int64, string, int64, error) {
 	return nil, "", 0, nil
 }
+
+func TestAgentRunOutcomeRequiresConfirmedCompletion(t *testing.T) {
+	for _, status := range []domain.AgentRunStatus{
+		domain.AgentRunQueued, domain.AgentRunRunning, domain.AgentRunFailed,
+		domain.AgentRunCancelled, domain.AgentRunSucceeded, domain.AgentRunAwaitingApproval,
+	} {
+		err := agentRunOutcomeError(&domain.AgentRun{ID: 73, Status: status})
+		wantSuccess := status == domain.AgentRunSucceeded || status == domain.AgentRunAwaitingApproval
+		if (err == nil) != wantSuccess {
+			t.Fatalf("status %s: err=%v", status, err)
+		}
+		if (status == domain.AgentRunQueued || status == domain.AgentRunRunning) && !strings.Contains(err.Error(), "before retrying") {
+			t.Fatalf("unconfirmed outcome must require inspection: %v", err)
+		}
+	}
+}

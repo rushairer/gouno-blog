@@ -27,6 +27,12 @@ The repository-root `AGENTS.md` remains authoritative. These additional rules ap
 - Dry-run offers only read/propose Tools and never executes write-risk Tools (including direct content creation and image-task creation); preview proposals do not create approval records. Reject unexpected writes before dispatch. Dry-run still creates run/usage records and may use the configured Provider; it is not free or a globally side-effect-free transaction.
 - Runner consumes the narrow versioned model-management port. Preserve strict Workflow resource authorization and existing publication/approval behavior for normal runs.
 
+## Execution claim and terminal evidence
+
+- Confirm the one-way queued-to-running claim before loading execution inputs or calling a Provider. A missing or uncertain claim acknowledgement never authorizes dispatch, notification of a failed run, or terminalization by that worker. There is no automatic lease reset or reclaim.
+- Only the acknowledged claimant attempts the guarded running-to-terminal transition; one short transaction covers Run state and MediaCandidate token metadata. Bound terminal writes to five seconds independently of worker cancellation. Never rewrite success as failure or retry an unconfirmed terminal transaction. Workflow must not treat a nonterminal Agent row as a successful model step.
+- Preserve observed input/output tokens on failure, including a failed usage insert. Monthly usage includes active, failed and cancelled runs: reconcile each run's ledger and aggregate using their per-component maximum, without adding both. Keep the existing run-creation-month boundary and deletion semantics for now. This is observed local usage, not an exact upstream invoice or a hard cross-month budget guarantee.
+
 ## Regression evidence
 
 Retain the unit tests in `generation_attempt_audit_test.go`, real-database tests in `generation_attempt_audit_integration_test.go`, the migration upgrade test in `../migrations/generation_attempt_audit_integration_test.go`, and the existing media-generation fencing/reconciliation suites. Database skips are not database acceptance; run the repository's disposable PostgreSQL gate.
