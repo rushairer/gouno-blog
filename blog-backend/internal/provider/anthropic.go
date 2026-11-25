@@ -191,6 +191,9 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 			}
 		}
 	}
+	if err := validateAnthropicCompletion(result.StopReason, result.ToolCalls); err != nil {
+		return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: evidence}, err
+	}
 	return result, nil
 }
 

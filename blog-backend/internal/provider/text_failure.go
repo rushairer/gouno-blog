@@ -31,6 +31,12 @@ func TextFailureCode(err error) string {
 		return "provider_stream_invalid"
 	case errors.Is(err, ErrTextStreamRejected):
 		return "provider_stream_failed"
+	case errors.Is(err, ErrTextResponseIncomplete):
+		return "provider_response_incomplete"
+	case errors.Is(err, ErrTextResponseInvalid):
+		return "provider_response_invalid"
+	case errors.Is(err, ErrTextResponseRejected):
+		return "provider_response_rejected"
 	}
 	if errors.Is(err, ErrTextDispatchStartUnconfirmed) {
 		return "provider_dispatch_audit_start_unconfirmed"
@@ -106,6 +112,12 @@ func TextFailureMessage(code string) string {
 		return "Provider stream contained invalid data or Tool calls; no Tool output was accepted."
 	case "provider_stream_failed":
 		return "Provider stream reported a failed response; inspect the invocation evidence before retrying."
+	case "provider_response_incomplete":
+		return "Provider response did not confirm a complete generation; no Tool output was accepted."
+	case "provider_response_invalid":
+		return "Provider response or Tool-call structure was invalid; no Tool output was accepted."
+	case "provider_response_rejected":
+		return "Provider reported a blocked or rejected response; no Tool output was accepted."
 	case "provider_dispatch_audit_start_unconfirmed":
 		return "Provider dispatch audit was not acknowledged; the associated HTTP call was not sent."
 	case "provider_dispatch_audit_finish_unconfirmed":

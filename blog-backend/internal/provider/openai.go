@@ -130,6 +130,10 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 	result := Result{
 		InputTokens:  decoded.Usage.PromptTokens,
 		OutputTokens: decoded.Usage.CompletionTokens,
+		Evidence:     p.responseEvidence(resp, false),
+	}
+	if len(decoded.Choices) != 1 {
+		return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, ErrTextResponseInvalid
 	}
 	if len(decoded.Choices) > 0 {
 		choice := decoded.Choices[0]
@@ -149,6 +153,9 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 				Arguments: args,
 			})
 		}
+	}
+	if err := validateOpenAIChatCompletion(result.StopReason, result.ToolCalls); err != nil {
+		return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, err
 	}
 	return result, nil
 }
@@ -344,6 +351,7 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 	result := Result{
 		Text: decoded.OutputText, InputTokens: decoded.Usage.InputTokens,
 		OutputTokens: decoded.Usage.OutputTokens, StopReason: decoded.Status,
+		Evidence: p.responseEvidence(resp, false),
 	}
 	for _, item := range decoded.Output {
 		if item.Type == "function_call" {
@@ -363,6 +371,9 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 				}
 			}
 		}
+	}
+	if err := validateOpenAIResponsesCompletion(result.StopReason, result.ToolCalls); err != nil {
+		return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, err
 	}
 	return result, nil
 }
