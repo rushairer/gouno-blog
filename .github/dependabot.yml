@@ -93,8 +93,11 @@ updates:
           - minor
           - patch
 
+  # Backend and Seed must update the shared Go builder digest atomically.
   - package-ecosystem: docker
-    directory: /blog-backend
+    directories:
+      - /blog-backend
+      - /seed
     schedule:
       interval: weekly
       day: monday
@@ -102,12 +105,10 @@ updates:
       timezone: Asia/Shanghai
     open-pull-requests-limit: 5
     groups:
-      backend-docker-minor-patch:
+      shared-go-docker-dependencies:
+        group-by: dependency-name
         patterns:
           - "*"
-        update-types:
-          - minor
-          - patch
 
   - package-ecosystem: docker
     directory: /blog-frontend
@@ -130,18 +131,3 @@ updates:
           - minor
           - patch
 
-  - package-ecosystem: docker
-    directory: /seed
-    schedule:
-      interval: weekly
-      day: monday
-      time: "05:30"
-      timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
-    groups:
-      seed-docker-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch

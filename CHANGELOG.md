@@ -9,6 +9,10 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 - Record the actual v1.6.0 immutable image digests, independent signature/SBOM/provenance verification and explicit remaining operational publication exception in the release manifest.
 
+### Security
+
+- Refresh the shared Backend/Seed Go builder and Alpine runtime digests, pin patched OpenSSL libraries (3.5.9-r1), and pin Nginx 1.30.7 slim by immutable index. Keep both scanners and runtime checks; group shared Docker updates by dependency name to avoid incompatible single-directory updates.
+
 ## [1.6.0] - 2026-11-11
 
 See the [release manifest](docs/releases/release-manifest-v1.6.0.md). Publication is
