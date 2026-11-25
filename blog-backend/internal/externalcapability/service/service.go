@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -17,14 +18,16 @@ import (
 	"github.com/rushairer/blog-backend/internal/ratelimit"
 	"github.com/rushairer/blog-backend/internal/tool"
 	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
+	"go.uber.org/zap"
 )
 
 var (
-	ErrInvalid     = errors.New("invalid external capability request")
-	ErrUnauthorized = errors.New("invalid external API key")
-	ErrForbidden   = errors.New("external capability is not authorized")
-	ErrRateLimited = errors.New("external capability rate limit exceeded")
-	ErrNotFound    = errors.New("external API client not found")
+	ErrInvalid          = errors.New("invalid external capability request")
+	ErrUnauthorized     = errors.New("invalid external API key")
+	ErrForbidden        = errors.New("external capability is not authorized")
+	ErrRateLimited      = errors.New("external capability rate limit exceeded")
+	ErrNotFound         = errors.New("external API client not found")
+	ErrAuditUnavailable = errors.New("external capability audit unavailable")
 )
 
 const (
@@ -32,6 +35,7 @@ const (
 	defaultRateLimitPerMin          = 60
 	maxRateLimitPerMinute           = 6000
 	authFailureRateLimitPerMinute   = 60
+	invocationAuditTimeout           = 2 * time.Second
 )
 
 type ClientRepository interface {
@@ -51,13 +55,17 @@ type Service struct {
 	repo    ClientRepository
 	tools   *tool.Registry
 	limiter ratelimit.Limiter
+	logger  *zap.Logger
 }
 
-func New(repo ClientRepository, tools *tool.Registry, limiter ratelimit.Limiter) *Service {
+func New(repo ClientRepository, tools *tool.Registry, limiter ratelimit.Limiter, logger *zap.Logger) *Service {
 	if limiter == nil {
 		limiter = ratelimit.NewMemoryLimiter()
 	}
-	return &Service{repo: repo, tools: tools, limiter: limiter}
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	return &Service{repo: repo, tools: tools, limiter: limiter, logger: logger}
 }
 
 func (s *Service) ExternalCatalog() []tool.CatalogItem {
@@ -251,10 +259,28 @@ func (s *Service) RecordRateLimited(ctx context.Context, client *externaldomain.
 	if capability == "" {
 		capability = "catalog"
 	}
-	_ = s.repo.RecordAudit(context.WithoutCancel(ctx), externaldomain.InvocationAudit{
+	_ = s.recordAudit(ctx, externaldomain.InvocationAudit{
 		ClientID: client.ID, RequestID: requestID, Capability: capability,
 		Result: "rate_limited", StatusCode: 429, SourceIP: sourceIP,
 	})
+}
+
+// recordAudit survives request cancellation but never removes the write deadline.
+func (s *Service) recordAudit(ctx context.Context, audit externaldomain.InvocationAudit) error {
+	auditCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), invocationAuditTimeout)
+	defer cancel()
+	if err := s.repo.RecordAudit(auditCtx, audit); err != nil {
+		// Do not log caller-controlled capability names, arguments, credentials,
+		// request IDs, addresses or the raw storage error.
+		s.logger.Error("external capability invocation audit write failed",
+			zap.Int64("client_id", audit.ClientID),
+			zap.String("result", audit.Result),
+			zap.Int("status_code", audit.StatusCode),
+			zap.Bool("deadline_exceeded", errors.Is(err, context.DeadlineExceeded) || errors.Is(auditCtx.Err(), context.DeadlineExceeded)),
+		)
+		return err
+	}
+	return nil
 }
 
 func (s *Service) Invoke(ctx context.Context, client *externaldomain.Client, capability string, arguments json.RawMessage, requestID, sourceIP string) (result json.RawMessage, err error) {
@@ -273,11 +299,16 @@ func (s *Service) Invoke(ctx context.Context, client *externaldomain.Client, cap
 		audit.DurationMS = time.Since(started).Milliseconds()
 		audit.Result, audit.StatusCode = classifyInvocationResult(err)
 		if audit.ClientID > 0 {
-			_ = s.repo.RecordAudit(context.WithoutCancel(ctx), audit)
+			if auditErr := s.recordAudit(ctx, audit); auditErr != nil && err == nil {
+				// The Tool is read-only. Withhold its result when the audit
+				// acknowledgement is missing; never retry an uncertain insert.
+				result = nil
+				err = fmt.Errorf("%w: %w", ErrAuditUnavailable, auditErr)
+			}
 		}
 	}()
 
-	if client == nil || !slices.Contains(client.Capabilities, capability) {
+	if client == nil || client.ID <= 0 || !slices.Contains(client.Capabilities, capability) {
 		return nil, ErrForbidden
 	}
 	if s.tools == nil || !s.tools.SupportsSurface(capability, "external") {

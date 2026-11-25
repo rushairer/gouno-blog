@@ -1350,6 +1350,7 @@ paths:
 
   /external/v1/capabilities:
     get:
+      operationId: listExternalCapabilities
       summary: List capabilities authorized for this external API client
       description: Server-to-server only. Browser requests carrying Origin are rejected.
       security:
@@ -1357,18 +1358,33 @@ paths:
       responses:
         '200':
           description: Read-only capability catalog filtered by the client scope.
+          headers:
+            Cache-Control:
+              schema: {type: string, example: no-store}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalCapabilityCatalogResponse'
         '401':
           description: Missing, invalid, expired, disabled, or revoked external API key.
+        '403':
+          description: Browser Origin is not accepted.
         '429':
-          description: Client rate limit exceeded.
+          description: Client or authentication-failure rate limit exceeded.
+        '500':
+          description: External capability operation failed.
 
   /external/v1/capabilities/{name}/invoke:
     post:
+      operationId: invokeExternalCapability
       summary: Invoke one authorized read-only Blog capability
       description: |
         Invokes the canonical Blog Tool Registry through an explicit client scope.
         v1 rejects write/propose Tools even if a client record is misconfigured.
         The API is server-to-server only and rejects browser Origin requests.
+        A successful result is returned only after the invocation audit write is acknowledged.
+        If the audit write fails or times out, the result is withheld and no automatic audit retry is attempted.
+        An audit record describes the invocation outcome, not proof of response delivery.
       security:
         - ExternalAPIKey: []
       parameters:
@@ -1385,17 +1401,33 @@ paths:
               $ref: '#/components/schemas/ExternalCapabilityInvokeRequest'
       responses:
         '200':
-          description: Capability result.
+          description: Capability result; data shape depends on the authorized Tool.
+          headers:
+            Cache-Control:
+              schema: {type: string, example: no-store}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalCapabilityInvokeResponse'
         '400':
-          description: Invalid capability arguments.
+          description: Invalid capability arguments or request JSON.
         '401':
           description: Missing, invalid, expired, disabled, or revoked external API key.
         '403':
-          description: Capability is not authorized for this client or is not externally readable.
+          description: Browser Origin is not accepted, or the capability is not authorized or externally readable.
         '429':
-          description: Client rate limit exceeded.
+          description: Client or authentication-failure rate limit exceeded.
+          headers:
+            Retry-After:
+              schema: {type: integer, example: 60}
         '413':
           description: JSON request exceeds the 2 MiB limit.
+        '500':
+          description: External capability operation failed, including unavailable invocation audit. No successful result is returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalCapabilityErrorResponse'
 
   /admin/external-api/capabilities:
     get:
@@ -1621,6 +1653,33 @@ components:
         version_token: {type: string}
         snapshot: {type: object, additionalProperties: true}
         created_at: {type: string, format: date-time}
+    ExternalCapabilityCatalogResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: integer, enum: [200]}
+        message: {type: string, enum: [success]}
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalCapability'
+    ExternalCapabilityInvokeResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: integer, enum: [200]}
+        message: {type: string, enum: [success]}
+        data:
+          description: Capability-specific JSON; consult the selected Tool's output_schema when supplied.
+    ExternalCapabilityErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: integer}
+        message: {type: string}
+      example:
+        code: 500
+        message: external capability operation failed
     ExternalCapability:
       type: object
       required: [name, description, parameters, surfaces, risk_level]

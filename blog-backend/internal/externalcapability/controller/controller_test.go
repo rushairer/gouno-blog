@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,6 +21,7 @@ type fakeCapabilityService struct {
 	created         *externaldomain.CreatedClient
 	invoked         string
 	authFailureErr  error
+	invokeErr       error
 }
 
 func (s *fakeCapabilityService) ExternalCatalog() []tool.CatalogItem {
@@ -61,7 +63,7 @@ func (s *fakeCapabilityService) Allow(context.Context, *externaldomain.Client) e
 func (s *fakeCapabilityService) RecordRateLimited(context.Context, *externaldomain.Client, string, string, string) {}
 func (s *fakeCapabilityService) Invoke(_ context.Context, _ *externaldomain.Client, name string, arguments json.RawMessage, _, _ string) (json.RawMessage, error) {
 	s.invoked = name + ":" + string(arguments)
-	return json.RawMessage(`{"ok":true}`), nil
+	return json.RawMessage(`{"ok":true}`), s.invokeErr
 }
 
 func TestExternalBearerBoundaryAndInvocation(t *testing.T) {
@@ -253,5 +255,33 @@ func TestAdminUpdateRequiresExplicitEnabledState(t *testing.T) {
 	router.ServeHTTP(response, req)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestExternalInvocationAuditFailureReturnsRedacted500WithoutResult(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCapabilityService{
+		client: &externaldomain.Client{ID: 1, Enabled: true, RateLimitPerMinute: 60},
+		invokeErr: errors.Join(externalservice.ErrAuditUnavailable, errors.New("private-storage-detail")),
+	}
+	ctrl := New(service)
+	router := gin.New()
+	group := router.Group("/api/external/v1")
+	group.Use(ctrl.RejectBrowserOrigin(), ctrl.Authenticate(), ctrl.RateLimit())
+	group.POST("/capabilities/:name/invoke", ctrl.Invoke)
+	req := httptest.NewRequest(http.MethodPost, "/api/external/v1/capabilities/content.list_published_posts/invoke", strings.NewReader(`{"arguments":{}}`))
+	req.Header.Set("Authorization", "Bearer gouno_live_valid")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if string(body["message"]) != `"external capability operation failed"` || len(body["data"]) != 0 ||
+		strings.Contains(response.Body.String(), "private-storage-detail") || strings.Contains(response.Body.String(), "gouno_live_valid") {
+		t.Fatalf("unsafe or changed audit failure response: %s", response.Body.String())
 	}
 }
