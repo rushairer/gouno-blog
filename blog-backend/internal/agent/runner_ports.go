@@ -35,6 +35,7 @@ type RunnerRunStore interface {
 	RecordUsage(context.Context, *domain.UsageEvent) error
 	StartTextDispatch(context.Context, *domain.TextDispatchAudit) error
 	FinishTextDispatch(context.Context, *domain.TextDispatchAudit) error
+	CompleteTextDispatch(context.Context, *domain.TextDispatchAudit) error
 }
 
 type RunnerApprovalStore interface {
