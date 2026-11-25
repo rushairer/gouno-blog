@@ -17,4 +17,5 @@ type TextDispatchAudit struct {
 	UpstreamRequestID         string
 	UpstreamAccountID         string
 	UpstreamWorkspaceID       string
+	DecodeStatus              string
 }

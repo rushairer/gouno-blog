@@ -44,6 +44,11 @@ The scoped regression suite must count real HTTP requests, including failures be
 
 A failed text stream must never reach Tool dispatch or success finalization. Preserve its observed usage in the same run ledger and terminal totals even when no executable response exists; do not invent zero-token observations for failed calls with no usage. A result carrying observed usage must not authorize generic retry even if it also carries a rejection error.
 
+## Decoded Provider response evidence
+
+- An HTTP 2xx dispatch is only header receipt. The provider must persist one separate decode outcome (`decoded`, `invalid`, `incomplete`, `rejected`) after parsing. If that acknowledgement is uncertain, return no text or Tool calls, preserve observed tokens only, and never retry.
+- Keep transport status and decode status separate; only a 2xx response may receive a decode outcome, exactly once. HTTP errors and transport-unknown attempts have no decode state.
+
 ## Regression evidence
 
 Retain the unit tests in `generation_attempt_audit_test.go`, real-database tests in `generation_attempt_audit_integration_test.go`, the migration upgrade test in `../migrations/generation_attempt_audit_integration_test.go`, and the existing media-generation fencing/reconciliation suites. Database skips are not database acceptance; run the repository's disposable PostgreSQL gate.

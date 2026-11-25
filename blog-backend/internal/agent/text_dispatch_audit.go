@@ -46,3 +46,9 @@ func (a *runTextDispatchAudit) Finish(ctx context.Context, id int64, outcome pro
 	row.UpstreamWorkspaceID = outcome.Evidence.WorkspaceID
 	return a.store.FinishTextDispatch(ctx, &row)
 }
+
+func (a *runTextDispatchAudit) Complete(ctx context.Context, id int64, outcome provider.TextDispatchDecodeOutcome) error {
+	row := a.base
+	row.ID, row.DecodeStatus = id, outcome.Status
+	return a.store.CompleteTextDispatch(ctx, &row)
+}

@@ -10,6 +10,7 @@ import (
 var (
 	ErrTextDispatchStartUnconfirmed  = errors.New("provider dispatch audit start unconfirmed; associated HTTP call not sent")
 	ErrTextDispatchFinishUnconfirmed = errors.New("provider dispatch audit finish unconfirmed; do not replay")
+	ErrTextDispatchDecodeUnconfirmed = errors.New("provider response decode audit unconfirmed; do not dispatch tools or replay")
 )
 
 // TextDispatch describes one explicit HTTP client.Do call, not a logical
@@ -25,12 +26,17 @@ type TextDispatchOutcome struct {
 	Evidence   RequestEvidence
 }
 
+type TextDispatchDecodeOutcome struct {
+	Status string // decoded, invalid, incomplete, or rejected
+}
+
 // TextDispatchAudit is supplied by governed text callers. The provider owns
 // protocol negotiation and invokes this port for every explicit HTTP dispatch,
 // including compatibility requests and Agent-level retries.
 type TextDispatchAudit interface {
 	Start(context.Context, TextDispatch) (int64, error)
 	Finish(context.Context, int64, TextDispatchOutcome) error
+	Complete(context.Context, int64, TextDispatchDecodeOutcome) error
 }
 
 type textDispatchAuditKey struct{}
@@ -100,4 +106,57 @@ func safeDispatchEvidence(value string) string {
 		}
 	}
 	return value
+}
+
+// textDispatchCollector keeps HTTP header receipt and decoded model outcome
+// separate. Only 2xx responses need a decode outcome.
+type textDispatchCollector struct {
+	audit TextDispatchAudit
+	responses []int64
+}
+
+func (c *textDispatchCollector) Start(ctx context.Context, dispatch TextDispatch) (int64, error) {
+	return c.audit.Start(ctx, dispatch)
+}
+
+func (c *textDispatchCollector) Finish(ctx context.Context, id int64, outcome TextDispatchOutcome) error {
+	if err := c.audit.Finish(ctx, id, outcome); err != nil {
+		return err
+	}
+	if outcome.Status == "response_received" {
+		c.responses = append(c.responses, id)
+	}
+	return nil
+}
+
+func (c *textDispatchCollector) Complete(ctx context.Context, id int64, outcome TextDispatchDecodeOutcome) error {
+	return c.audit.Complete(ctx, id, outcome)
+}
+
+func (c *textDispatchCollector) complete(ctx context.Context, decodeErr error) error {
+	if c == nil || len(c.responses) == 0 {
+		return nil
+	}
+	status := "decoded"
+	switch {
+	case errors.Is(decodeErr, ErrTextStreamIncomplete), errors.Is(decodeErr, context.Canceled), errors.Is(decodeErr, context.DeadlineExceeded):
+		status = "incomplete"
+	case errors.Is(decodeErr, ErrTextStreamRejected):
+		status = "rejected"
+	case decodeErr != nil:
+		status = "invalid"
+	}
+	var unconfirmed bool
+	for _, id := range c.responses {
+		auditCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), textDispatchAuditTimeout)
+		err := c.audit.Complete(auditCtx, id, TextDispatchDecodeOutcome{Status: status})
+		cancel()
+		if err != nil {
+			unconfirmed = true
+		}
+	}
+	if unconfirmed {
+		return ErrTextDispatchDecodeUnconfirmed
+	}
+	return nil
 }

@@ -42,3 +42,24 @@ func (r *RunRepository) FinishTextDispatch(ctx context.Context, a *domain.TextDi
 	}
 	return requireRunTransition(result)
 }
+
+// CompleteTextDispatch records exactly one decoded model outcome after parsing.
+func (r *RunRepository) CompleteTextDispatch(ctx context.Context, a *domain.TextDispatchAudit) error {
+	if a == nil || a.ID <= 0 {
+		return errors.New("invalid text dispatch decode completion")
+	}
+	switch a.DecodeStatus {
+	case "decoded", "invalid", "incomplete", "rejected":
+	default:
+		return errors.New("invalid text dispatch decode outcome")
+	}
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_text_dispatch_audits
+		SET decode_status=$4,decoded_at=NOW()
+		WHERE id=$1 AND source_run_id=$2 AND turn_request_id=$3
+			AND status='response_received' AND decode_status IS NULL`,
+		a.ID, a.RunID, a.TurnRequestID, a.DecodeStatus)
+	if err != nil {
+		return err
+	}
+	return requireRunTransition(result)
+}
