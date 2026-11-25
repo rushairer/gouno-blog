@@ -1,8 +1,8 @@
-
 package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 )
 
@@ -55,7 +55,7 @@ func validateOpenAIResponsesCompletion(status string, calls []ToolCall) error {
 	switch status {
 	case "completed":
 		return validateResponseToolCalls(calls)
-	case "incomplete", "in_progress", "":
+	case "incomplete", "queued", "in_progress", "":
 		return ErrTextResponseIncomplete
 	case "failed", "cancelled":
 		return ErrTextResponseRejected
@@ -66,7 +66,7 @@ func validateOpenAIResponsesCompletion(status string, calls []ToolCall) error {
 
 func validateAnthropicCompletion(reason string, calls []ToolCall) error {
 	switch reason {
-	case "end_turn", "stop_sequence", "refusal":
+	case "end_turn", "stop_sequence":
 		if len(calls) != 0 {
 			return ErrTextResponseInvalid
 		}
@@ -78,6 +78,8 @@ func validateAnthropicCompletion(reason string, calls []ToolCall) error {
 		return validateResponseToolCalls(calls)
 	case "max_tokens", "pause_turn", "":
 		return ErrTextResponseIncomplete
+	case "refusal":
+		return ErrTextResponseRejected
 	default:
 		return ErrTextResponseInvalid
 	}

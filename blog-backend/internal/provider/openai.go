@@ -132,7 +132,7 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 		OutputTokens: decoded.Usage.CompletionTokens,
 		Evidence:     p.responseEvidence(resp, false),
 	}
-	if len(decoded.Choices) != 1 {
+	if req.DispatchAudit != nil && len(decoded.Choices) != 1 {
 		return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, ErrTextResponseInvalid
 	}
 	if len(decoded.Choices) > 0 {
@@ -140,6 +140,9 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 		result.Text = choice.Message.Content
 		result.StopReason = choice.FinishReason
 		for _, tc := range choice.Message.ToolCalls {
+			if req.DispatchAudit != nil && tc.Type != "" && tc.Type != "function" {
+				return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, ErrTextResponseInvalid
+			}
 			args := tc.Function.Arguments
 			if len(args) > 0 && args[0] == '"' {
 				var raw string
@@ -154,8 +157,10 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 			})
 		}
 	}
-	if err := validateOpenAIChatCompletion(result.StopReason, result.ToolCalls); err != nil {
-		return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, err
+	if req.DispatchAudit != nil {
+		if err := validateOpenAIChatCompletion(result.StopReason, result.ToolCalls); err != nil {
+			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, err
+		}
 	}
 	return result, nil
 }
@@ -331,6 +336,7 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 		Output []struct {
 			Type      string          `json:"type"`
 			CallID    string          `json:"call_id"`
+			Status    string          `json:"status"`
 			Name      string          `json:"name"`
 			Arguments json.RawMessage `json:"arguments"`
 			Content   []struct {
@@ -355,6 +361,9 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 	}
 	for _, item := range decoded.Output {
 		if item.Type == "function_call" {
+			if req.DispatchAudit != nil && item.Status != "" && item.Status != "completed" {
+				return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, ErrTextResponseInvalid
+			}
 			arguments := item.Arguments
 			if len(arguments) > 0 && arguments[0] == '"' {
 				var raw string
@@ -372,8 +381,10 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 			}
 		}
 	}
-	if err := validateOpenAIResponsesCompletion(result.StopReason, result.ToolCalls); err != nil {
-		return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, err
+	if req.DispatchAudit != nil {
+		if err := validateOpenAIResponsesCompletion(result.StopReason, result.ToolCalls); err != nil {
+			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, err
+		}
 	}
 	return result, nil
 }

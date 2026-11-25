@@ -48,6 +48,7 @@ A failed text stream must never reach Tool dispatch or success finalization. Pre
 
 - An HTTP 2xx dispatch is only header receipt. The provider must persist one separate decode outcome (`decoded`, `invalid`, `incomplete`, `rejected`) after parsing. If that acknowledgement is uncertain, return no text or Tool calls, preserve observed tokens only, and never retry.
 - Keep transport status and decode status separate; only a 2xx response may receive a decode outcome, exactly once. HTTP errors and transport-unknown attempts have no decode state.
+- Governed Agent non-stream OpenAI, Anthropic and Gemini text responses require protocol-specific completion and a valid Tool batch. Preserve observed usage on invalid, incomplete or rejected results; return no partial output and never retry such responses. Non-Agent validation and image behavior remain separate.
 
 ## Regression evidence
 

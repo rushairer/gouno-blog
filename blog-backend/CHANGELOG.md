@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
-- Require explicit protocol completion for non-stream OpenAI, Anthropic and Gemini responses, and validate Tool-call identity/arguments before returning executable output. Preserve observed usage and bounded correlation evidence on failure.
+- Require explicit protocol completion for governed Agent non-stream OpenAI, Anthropic and Gemini text responses, and validate Tool-call identity/arguments before returning executable output. Preserve observed usage and bounded correlation evidence on failure; record the corresponding decode outcome and do not replay. Legacy non-Agent callers and image behavior remain separate.
 - Bind RSS and Sitemap absolute URLs to the server-configured Blog OIDC callback origin rather than client-supplied Host/X-Forwarded-Host/X-Forwarded-Proto. Fail closed on invalid/missing configuration and regression-test hostile forwarded headers on real Gin routes. Expand the first-order HTTP error disclosure Go AST guard from ten to sixteen independently scoped non-Connector controllers with positive/negative probes for direct and aliased `err.Error()` serialization. The separately frozen Connector transport risk remains tracked, not implicitly modified.
 
 - Restrict the global 11 MiB multipart allowance to a registered Media upload POST with a parsed multipart media type; forged MIME on non-upload JSON routes now retains the 2 MiB limit. Preserve fixed HTTP 413 for external Capability unknown-length/extra-whitespace JSON overflow, without invoking Tools or leaking one-time API keys; retain previous 400 errors for malformed JSON. Add body-size, route, MIME and actual Bearer API regressions.
