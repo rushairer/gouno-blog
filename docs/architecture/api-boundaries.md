@@ -18,6 +18,10 @@ Sources: [route composition](../../blog-backend/router/web.go), [runtime wiring]
 
 An authorized read-only Tool invocation returns a successful result only after its invocation audit insert is acknowledged. An audit failure or timeout withholds the result and returns a fixed 500. Existing denied, malformed, and rate-limited response contracts are preserved; audit failures on those paths are logged as redacted operational errors. Invocation and rate-limit audit writes use a two-second context independent of request cancellation. No failed or ambiguous insert is automatically replayed. Successful catalog discovery is distinct from invocation; malformed JSON rejected before Tool dispatch does not represent an invocation. The audit record describes the attempted operation, not proof of response delivery. No new database schema, external write capability, or exactly-once guarantee is introduced.
 
+## Rate-limit storage contract
+
+External Capability and Community share the `internal/ratelimit` infrastructure but not the same outage policy. The external service rejects Redis errors; Community retains its existing bounded process fallback. Redis uses a single-key atomic fixed-window operation: new counters are created together with their expiry, existing deadlines are preserved, and legacy persistent counters receive a finite expiry without resetting usage. No Redis ACL expansion, key namespace change, new quota policy or Connector change is implied. The executable tests cover expiry, legacy repair, concurrency, invalid parameters and storage errors. Actual deployment and multi-replica acceptance remain separate.
+
 ## Contract governance
 
 - The [current OpenAPI document](../../blog-backend/config/openapi.yaml) describes selected operations across multiple surfaces. It is not a complete route inventory and must not be published as a stable general-purpose SDK contract without additional review.
