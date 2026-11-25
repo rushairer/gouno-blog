@@ -318,9 +318,12 @@ func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, o
 		return err
 	}
 	limits := effectiveLimits(value, skill)
-	_, client, err := r.management.AgentProviderClient(ctx, value)
+	profile, client, err := r.management.AgentProviderClient(ctx, value)
 	if err != nil {
 		return err
+	}
+	if profile == nil || profile.ID <= 0 || client == nil {
+		return provider.ErrTextDispatchStartUnconfirmed
 	}
 	userInput := "Run your configured blog operation now."
 	if len(run.Input) > 0 && string(run.Input) != "{}" {
@@ -376,6 +379,7 @@ func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, o
 			Instructions: instructions,
 			Messages:     messages, Tools: tools,
 			MaxTokens: min(limits.maxOutputTokens, int(remainingTokens)),
+			DispatchAudit: newRunTextDispatchAudit(r.runs, run.ID, run.AgentID, requestID, profile),
 		})
 		if err != nil {
 			return err
@@ -388,7 +392,7 @@ func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, o
 		outcome.inputTokens += result.InputTokens
 		outcome.outputTokens += result.OutputTokens
 		usage := &domain.UsageEvent{
-			RunID: run.ID, RequestID: requestID, Provider: run.Provider, Model: run.Model,
+			RunID: run.ID, RequestID: requestID, Provider: client.Name(), Model: client.Model(),
 			InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, CompletedAt: time.Now().UTC(),
 		}
 		if err := r.runs.RecordUsage(ctx, usage); err != nil {

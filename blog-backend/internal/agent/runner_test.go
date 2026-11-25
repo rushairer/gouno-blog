@@ -188,7 +188,7 @@ func (m *modelBoundaryManagement) GetSkillVersion(context.Context, int64) (*doma
 }
 
 func (m *modelBoundaryManagement) AgentProviderClient(context.Context, *domain.Agent) (*providerdomain.ProviderProfile, provider.Provider, error) {
-	return nil, m.client, nil
+	return &providerdomain.ProviderProfile{ID: 1, ProviderType: "openai", Vendor: "openai", Model: m.client.Model()}, m.client, nil
 }
 
 type modelBoundaryRuns struct {

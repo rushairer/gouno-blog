@@ -33,6 +33,8 @@ type RunnerRunStore interface {
 	FinishToolCall(context.Context, int64, domain.ToolCallStatus, json.RawMessage, *string) error
 	ListToolCalls(context.Context, int64) ([]*domain.AgentToolCall, error)
 	RecordUsage(context.Context, *domain.UsageEvent) error
+	StartTextDispatch(context.Context, *domain.TextDispatchAudit) error
+	FinishTextDispatch(context.Context, *domain.TextDispatchAudit) error
 }
 
 type RunnerApprovalStore interface {

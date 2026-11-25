@@ -33,6 +33,13 @@ The repository-root `AGENTS.md` remains authoritative. These additional rules ap
 - Only the acknowledged claimant attempts the guarded running-to-terminal transition; one short transaction covers Run state and MediaCandidate token metadata. Bound terminal writes to five seconds independently of worker cancellation. Never rewrite success as failure or retry an unconfirmed terminal transaction. Workflow must not treat a nonterminal Agent row as a successful model step.
 - Preserve observed input/output tokens on failure, including a failed usage insert. Monthly usage includes active, failed and cancelled runs: reconcile each run's ledger and aggregate using their per-component maximum, without adding both. Keep the existing run-creation-month boundary and deletion semantics for now. This is observed local usage, not an exact upstream invoice or a hard cross-month budget guarantee.
 
+## Text HTTP dispatch evidence
+
+- Governed Agent text turns attach an audit observer at the actual HTTP dispatch boundary. Confirm a new started row for the running identity before each explicit client.Do, including negotiation and bounded retries. No dispatch on missing/uncertain acknowledgement; no fallback/retry on unconfirmed outcome evidence.
+- Record only bounded operation/stream flags, exact selected Provider profile identity and fingerprint, local turn/sequence and optional vetted upstream header IDs. No prompt, Tool arguments, responses, URLs, credentials or raw upstream errors in this ledger. The terminal observation describes HTTP headers or a transport-unknown result, not successful decoding, provider receipt or billing.
+- Return the exact profile snapshot used to construct the text client and attribute usage events to the actual client, not the queued Run's intended model. Preserve the historical queued metadata contract.
+- The nullable live Run link may disappear on deletion; original Run ID and dispatch facts remain. No fabricated historical dispatch rows, public audit API, recovery/replay permission, or usage-retention policy is introduced.
+
 ## Regression evidence
 
 Retain the unit tests in `generation_attempt_audit_test.go`, real-database tests in `generation_attempt_audit_integration_test.go`, the migration upgrade test in `../migrations/generation_attempt_audit_integration_test.go`, and the existing media-generation fencing/reconciliation suites. Database skips are not database acceptance; run the repository's disposable PostgreSQL gate.

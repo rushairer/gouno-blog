@@ -401,9 +401,16 @@ func (p *HTTPProvider) doWithHeaders(ctx context.Context, path string, body any,
 		}
 	}
 	clientRequestIDSent := strings.TrimSpace(req.Header.Get("X-Client-Request-Id")) != ""
+	audit, dispatchID, err := beginTextDispatch(ctx, path, body)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := p.client.Do(req)
 	if err != nil {
-		if clientRequestIDSent {
+		if finishErr := finishTextDispatch(ctx, audit, dispatchID, TextDispatchOutcome{Status: "transport_unknown"}); finishErr != nil {
+			return nil, finishErr
+		}
+		if clientRequestIDSent || audit != nil {
 			return nil, &upstreamTransportError{
 				Provider: p.name, Cause: err,
 				Evidence: RequestEvidence{ClientRequestIDSent: true},
@@ -424,9 +431,22 @@ func (p *HTTPProvider) doWithHeaders(ctx context.Context, path string, body any,
 				evidence.RequestID = boundedEvidenceValue(decoded.RequestID)
 			}
 		}
+		if finishErr := finishTextDispatch(ctx, audit, dispatchID, TextDispatchOutcome{
+			Status: "http_error", HTTPStatus: resp.StatusCode, Evidence: evidence,
+		}); finishErr != nil {
+			return nil, finishErr
+		}
 		return nil, &upstreamHTTPError{
 			Provider: p.name, StatusCode: resp.StatusCode, Body: bodyText, Evidence: evidence,
 		}
+	}
+	// This records HTTP response headers only. Parsing, streamed completion,
+	// model usage and billing remain separate facts.
+	if finishErr := finishTextDispatch(ctx, audit, dispatchID, TextDispatchOutcome{
+		Status: "response_received", HTTPStatus: resp.StatusCode, Evidence: evidence,
+	}); finishErr != nil {
+		_ = resp.Body.Close()
+		return nil, finishErr
 	}
 	return resp, nil
 }

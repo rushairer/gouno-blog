@@ -62,6 +62,9 @@ type Request struct {
 	// Empty keeps the provider's automatic tool-selection behaviour.
 	ToolChoice string
 	MaxTokens  int
+	// DispatchAudit is an internal, optional text HTTP-dispatch observer. It
+	// never becomes part of an upstream request body.
+	DispatchAudit TextDispatchAudit `json:"-"`
 }
 
 type Result struct {
@@ -81,6 +84,9 @@ type Provider interface {
 
 // Generate dispatches text and tool-calling requests to the configured provider (OpenAI, Anthropic, or Gemini).
 func (p *HTTPProvider) Generate(ctx context.Context, req Request) (Result, error) {
+	if req.DispatchAudit != nil {
+		ctx = context.WithValue(ctx, textDispatchAuditKey{}, req.DispatchAudit)
+	}
 	switch p.name {
 	case "openai":
 		return p.openAIGenerate(ctx, req)
