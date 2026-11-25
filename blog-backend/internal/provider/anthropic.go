@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"strings"
 )
 
@@ -17,6 +18,23 @@ func fromAnthropicToolName(name string, nameMap map[string]string) string {
 		return original
 	}
 	return strings.ReplaceAll(name, "__", ".")
+}
+
+// Anthropic-compatible thinking negotiation is permitted only after a
+// typed parameter rejection, never after an ambiguous request outcome.
+func anthropicCompatibilityRejection(err error, hints ...string) bool {
+	var upstreamErr *upstreamHTTPError
+	if !errors.As(err, &upstreamErr) ||
+		(upstreamErr.StatusCode != http.StatusBadRequest && upstreamErr.StatusCode != http.StatusUnprocessableEntity) {
+		return false
+	}
+	body := strings.ToLower(upstreamErr.Body)
+	for _, hint := range hints {
+		if strings.Contains(body, hint) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Result, error) {
@@ -113,10 +131,13 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 	// forced tool choice in that mode. First disable thinking while retaining the
 	// forced schema. If the gateway does not support that control, fall back to
 	// automatic tool selection as a final compatibility path.
-	if err != nil && req.ToolChoice != "" && strings.Contains(strings.ToLower(err.Error()), "does not support this tool_choice") {
+	if ctx.Err() == nil && req.ToolChoice != "" && len(req.Tools) > 0 &&
+		anthropicCompatibilityRejection(err, "does not support this tool_choice") {
 		body["thinking"] = map[string]any{"type": "disabled"}
 		resp, err = p.do(ctx, "/v1/messages", body)
-		if err != nil {
+		if ctx.Err() == nil && anthropicCompatibilityRejection(err,
+			"does not support this tool_choice", "thinking is not supported",
+			"thinking parameter is not supported", "unknown field: thinking", "unknown parameter: thinking") {
 			delete(body, "thinking")
 			delete(body, "tool_choice")
 			resp, err = p.do(ctx, "/v1/messages", body)

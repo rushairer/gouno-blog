@@ -10,25 +10,49 @@ import (
 
 var openAIToolNameParameter = regexp.MustCompile(`^tools\[[0-9]{1,6}\](\.function)?\.name$`)
 
-func TextFailureCode(err error) string {
-	var requestErr *openAITextRequestError
-	if !errors.As(err, &requestErr) {
-		return ""
-	}
-	if requestErr.disabled {
-		return "provider_stream_disabled"
-	}
-	if errors.Is(requestErr.cause, context.DeadlineExceeded) {
-		return "provider_timeout"
-	}
-	if errors.Is(requestErr.cause, context.Canceled) {
-		return "provider_request_cancelled"
+// RetryableTextRejection permits a bounded Agent-level retry only for an
+// actual HTTP 429 rejection. Transport/decode errors and HTTP 5xx can follow
+// accepted, billed work; neither a timeout nor arbitrary response text proves
+// that another generation is safe. Protocol/stream negotiation stays separate.
+// This is not a billing guarantee, and must never be used for image requests.
+func RetryableTextRejection(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
 	}
 	var upstreamErr *upstreamHTTPError
-	if !errors.As(requestErr.cause, &upstreamErr) {
-		return "provider_request_failed"
+	return errors.As(err, &upstreamErr) && upstreamErr.StatusCode == http.StatusTooManyRequests
+}
+
+func TextFailureCode(err error) string {
+	var requestErr *openAITextRequestError
+	hasOpenAIContext := errors.As(err, &requestErr)
+	cause := err
+	if hasOpenAIContext {
+		if requestErr.disabled {
+			return "provider_stream_disabled"
+		}
+		cause = requestErr.cause
 	}
-	if requestErr.stream && requiresStreamingFallback(requestErr.cause) {
+	var transportErr *upstreamTransportError
+	hasProviderTransport := errors.As(cause, &transportErr)
+	// Raw context errors may originate from database or local execution.
+	// Do not label them as Provider failures without a typed Provider boundary.
+	if hasOpenAIContext || hasProviderTransport {
+		if errors.Is(cause, context.DeadlineExceeded) {
+			return "provider_timeout"
+		}
+		if errors.Is(cause, context.Canceled) {
+			return "provider_request_cancelled"
+		}
+	}
+	var upstreamErr *upstreamHTTPError
+	if !errors.As(cause, &upstreamErr) {
+		if hasOpenAIContext || hasProviderTransport {
+			return "provider_request_failed"
+		}
+		return ""
+	}
+	if hasOpenAIContext && requestErr.stream && requiresStreamingFallback(cause) {
 		return "provider_stream_rejected"
 	}
 	switch upstreamErr.StatusCode {
@@ -38,7 +62,8 @@ func TextFailureCode(err error) string {
 				Param string `json:"param"`
 			} `json:"error"`
 		}
-		if json.Unmarshal([]byte(upstreamErr.Body), &decoded) == nil && openAIToolNameParameter.MatchString(decoded.Error.Param) {
+		if (hasOpenAIContext || upstreamErr.Provider == "openai") &&
+			json.Unmarshal([]byte(upstreamErr.Body), &decoded) == nil && openAIToolNameParameter.MatchString(decoded.Error.Param) {
 			return "provider_tool_name_invalid"
 		}
 		return "provider_request_invalid"

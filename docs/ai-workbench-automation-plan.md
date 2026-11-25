@@ -251,4 +251,4 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 
 - Workflow 草案默认停用，管理员审阅、保存并 Dry-run 后才能运行。
 - 已保存的 starter Workflow 仍保留其最小运行前检查契约，以保证历史数据可安全执行；它们不是新的创建路径。
-- Workflow `/preflight` 无副作用检查；Dry-run 和正式运行在入队前复用服务端校验输入 Schema、Agent 状态和只读 discovery 权限。
+- Workflow `/preflight` 无副作用检查；Dry-run 和正式运行在入队前复用服务端校验输入 Schema、Agent 状态和只读 discovery 权限。Dry-run 仅提供读取和提案类 Tool，不执行写入类 Tool（包括直接创建文章及图片任务），不创建实际审批记录。仍会记录运行和用量，并可能消耗 Provider 额度；不得描述为免费或全局无副作用。模型返回未在本轮提供的 Tool 时，先拒绝整批调用再结束失败运行；最后总结轮不得执行 Tool。

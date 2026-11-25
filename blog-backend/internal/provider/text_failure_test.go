@@ -76,3 +76,39 @@ func TestTextFailurePlacesActualCauseBeforeNegotiationContext(t *testing.T) {
 		t.Fatalf("negotiation must not obscure the actual cause: %s", message)
 	}
 }
+
+func TestTextFailureCodeClassifiesTypedCrossProviderFailures(t *testing.T) {
+	for _, protocol := range []string{"anthropic", "gemini"} {
+		for _, tc := range []struct {
+			status int
+			code   string
+		}{
+			{400, "provider_request_invalid"},
+			{401, "provider_auth_rejected"},
+			{429, "provider_rate_limited"},
+			{503, "provider_unavailable"},
+		} {
+			err := fmt.Errorf("wrapped: %w", &upstreamHTTPError{
+				Provider: protocol, StatusCode: tc.status,
+				Body: `{"error":{"param":"tools[0].name","message":"timeout returned 429 private detail"}}`,
+			})
+			if got := TextFailureCode(err); got != tc.code {
+				t.Fatalf("%s HTTP %d: code=%s want=%s", protocol, tc.status, got, tc.code)
+			}
+			if RetryableTextRejection(err) != (tc.status == 429) {
+				t.Fatalf("%s HTTP %d: incorrect retry eligibility", protocol, tc.status)
+			}
+		}
+	}
+	if TextFailureCode(errors.New("upstream anthropic returned 429")) != "" {
+		t.Fatal("untyped provider error was classified")
+	}
+}
+
+func TestTextFailureCodeDoesNotMisattributeLocalContextErrors(t *testing.T) {
+	for _, cause := range []error{context.Canceled, context.DeadlineExceeded} {
+		if code := TextFailureCode(fmt.Errorf("database operation: %w", cause)); code != "" {
+			t.Fatalf("local context failure classified as Provider failure: %q", code)
+		}
+	}
+}

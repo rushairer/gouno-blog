@@ -21,6 +21,12 @@ The repository-root `AGENTS.md` remains authoritative. These additional rules ap
 - The reviewed-release transaction must lock/fence the exact candidate/attempt, atomically persist status and a unique append-only decision, and reject duplicate/stale/active non-uncertain attempts. No Provider call, image attach, publication, object DELETE, lease reset, or automatic re-generation belongs in the decision. A later new generation is a separate human-triggered action.
 - Keep stored image bytes on any initial `CreateMedia` error, including cancellation, zero returned ID and `sql.ErrNoRows`. The metadata INSERT may already have committed. This port does not provide the final candidate CAS's definitive-miss guarantee. Do not delete, re-generate or automatically collect possible orphans; this also applies to direct editor images.
 
+## Model execution authority
+
+- Only a Tool actually offered in the current model request may be invoked. Check the entire returned batch before any Tool dispatch, even if its names appear in a locked Skill. The last synthesis turn offers no Tools and rejects unsolicited calls. Model usage is recorded before this check; a rejected response must fail the run.
+- Dry-run offers only read/propose Tools and never executes write-risk Tools (including direct content creation and image-task creation); preview proposals do not create approval records. Reject unexpected writes before dispatch. Dry-run still creates run/usage records and may use the configured Provider; it is not free or a globally side-effect-free transaction.
+- Runner consumes the narrow versioned model-management port. Preserve strict Workflow resource authorization and existing publication/approval behavior for normal runs.
+
 ## Regression evidence
 
 Retain the unit tests in `generation_attempt_audit_test.go`, real-database tests in `generation_attempt_audit_integration_test.go`, the migration upgrade test in `../migrations/generation_attempt_audit_integration_test.go`, and the existing media-generation fencing/reconciliation suites. Database skips are not database acceptance; run the repository's disposable PostgreSQL gate.

@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"sync/atomic"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -864,5 +866,98 @@ func TestResolveProviderTargetURLKeepsCompatibleBasePrefixes(t *testing.T) {
 				t.Fatalf("target URL = %q, want %q", got, test.want)
 			}
 		})
+	}
+}
+
+func TestAnthropicThinkingNegotiationStopsOnNonCompatibilityFailures(t *testing.T) {
+	const rejected = `{"error":{"message":"Thinking mode does not support this tool_choice"}}`
+	for _, tc := range []struct {
+		name         string
+		firstStatus  int
+		secondStatus int
+		secondBody   string
+		wantCalls    int32
+		wantStatus   int
+	}{
+		{"initial-auth", 401, 0, "", 1, 401},
+		{"initial-server", 503, 0, "", 1, 503},
+		{"second-auth", 400, 401, rejected, 2, 401},
+		{"second-quota", 400, 429, rejected, 2, 429},
+		{"second-server", 400, 503, rejected, 2, 503},
+		{"second-unrelated-invalid", 400, 400, `{"error":{"message":"invalid model"}}`, 2, 400},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if calls.Add(1) == 1 {
+					w.WriteHeader(tc.firstStatus)
+					_, _ = io.WriteString(w, rejected)
+					return
+				}
+				if tc.secondStatus == 0 {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				w.WriteHeader(tc.secondStatus)
+				_, _ = io.WriteString(w, tc.secondBody)
+			}))
+			defer server.Close()
+			client, err := NewHTTPProvider("anthropic", server.URL, "secret", "model", []string{"127.0.0.1"}, time.Second)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = client.Generate(context.Background(), Request{
+				Messages: []Message{{Role: "user", Content: "draft"}},
+				Tools: []ToolDefinition{{Name: "submit", Parameters: json.RawMessage(`{"type":"object"}`)}},
+				ToolChoice: "submit",
+			})
+			var upstreamErr *upstreamHTTPError
+			if calls.Load() != tc.wantCalls || !errors.As(err, &upstreamErr) || upstreamErr.StatusCode != tc.wantStatus {
+				t.Fatalf("HTTP calls=%d err=%v; want %d calls and HTTP %d", calls.Load(), err, tc.wantCalls, tc.wantStatus)
+			}
+		})
+	}
+}
+
+func TestAnthropicExplicitThinkingRejectionCanNegotiateAutomaticToolChoiceOnce(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode request: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		switch n {
+		case 1:
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = io.WriteString(w, `{"error":{"message":"Thinking mode does not support this tool_choice"}}`)
+		case 2:
+			if body["thinking"] == nil || body["tool_choice"] == nil {
+				t.Error("second request lost forced tool choice")
+			}
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			_, _ = io.WriteString(w, `{"error":{"message":"thinking parameter is not supported"}}`)
+		default:
+			if body["thinking"] != nil || body["tool_choice"] != nil || body["tools"] == nil {
+				t.Error("final negotiation must remove only incompatible controls")
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `{"content":[{"type":"tool_use","id":"call_1","name":"submit","input":{}}]}`)
+		}
+	}))
+	defer server.Close()
+	client, err := NewHTTPProvider("anthropic", server.URL, "secret", "model", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{
+		Messages: []Message{{Role: "user", Content: "draft"}},
+		Tools: []ToolDefinition{{Name: "submit", Parameters: json.RawMessage(`{"type":"object"}`)}},
+		ToolChoice: "submit",
+	})
+	if err != nil || calls.Load() != 3 || len(result.ToolCalls) != 1 || result.ToolCalls[0].Name != "submit" {
+		t.Fatalf("bounded negotiation: result=%#v calls=%d err=%v", result, calls.Load(), err)
 	}
 }
