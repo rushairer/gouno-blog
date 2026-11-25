@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -161,7 +162,7 @@ func TestTextDispatchAuditRecordsDecodedInvalidAndIncompleteResponses(t *testing
 		wantText string
 	}{
 		{"decoded", `{"status":"completed","output_text":"ok","usage":{"input_tokens":4,"output_tokens":2}}`, "never", "decoded", nil, "ok"},
-		{"invalid-json", `{"status":`, "never", "invalid", nil, ""},
+		{"invalid-json", `{"status":`, "never", "invalid", io.ErrUnexpectedEOF, ""},
 		{"incomplete-stream", "data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\"}\n\n", "always", "incomplete", ErrTextStreamIncomplete, ""},
 		{"failed-stream", "data: {\"type\":\"response.failed\",\"response\":{\"status\":\"failed\"}}\n\n", "always", "rejected", ErrTextStreamRejected, ""},
 	} {

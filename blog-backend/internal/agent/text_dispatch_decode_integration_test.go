@@ -16,7 +16,7 @@ import (
 	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 )
 
-func TestAgentTextDispatchDecodeEvidenceIsOneWayAndSeparateFromHTTPReceipt(t *testing.T) {
+func TestAgentTextDispatchDecodeEvidenceRejectsDuplicateCompletion(t *testing.T) {
 	db, agentID, versionID := newExecutionFixture(t)
 	ctx := context.Background()
 	repo := agentrepository.NewRunRepository(db)
