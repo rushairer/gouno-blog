@@ -16,6 +16,7 @@ This directory contains **current contracts** and **historical evidence**. They 
 - [September A+ quality roadmap](quality/roadmap.md), [original quality baseline](quality/baseline.md), and [Q task cards](quality/tasks/) preserve the 2026-09 execution plan; their pre-merge states do **not** re-open already shipped features.
 - [Original UI redesign plan](ui-redesign/PLAN.md), [stage task cards](ui-redesign/tasks/), [phase prompts](ui-redesign/PHASE-PROMPTS.md) and [migration ledger](ui-redesign/migration.json) preserve earlier UI migration scope. Current parity certification is tracked in [showcase-parity-certifications.json](ui-redesign/showcase-parity-certifications.json) and the Gouno UI canonical owner; completion of a historical stage is not manual product certification.
 - `quality/*-2026-*.md`, `ui-redesign/*-review*.md`, dated recertifications and machine-readable JSON receipts are **point-in-time audit evidence**. Preserve their original findings, even when later releases have changed status. Use current release manifests or source code to evaluate the present.
+- [Container security remediation, 2026-11-25](quality/container-image-security-2026-11-25.md): observed November 22 scan failures, candidate patch and remaining verification requirements.
 - [November 2026 release exception](quality/release-exception-2026-11-11.md): publication was permitted while manual Showcase and external Staging remained unverified; do not turn a waiver into a passing result.
 
 ## Hygiene rules

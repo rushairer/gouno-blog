@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -28,9 +29,31 @@ class ImageSecurityContractTest(unittest.TestCase):
         self.assertNotIn("apk add --no-cache ca-certificates tzdata", backend)
         self.assertNotRegex(seed, r"apk --no-cache add ca-certificates(?:\s|$)")
 
+    def test_openssl_security_floor_in_alpine_stages(self) -> None:
+        for component in ("blog-backend", "seed", "blog-frontend"):
+            dockerfile = (REPO_ROOT / component / "Dockerfile").read_text(encoding="utf-8")
+            stages = re.split(r"(?m)^FROM ", dockerfile)[1:]
+            self.assertEqual(len(stages), 2, component)
+            # The Node builder does not ship in the frontend image. Go builders
+            # and all three final Alpine-based images must be patched.
+            for stage in (stages[1:] if component == "blog-frontend" else stages):
+                for package in ("libcrypto3", "libssl3"):
+                    with self.subTest(component=component, stage=stage.splitlines()[0], package=package):
+                        pins = re.findall(
+                            rf"\b{package}=(\d+)\.(\d+)\.(\d+)-r(\d+)(?=\s|$)",
+                            stage,
+                        )
+                        self.assertEqual(len(pins), 1, "missing or ambiguous exact package pin")
+                        self.assertGreaterEqual(tuple(map(int, pins[0])), (3, 5, 9, 1))
+
     def test_static_frontend_uses_immutable_minimal_runtime(self) -> None:
         frontend = (REPO_ROOT / "blog-frontend" / "Dockerfile").read_text(encoding="utf-8")
-        self.assertRegex(frontend, r"(?m)^FROM nginx:stable-alpine-slim@sha256:[0-9a-f]{64}$")
+        runtime = re.search(
+            r"(?m)^FROM nginx:(\d+)\.(\d+)\.(\d+)-alpine-slim@sha256:[0-9a-f]{64}$",
+            frontend,
+        )
+        self.assertIsNotNone(runtime, "pin a patched Nginx version and immutable index")
+        self.assertGreaterEqual(tuple(map(int, runtime.groups())), (1, 30, 7))
         self.assertIn("USER nginx\n\nRUN nginx -t", frontend)
         # Actual package absence and HTTP behavior are tested against the built image.
         for package in ("libxml2", "libxslt", "libexpat", "libpng", "tiff", "nghttp2-libs"):
