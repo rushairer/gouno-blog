@@ -30,6 +30,9 @@ func newExecutionFixture(t *testing.T) (*sql.DB, int64, int64) {
 		if _, err := db.Exec(`DELETE FROM ai_agent_runs WHERE agent_id=$1`, agentID); err != nil {
 			t.Errorf("cleanup runs: %v", err)
 		}
+		if _, err := db.Exec(`DELETE FROM ai_agent_run_usage_archive WHERE agent_id=$1`, agentID); err != nil {
+			t.Errorf("cleanup archived usage: %v", err)
+		}
 		if _, err := db.Exec(`DELETE FROM ai_agents WHERE id=$1`, agentID); err != nil {
 			t.Errorf("cleanup agent: %v", err)
 		}
@@ -202,5 +205,116 @@ func TestAgentTerminalAndMediaUsageCommitTogether(t *testing.T) {
 	}
 	if err := db.QueryRow(`SELECT input_tokens,output_tokens FROM ai_media_candidates WHERE id=$1`, candidateID).Scan(&input, &output); err != nil || input != 17 || output != 4 {
 		t.Fatalf("media usage not synchronized: input=%d output=%d err=%v", input, output, err)
+	}
+}
+
+func TestAgentMonthlyUsageSurvivesRunDeletionWithoutDoubleCounting(t *testing.T) {
+	db, agentID, versionID := newExecutionFixture(t)
+	ctx := context.Background()
+	repo := agentrepository.NewRunRepository(db)
+	lifecycle := NewRunLifecycle(dbtx.NewTransactor(db, nil), repo, agentrepository.NewMediaCandidateRepository(db))
+
+	// Legacy/terminal aggregate dominates the request ledger.
+	aggregateRun := createExecutionRun(t, db, agentID, versionID, domain.AgentRunSucceeded, 20, 5)
+	if err := repo.RecordUsage(ctx, &domain.UsageEvent{
+		RunID: aggregateRun, RequestID: fmt.Sprintf("archive-%d-aggregate", aggregateRun),
+		Provider: "openai", Model: "test", InputTokens: 8, OutputTokens: 3, CompletedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// A request ledger may dominate a stale terminal aggregate.
+	ledgerRun := createExecutionRun(t, db, agentID, versionID, domain.AgentRunFailed, 1, 1)
+	for i, event := range []domain.UsageEvent{
+		{InputTokens: 4, OutputTokens: 2},
+		{InputTokens: 3, OutputTokens: 1},
+	} {
+		event.RunID = ledgerRun
+		event.RequestID = fmt.Sprintf("archive-%d-ledger-%d", ledgerRun, i)
+		event.Provider, event.Model, event.CompletedAt = "openai", "test", time.Now().UTC()
+		if err := repo.RecordUsage(ctx, &event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A zero observation is not archived as proof of zero Provider billing.
+	zeroRun := createExecutionRun(t, db, agentID, versionID, domain.AgentRunSucceeded, 0, 0)
+	// Preserve the existing run-creation-month boundary through deletion.
+	oldRun := createExecutionRun(t, db, agentID, versionID, domain.AgentRunSucceeded, 1000, 500)
+	if _, err := db.Exec(`UPDATE ai_agent_runs SET created_at=date_trunc('month', NOW()) - INTERVAL '1 day' WHERE id=$1`, oldRun); err != nil {
+		t.Fatal(err)
+	}
+
+	assertTotal := func(want int64) {
+		t.Helper()
+		got, err := repo.MonthlyTokenUsage(ctx, agentID)
+		if err != nil || got != want {
+			t.Fatalf("monthly usage=%d want=%d err=%v", got, want, err)
+		}
+	}
+	assertTotal(35)
+	for _, id := range []int64{aggregateRun, ledgerRun, zeroRun, oldRun} {
+		if err := lifecycle.DeleteRun(ctx, id); err != nil {
+			t.Fatalf("delete run %d: %v", id, err)
+		}
+	}
+	assertTotal(35)
+
+	var archived, retainedZero, oldArchived int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM ai_agent_run_usage_archive WHERE agent_id=$1`, agentID).Scan(&archived); err != nil {
+		t.Fatal(err)
+	}
+	if archived != 3 {
+		t.Fatalf("expected aggregate, ledger and old run snapshots; got %d", archived)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM ai_agent_run_usage_archive WHERE source_run_id=$1`, zeroRun).Scan(&retainedZero); err != nil {
+		t.Fatal(err)
+	}
+	if retainedZero != 0 {
+		t.Fatal("zero-token run must not be represented as proof of zero billing")
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM ai_agent_run_usage_archive WHERE source_run_id=$1 AND run_created_at < date_trunc('month', NOW())`, oldRun).Scan(&oldArchived); err != nil {
+		t.Fatal(err)
+	}
+	if oldArchived != 1 {
+		t.Fatal("archive must retain original run creation time")
+	}
+	var usageRows int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM ai_usage_events WHERE run_id IN ($1,$2)`, aggregateRun, ledgerRun).Scan(&usageRows); err != nil {
+		t.Fatal(err)
+	}
+	if usageRows != 0 {
+		t.Fatalf("request ledger should follow existing cascade deletion policy: %d", usageRows)
+	}
+}
+
+func TestAgentRunUsageArchiveRollsBackWithRunDeletion(t *testing.T) {
+	db, agentID, versionID := newExecutionFixture(t)
+	ctx := context.Background()
+	repo := agentrepository.NewRunRepository(db)
+	id := createExecutionRun(t, db, agentID, versionID, domain.AgentRunSucceeded, 14, 6)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM ai_agent_runs WHERE id=$1`, id); err != nil {
+		_ = tx.Rollback()
+		t.Fatal(err)
+	}
+	var archived int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_agent_run_usage_archive WHERE source_run_id=$1`, id).Scan(&archived); err != nil || archived != 1 {
+		_ = tx.Rollback()
+		t.Fatalf("delete trigger did not archive in transaction: count=%d err=%v", archived, err)
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	var status domain.AgentRunStatus
+	if err := db.QueryRowContext(ctx, `SELECT status FROM ai_agent_runs WHERE id=$1`, id).Scan(&status); err != nil || status != domain.AgentRunSucceeded {
+		t.Fatalf("rollback did not restore run: status=%s err=%v", status, err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_agent_run_usage_archive WHERE source_run_id=$1`, id).Scan(&archived); err != nil || archived != 0 {
+		t.Fatalf("rollback did not restore archive: count=%d err=%v", archived, err)
+	}
+	if total, err := repo.MonthlyTokenUsage(ctx, agentID); err != nil || total != 20 {
+		t.Fatalf("rollback changed monthly usage: total=%d err=%v", total, err)
 	}
 }
