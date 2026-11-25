@@ -63,7 +63,8 @@ type Request struct {
 	ToolChoice string
 	MaxTokens  int
 	// DispatchAudit is an internal, optional text HTTP-dispatch observer. It
-	// never becomes part of an upstream request body.
+	// never becomes part of an upstream request body. Implementations that
+	// make HTTP requests must honor it for every explicit dispatch.
 	DispatchAudit TextDispatchAudit `json:"-"`
 }
 

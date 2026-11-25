@@ -40,6 +40,8 @@ The repository-root `AGENTS.md` remains authoritative. These additional rules ap
 - Return the exact profile snapshot used to construct the text client and attribute usage events to the actual client, not the queued Run's intended model. Preserve the historical queued metadata contract.
 - The nullable live Run link may disappear on deletion; original Run ID and dispatch facts remain. No fabricated historical dispatch rows, public audit API, recovery/replay permission, or usage-retention policy is introduced.
 
+The scoped regression suite must count real HTTP requests, including failures before and after audit acknowledgement, and exercise dispatch identity, status guards, and Run deletion against migrated PostgreSQL. Test explicit and default profile snapshot consistency and actual usage attribution.
+
 ## Regression evidence
 
 Retain the unit tests in `generation_attempt_audit_test.go`, real-database tests in `generation_attempt_audit_integration_test.go`, the migration upgrade test in `../migrations/generation_attempt_audit_integration_test.go`, and the existing media-generation fencing/reconciliation suites. Database skips are not database acceptance; run the repository's disposable PostgreSQL gate.

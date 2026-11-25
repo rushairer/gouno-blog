@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ErrTextDispatchStartUnconfirmed = errors.New("provider dispatch audit start unconfirmed; associated HTTP call not sent")
+	ErrTextDispatchStartUnconfirmed  = errors.New("provider dispatch audit start unconfirmed; associated HTTP call not sent")
 	ErrTextDispatchFinishUnconfirmed = errors.New("provider dispatch audit finish unconfirmed; do not replay")
 )
 

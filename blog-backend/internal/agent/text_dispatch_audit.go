@@ -11,8 +11,8 @@ import (
 // One observer belongs to one logical model turn. Negotiation and Agent
 // retries share its sequence, while distinct turns never share an identity.
 type runTextDispatchAudit struct {
-	store RunnerRunStore
-	base domain.TextDispatchAudit
+	store    RunnerRunStore
+	base     domain.TextDispatchAudit
 	sequence int
 }
 
