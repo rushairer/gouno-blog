@@ -462,3 +462,38 @@ func TestPanickingToolDoesNotProduceSuccessAudit(t *testing.T) {
 		t.Fatalf("incomplete invocation recorded incorrectly: %#v", repo.audits)
 	}
 }
+
+func TestStaleClientGrantsCannotDispatchNonReadTools(t *testing.T) {
+	repo := &fakeRepository{}
+	svc := New(repo, externalRegistry(), fixedLimiter{allowed: true}, nil)
+	client := &externaldomain.Client{ID: 7, Capabilities: []string{"content.agent_only", "content.write"}}
+	for _, name := range client.Capabilities {
+		result, err := svc.Invoke(context.Background(), client, name, json.RawMessage(`{}`), "request", "")
+		if result != nil || !errors.Is(err, ErrForbidden) {
+			t.Fatalf("stale grant for %s: result=%s err=%v", name, result, err)
+		}
+	}
+	if len(repo.audits) != 2 {
+		t.Fatalf("denied calls must still be audited: %#v", repo.audits)
+	}
+	for _, audit := range repo.audits {
+		if audit.Result != "denied" || audit.StatusCode != 403 {
+			t.Fatalf("unexpected audit: %#v", audit)
+		}
+	}
+}
+
+func TestMissingReadRegistryFailsClosed(t *testing.T) {
+	for _, registry := range []ReadCapabilities{nil, (*tool.Registry)(nil)} {
+		repo := &fakeRepository{}
+		svc := New(repo, registry, fixedLimiter{allowed: true}, nil)
+		client := &externaldomain.Client{ID: 7, Capabilities: []string{"content.safe_read"}}
+		if len(svc.ExternalCatalog()) != 0 {
+			t.Fatal("missing registry advertised capabilities")
+		}
+		result, err := svc.Invoke(context.Background(), client, "content.safe_read", json.RawMessage(`{}`), "request", "")
+		if result != nil || !errors.Is(err, ErrForbidden) {
+			t.Fatalf("missing registry: result=%s err=%v", result, err)
+		}
+	}
+}

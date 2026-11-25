@@ -12,6 +12,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Constrain machine-client Tool execution to a dedicated external read-only catalog and dispatch contract. Reject stale or misconfigured grants for write, proposal, Agent-only and unbound Tools. Own and return detached Tool authority metadata to prevent accidental cross-consumer mutation.
 - Atomically initialize Redis-backed interaction and external API rate-limit counters with finite fixed-window TTLs. Repair legacy persistent counters without restoring consumed quota; preserve existing caller-specific fallback policies and reject unconfirmed limiter decisions.
 - Bound External Capability invocation audit writes to an independent two-second deadline; require audit acknowledgement before returning successful Tool output, keep original denial/rate-limit contracts, and log redacted audit failures. Document the two external v1 operations and their response envelopes.
 - Refresh the shared Backend/Seed Go builder and Alpine runtime digests, pin patched OpenSSL libraries (3.5.9-r1), and pin Nginx 1.30.7 slim by immutable index. Keep both scanners and runtime checks; group shared Docker updates by dependency name to avoid incompatible single-directory updates.

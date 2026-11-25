@@ -14,6 +14,12 @@ This document is the current API-boundary decision and work order for the Blog-f
 
 Sources: [route composition](../../blog-backend/router/web.go), [runtime wiring](../../blog-backend/cmd/gouno/web.go), [External Capability HTTP adapter](../../blog-backend/internal/externalcapability/controller/controller.go), [invocation service](../../blog-backend/internal/externalcapability/service/service.go), [Tool registry](../../blog-backend/internal/tool/registry.go), [confidential BFF ADR](../oidc-bff-split-adr.md).
 
+## Tool dispatch ownership
+
+The Tool Registry owns executable Tool definitions, surface classification, risk and resource scope. External Capability consumes only a read catalog and read invocation port. The same registry predicate governs both discovery and execution: an explicit external surface, read risk, an executable handler and no proposal handler. The gateway still verifies the persisted client's grant before dispatch. Agent/Workflow execution remains on the existing governed path; no new external Tool names, routes or privileges are introduced.
+
+Registration owns copies of mutable schema, surface and scope metadata. Catalog, provider definitions and scope queries return detached copies so consumers cannot silently change authority through an alias. Registry registration and binding remain startup operations, not a concurrent runtime plugin lifecycle.
+
 ## Audit semantics
 
 An authorized read-only Tool invocation returns a successful result only after its invocation audit insert is acknowledged. An audit failure or timeout withholds the result and returns a fixed 500. Existing denied, malformed, and rate-limited response contracts are preserved; audit failures on those paths are logged as redacted operational errors. Invocation and rate-limit audit writes use a two-second context independent of request cancellation. No failed or ambiguous insert is automatically replayed. Successful catalog discovery is distinct from invocation; malformed JSON rejected before Tool dispatch does not represent an invocation. The audit record describes the attempted operation, not proof of response delivery. No new database schema, external write capability, or exactly-once guarantee is introduced.
