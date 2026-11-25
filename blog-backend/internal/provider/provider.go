@@ -85,19 +85,30 @@ type Provider interface {
 
 // Generate dispatches text and tool-calling requests to the configured provider (OpenAI, Anthropic, or Gemini).
 func (p *HTTPProvider) Generate(ctx context.Context, req Request) (Result, error) {
+	var collector *textDispatchCollector
 	if req.DispatchAudit != nil {
-		ctx = context.WithValue(ctx, textDispatchAuditKey{}, req.DispatchAudit)
+		collector = &textDispatchCollector{audit: req.DispatchAudit}
+		ctx = context.WithValue(ctx, textDispatchAuditKey{}, TextDispatchAudit(collector))
 	}
+	var result Result
+	var err error
 	switch p.name {
 	case "openai":
-		return p.openAIGenerate(ctx, req)
+		result, err = p.openAIGenerate(ctx, req)
 	case "anthropic":
-		return p.anthropicGenerate(ctx, req)
+		result, err = p.anthropicGenerate(ctx, req)
 	case "gemini":
-		return p.geminiGenerate(ctx, req)
+		result, err = p.geminiGenerate(ctx, req)
 	default:
-		return Result{}, errors.New("unsupported provider")
+		err = errors.New("unsupported provider")
 	}
+	if collector != nil {
+		if auditErr := collector.complete(ctx, err); auditErr != nil {
+			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, auditErr
+		}
+	}
+	return result, err
+}
 }
 
 // GenerateImage dispatches image generation requests to the configured provider (OpenAI, Anthropic, or Gemini).

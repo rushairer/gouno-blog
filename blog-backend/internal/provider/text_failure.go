@@ -38,6 +38,9 @@ func TextFailureCode(err error) string {
 	if errors.Is(err, ErrTextDispatchFinishUnconfirmed) {
 		return "provider_dispatch_audit_finish_unconfirmed"
 	}
+	if errors.Is(err, ErrTextDispatchDecodeUnconfirmed) {
+		return "provider_dispatch_audit_decode_unconfirmed"
+	}
 	var requestErr *openAITextRequestError
 	hasOpenAIContext := errors.As(err, &requestErr)
 	cause := err
@@ -107,6 +110,8 @@ func TextFailureMessage(code string) string {
 		return "Provider dispatch audit was not acknowledged; the associated HTTP call was not sent."
 	case "provider_dispatch_audit_finish_unconfirmed":
 		return "Provider response evidence was not acknowledged; inspect the recorded dispatch before any retry."
+	case "provider_dispatch_audit_decode_unconfirmed":
+		return "Provider response decode evidence was not acknowledged; no model output or Tool call was accepted."
 	case "provider_stream_disabled":
 		return "Provider requires streaming, but stream_mode=never disables it."
 	case "provider_stream_rejected":

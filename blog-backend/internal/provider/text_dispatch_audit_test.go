@@ -14,7 +14,8 @@ import (
 type recordingTextDispatchAudit struct {
 	starts []TextDispatch
 	outcomes []TextDispatchOutcome
-	startErr, finishErr error
+	completions []TextDispatchDecodeOutcome
+	startErr, finishErr, completeErr error
 }
 
 func (a *recordingTextDispatchAudit) Start(ctx context.Context, dispatch TextDispatch) (int64, error) {
@@ -37,6 +38,14 @@ func (a *recordingTextDispatchAudit) Finish(ctx context.Context, id int64, outco
 	}
 	a.outcomes = append(a.outcomes, outcome)
 	return a.finishErr
+}
+
+func (a *recordingTextDispatchAudit) Complete(ctx context.Context, id int64, outcome TextDispatchDecodeOutcome) error {
+	if _, ok := ctx.Deadline(); !ok || ctx.Err() != nil || id <= 0 {
+		return errors.New("missing bounded decode completion context")
+	}
+	a.completions = append(a.completions, outcome)
+	return a.completeErr
 }
 
 func TestTextDispatchAuditTracksNegotiationWithoutRecordingBody(t *testing.T) {
@@ -142,5 +151,59 @@ func TestTextDispatchTransportUnknownUsesIndependentOutcomeContext(t *testing.T)
 		audit.outcomes[0].Status != "transport_unknown" || audit.outcomes[0].HTTPStatus != 0 ||
 		RetryableTextRejection(err) {
 		t.Fatalf("transport failure lost or retryable: audit=%#v err=%v", audit, err)
+	}
+}
+
+func TestTextDispatchAuditRecordsDecodedInvalidAndIncompleteResponses(t *testing.T) {
+	for _, tc := range []struct {
+		name, body, mode, wantStatus string
+		wantErr error
+		wantText string
+	}{
+		{"decoded", `{"status":"completed","output_text":"ok","usage":{"input_tokens":4,"output_tokens":2}}`, "never", "decoded", nil, "ok"},
+		{"invalid-json", `{"status":`, "never", "invalid", nil, ""},
+		{"incomplete-stream", "data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\"}\n\n", "always", "incomplete", ErrTextStreamIncomplete, ""},
+		{"failed-stream", "data: {\"type\":\"response.failed\",\"response\":{\"status\":\"failed\"}}\n\n", "always", "rejected", ErrTextStreamRejected, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls.Add(1)
+				if tc.mode == "always" { w.Header().Set("Content-Type", "text/event-stream") }
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer server.Close()
+			client, err := NewHTTPProviderWithConfig("openai", server.URL, "fixture-key", "model", "responses", tc.mode, []string{"127.0.0.1"}, time.Second)
+			if err != nil { t.Fatal(err) }
+			audit := &recordingTextDispatchAudit{}
+			result, err := client.Generate(context.Background(), Request{DispatchAudit: audit})
+			if tc.wantErr != nil && !errors.Is(err, tc.wantErr) || tc.wantErr == nil && err != nil {
+				t.Fatalf("result=%#v err=%v", result, err)
+			}
+			if calls.Load() != 1 || len(audit.outcomes) != 1 || audit.outcomes[0].Status != "response_received" ||
+				len(audit.completions) != 1 || audit.completions[0].Status != tc.wantStatus || result.Text != tc.wantText {
+				t.Fatalf("decode evidence mismatch: calls=%d outcomes=%#v decoded=%#v result=%#v err=%v", calls.Load(), audit.outcomes, audit.completions, result, err)
+			}
+		})
+	}
+}
+
+func TestTextDispatchDecodeAcknowledgementFailureWithholdsModelOutput(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"completed","output_text":"must not escape","usage":{"input_tokens":6,"output_tokens":2}}`))
+	}))
+	defer server.Close()
+	client, err := NewHTTPProviderWithConfig("openai", server.URL, "fixture-key", "model", "responses", "never", []string{"127.0.0.1"}, time.Second)
+	if err != nil { t.Fatal(err) }
+	audit := &recordingTextDispatchAudit{completeErr: errors.New("private storage failure")}
+	result, err := client.Generate(context.Background(), Request{DispatchAudit: audit})
+	if !errors.Is(err, ErrTextDispatchDecodeUnconfirmed) || calls.Load() != 1 ||
+		result.Text != "" || len(result.ToolCalls) != 0 || result.InputTokens != 6 || result.OutputTokens != 2 ||
+		len(audit.completions) != 1 || RetryableTextRejection(err) {
+		t.Fatalf("unacknowledged decode exposed or replayed: calls=%d result=%#v audit=%#v err=%v", calls.Load(), result, audit, err)
 	}
 }
