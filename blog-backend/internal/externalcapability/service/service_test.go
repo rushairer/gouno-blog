@@ -439,3 +439,26 @@ func TestInvocationWithoutPersistedClientIdentityCannotSucceed(t *testing.T) {
 		t.Fatalf("identityless invocation: result=%s err=%v audits=%#v", result, err, repo.audits)
 	}
 }
+
+func TestPanickingToolDoesNotProduceSuccessAudit(t *testing.T) {
+	repo := &fakeRepository{}
+	registry := tool.New(tool.Definition{
+		Name: "content.panic", Surfaces: []string{"external"}, Risk: tooldomain.ToolRiskRead,
+		Execute: func(context.Context, json.RawMessage) (any, error) {
+			panic("simulated Tool panic")
+		},
+	})
+	svc := New(repo, registry, fixedLimiter{allowed: true}, nil)
+	client := &externaldomain.Client{ID: 7, Capabilities: []string{"content.panic"}}
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("Tool panic must propagate to the normal recovery boundary")
+			}
+		}()
+		_, _ = svc.Invoke(context.Background(), client, "content.panic", json.RawMessage(`{}`), "request", "")
+	}()
+	if len(repo.audits) != 1 || repo.audits[0].Result != "failed" || repo.audits[0].StatusCode != 500 {
+		t.Fatalf("incomplete invocation recorded incorrectly: %#v", repo.audits)
+	}
+}

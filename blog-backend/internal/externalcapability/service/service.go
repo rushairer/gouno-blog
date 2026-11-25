@@ -285,6 +285,7 @@ func (s *Service) recordAudit(ctx context.Context, audit externaldomain.Invocati
 
 func (s *Service) Invoke(ctx context.Context, client *externaldomain.Client, capability string, arguments json.RawMessage, requestID, sourceIP string) (result json.RawMessage, err error) {
 	started := time.Now()
+	completed := false
 	if len(arguments) == 0 {
 		arguments = json.RawMessage(`{}`)
 	}
@@ -298,8 +299,13 @@ func (s *Service) Invoke(ctx context.Context, client *externaldomain.Client, cap
 	defer func() {
 		audit.DurationMS = time.Since(started).Milliseconds()
 		audit.Result, audit.StatusCode = classifyInvocationResult(err)
+		if err == nil && !completed {
+			// A panic may unwind before named return values are assigned.
+			// Never record that incomplete invocation as a successful read.
+			audit.Result, audit.StatusCode = "failed", 500
+		}
 		if audit.ClientID > 0 {
-			if auditErr := s.recordAudit(ctx, audit); auditErr != nil && err == nil {
+			if auditErr := s.recordAudit(ctx, audit); auditErr != nil && completed && err == nil {
 				// The Tool is read-only. Withhold its result when the audit
 				// acknowledgement is missing; never retry an uncertain insert.
 				result = nil
@@ -331,6 +337,7 @@ func (s *Service) Invoke(ctx context.Context, client *externaldomain.Client, cap
 	if proposal != nil {
 		return nil, ErrForbidden
 	}
+	completed = true
 	return output, nil
 }
 
