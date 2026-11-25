@@ -42,6 +42,8 @@ The repository-root `AGENTS.md` remains authoritative. These additional rules ap
 
 The scoped regression suite must count real HTTP requests, including failures before and after audit acknowledgement, and exercise dispatch identity, status guards, and Run deletion against migrated PostgreSQL. Test explicit and default profile snapshot consistency and actual usage attribution.
 
+A failed text stream must never reach Tool dispatch or success finalization. Preserve its observed usage in the same run ledger and terminal totals even when no executable response exists; do not invent zero-token observations for failed calls with no usage. A result carrying observed usage must not authorize generic retry even if it also carries a rejection error.
+
 ## Regression evidence
 
 Retain the unit tests in `generation_attempt_audit_test.go`, real-database tests in `generation_attempt_audit_integration_test.go`, the migration upgrade test in `../migrations/generation_attempt_audit_integration_test.go`, and the existing media-generation fencing/reconciliation suites. Database skips are not database acceptance; run the repository's disposable PostgreSQL gate.

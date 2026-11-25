@@ -477,3 +477,49 @@ func TestRunnerSuccessfulOutcomeNeverRewrittenAfterUnacknowledgedCommit(t *testi
 		t.Fatalf("usage attributed to queued rather than actual client: %#v", runs.lastUsage)
 	}
 }
+
+type partialTextModelProvider struct {
+	calls int
+}
+
+func (*partialTextModelProvider) Name() string { return "openai" }
+func (*partialTextModelProvider) Model() string { return "test" }
+
+func (p *partialTextModelProvider) Generate(context.Context, provider.Request) (provider.Result, error) {
+	p.calls++
+	return provider.Result{
+		Text: "must not become a successful response", InputTokens: 9, OutputTokens: 3,
+		ToolCalls: []provider.ToolCall{{ID: "call_1", Name: "read", Arguments: json.RawMessage(`{}`)}},
+	}, provider.ErrTextStreamIncomplete
+}
+
+func TestRunnerFailedStreamRetainsObservedUsageAndNeverDispatches(t *testing.T) {
+	versionID := int64(9)
+	runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID}}
+	client := &partialTextModelProvider{}
+	lifecycle := &recordingRunLifecycle{}
+	notifications := &recordingRunNotifications{}
+	executed := 0
+	registry := tool.New(tool.Definition{Name: "read", Risk: tooldomain.ToolRiskRead,
+		Execute: func(context.Context, json.RawMessage) (any, error) {
+			executed++
+			return nil, nil
+		},
+	})
+	runner := &Runner{
+		runs: runs, tools: registry, lifecycle: lifecycle, notifications: notifications,
+		management: &modelBoundaryManagement{
+			agent: &domain.Agent{ID: 2, MonthlyTokenBudget: 1000},
+			skill: &domain.AgentSkill{Capabilities: []string{"read"}, MaxSteps: 2, MaxInputTokens: 10000, MaxOutputTokens: 100},
+			client: client,
+		},
+	}
+	err := runner.execute(context.Background(), 1, false)
+	if !errors.Is(err, provider.ErrTextStreamIncomplete) || client.calls != 1 || executed != 0 ||
+		runs.toolRows != 0 || runs.usages != 1 || runs.lastUsage == nil ||
+		runs.lastUsage.InputTokens != 9 || runs.lastUsage.OutputTokens != 3 ||
+		lifecycle.calls != 1 || lifecycle.status != domain.AgentRunFailed ||
+		lifecycle.inputTokens != 9 || lifecycle.outputTokens != 3 {
+		t.Fatalf("failed stream replayed or lost usage: err=%v calls=%d effects=%d runs=%#v terminal=%#v", err, client.calls, executed, runs, lifecycle)
+	}
+}
