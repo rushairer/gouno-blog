@@ -772,6 +772,11 @@ func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *do
 	if risk != tooldomain.ToolRiskRead && risk != tooldomain.ToolRiskPropose && risk != tooldomain.ToolRiskWrite {
 		return risk, nil, nil, tool.ErrUnauthorized
 	}
+	// Runner-owned mutation handlers must keep their write classification.
+	// A mislabeled registration must not turn a preview into a write.
+	if (name == "media.create_image_task" || name == "content.create_post") && risk != tooldomain.ToolRiskWrite {
+		return risk, nil, nil, tool.ErrUnauthorized
+	}
 	if dryRun && risk == tooldomain.ToolRiskWrite {
 		return risk, nil, nil, tool.ErrUnauthorized
 	}

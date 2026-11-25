@@ -33,16 +33,21 @@ func TextFailureCode(err error) string {
 		}
 		cause = requestErr.cause
 	}
-	if errors.Is(cause, context.DeadlineExceeded) {
-		return "provider_timeout"
-	}
-	if errors.Is(cause, context.Canceled) {
-		return "provider_request_cancelled"
+	var transportErr *upstreamTransportError
+	hasProviderTransport := errors.As(cause, &transportErr)
+	// Raw context errors may originate from database or local execution.
+	// Do not label them as Provider failures without a typed Provider boundary.
+	if hasOpenAIContext || hasProviderTransport {
+		if errors.Is(cause, context.DeadlineExceeded) {
+			return "provider_timeout"
+		}
+		if errors.Is(cause, context.Canceled) {
+			return "provider_request_cancelled"
+		}
 	}
 	var upstreamErr *upstreamHTTPError
 	if !errors.As(cause, &upstreamErr) {
-		var transportErr *upstreamTransportError
-		if hasOpenAIContext || errors.As(cause, &transportErr) {
+		if hasOpenAIContext || hasProviderTransport {
 			return "provider_request_failed"
 		}
 		return ""

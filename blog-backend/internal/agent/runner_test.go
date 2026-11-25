@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
-	"testing"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"testing"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
@@ -310,6 +310,19 @@ func TestRunnerDirectDispatchPreservesAgentSurfaceAndPreviewFence(t *testing.T) 
 		_, result, proposal, err := runner.invokeTool(context.Background(), &domain.AgentRun{ID: 1}, skill, name, json.RawMessage(`{}`), true)
 		if !errors.Is(err, tool.ErrUnauthorized) || result != nil || proposal != nil || executed != 0 {
 			t.Fatalf("unexpected dispatch: %s result=%s proposal=%#v err=%v effects=%d", name, result, proposal, err, executed)
+		}
+	}
+}
+
+func TestRunnerOwnedWriteHandlersRejectMisclassifiedDefinitions(t *testing.T) {
+	for _, name := range []string{"content.create_post", "media.create_image_task"} {
+		runner := &Runner{tools: tool.New(tool.Definition{Name: name, Risk: tooldomain.ToolRiskRead})}
+		skill := &domain.AgentSkill{Capabilities: []string{name}}
+		for _, preview := range []bool{true, false} {
+			_, result, proposal, err := runner.invokeTool(context.Background(), &domain.AgentRun{ID: 1}, skill, name, json.RawMessage(`{}`), preview)
+			if !errors.Is(err, tool.ErrUnauthorized) || result != nil || proposal != nil {
+				t.Fatalf("misclassified write handler %s: result=%s proposal=%#v err=%v", name, result, proposal, err)
+			}
 		}
 	}
 }

@@ -104,3 +104,11 @@ func TestTextFailureCodeClassifiesTypedCrossProviderFailures(t *testing.T) {
 		t.Fatal("untyped provider error was classified")
 	}
 }
+
+func TestTextFailureCodeDoesNotMisattributeLocalContextErrors(t *testing.T) {
+	for _, cause := range []error{context.Canceled, context.DeadlineExceeded} {
+		if code := TextFailureCode(fmt.Errorf("database operation: %w", cause)); code != "" {
+			t.Fatalf("local context failure classified as Provider failure: %q", code)
+		}
+	}
+}
