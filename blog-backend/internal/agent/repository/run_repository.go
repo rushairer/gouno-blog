@@ -150,15 +150,22 @@ func (r *RunRepository) MonthlyTokenUsage(ctx context.Context, agentID int64) (i
 	// Count all current-month runs, including active and failed executions.
 	// The per-run maximum reconciles durable usage rows with legacy or
 	// terminal aggregate counters without counting the same model turn twice.
-	err := r.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(
-		GREATEST(r.input_tokens, COALESCE(u.input_tokens, 0), 0) +
-		GREATEST(r.output_tokens, COALESCE(u.output_tokens, 0), 0)), 0)
-		FROM ai_agent_runs r
-		LEFT JOIN LATERAL (
-			SELECT SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens
-			FROM ai_usage_events WHERE run_id=r.id
-		) u ON TRUE
-		WHERE r.agent_id=$1 AND r.created_at >= date_trunc('month', NOW())`, agentID).Scan(&total)
+	err := r.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(usage.input_tokens + usage.output_tokens), 0)
+		FROM (
+			SELECT
+				GREATEST(r.input_tokens::numeric, COALESCE(u.input_tokens, 0)) AS input_tokens,
+				GREATEST(r.output_tokens::numeric, COALESCE(u.output_tokens, 0)) AS output_tokens
+			FROM ai_agent_runs r
+			LEFT JOIN LATERAL (
+				SELECT SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens
+				FROM ai_usage_events WHERE run_id=r.id
+			) u ON TRUE
+			WHERE r.agent_id=$1 AND r.created_at >= date_trunc('month', NOW())
+			UNION ALL
+			SELECT input_tokens::numeric, output_tokens::numeric
+			FROM ai_agent_run_usage_archive
+			WHERE agent_id=$1 AND run_created_at >= date_trunc('month', NOW())
+		) usage`, agentID).Scan(&total)
 	return total, err
 }
 
