@@ -101,12 +101,29 @@ func normalizeDefinition(definition Definition) Definition {
 	if len(definition.Surfaces) == 0 {
 		definition.Surfaces = []string{"agent"}
 	}
+	// Own mutable metadata at registration. Consumers must not be able to
+	// change the authority of a registered Tool through shared slices.
+	definition.Parameters = slices.Clone(definition.Parameters)
+	definition.Configuration = slices.Clone(definition.Configuration)
+	definition.DefaultBinding = slices.Clone(definition.DefaultBinding)
+	definition.Output = slices.Clone(definition.Output)
+	definition.Surfaces = slices.Clone(definition.Surfaces)
+	definition.Scope = cloneScope(definition.Scope)
 	return definition
+}
+
+func cloneScope(scope *ScopeRule) *ScopeRule {
+	if scope == nil {
+		return nil
+	}
+	copy := *scope
+	copy.OutputKeys = slices.Clone(scope.OutputKeys)
+	return &copy
 }
 
 func catalogSchema(value json.RawMessage, fallback json.RawMessage) json.RawMessage {
 	if json.Valid(value) {
-		return value
+		return slices.Clone(value)
 	}
 	if len(fallback) == 0 {
 		return nil
@@ -181,15 +198,59 @@ func (r *Registry) Invoke(ctx context.Context, capabilities []string, name strin
 		})
 		return definition.Risk, result, proposal, nil
 	}
+	result, err := executeDefinition(ctx, definition, arguments)
+	return definition.Risk, result, nil, err
+}
+
+func executeDefinition(ctx context.Context, definition Definition, arguments json.RawMessage) (json.RawMessage, error) {
 	if definition.Execute == nil {
-		return definition.Risk, nil, nil, fmt.Errorf("%w: execute handler missing", ErrUnknownTool)
+		return nil, fmt.Errorf("%w: execute handler missing", ErrUnknownTool)
 	}
 	value, err := definition.Execute(ctx, arguments)
 	if err != nil {
-		return definition.Risk, nil, nil, err
+		return nil, err
 	}
-	result, err := json.Marshal(value)
-	return definition.Risk, result, nil, err
+	return json.Marshal(value)
+}
+
+// externallyReadable is shared by discovery and invocation. Merely having an
+// external surface or a client grant cannot authorize a write or proposal.
+func externallyReadable(definition Definition) bool {
+	return definition.Risk == tooldomain.ToolRiskRead &&
+		slices.Contains(definition.Surfaces, "external") &&
+		definition.Execute != nil && definition.Propose == nil
+}
+
+// ExternalReadCatalog exposes only executable, read-only external Tools.
+func (r *Registry) ExternalReadCatalog() []CatalogItem {
+	if r == nil {
+		return nil
+	}
+	items := r.CatalogForSurface("external")
+	result := make([]CatalogItem, 0, len(items))
+	for _, item := range items {
+		if externallyReadable(r.definitions[item.Name]) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+// InvokeExternalRead is the machine API dispatch boundary. Unlike Invoke,
+// this method cannot execute a write or create a proposal, even when a
+// caller supplies a stale or incorrectly configured capability grant.
+func (r *Registry) InvokeExternalRead(ctx context.Context, capabilities []string, name string, arguments json.RawMessage) (json.RawMessage, error) {
+	if r == nil || !slices.Contains(capabilities, name) {
+		return nil, ErrUnauthorized
+	}
+	definition, ok := r.definitions[name]
+	if !ok || !externallyReadable(definition) {
+		return nil, ErrUnauthorized
+	}
+	if !json.Valid(arguments) {
+		return nil, ErrInvalidArgument
+	}
+	return executeDefinition(ctx, definition, arguments)
 }
 
 func (r *Registry) SupportsSurface(name, surface string) bool {
@@ -209,7 +270,7 @@ func (r *Registry) CatalogForSurface(surface string) []CatalogItem {
 			ConfigurationSchema: catalogSchema(definition.Configuration, nil),
 			DefaultBinding: catalogSchema(definition.DefaultBinding, nil),
 			Output: catalogSchema(definition.Output, nil),
-			Surfaces: definition.Surfaces, Risk: definition.Risk, Scope: definition.Scope,
+			Surfaces: slices.Clone(definition.Surfaces), Risk: definition.Risk, Scope: cloneScope(definition.Scope),
 		})
 	}
 	slices.SortFunc(result, func(a, b CatalogItem) int {
@@ -233,7 +294,7 @@ func (r *Registry) Catalog() []CatalogItem {
 			ConfigurationSchema: catalogSchema(definition.Configuration, nil),
 			DefaultBinding:      catalogSchema(definition.DefaultBinding, nil),
 			Output:              catalogSchema(definition.Output, nil),
-			Surfaces:            definition.Surfaces, Risk: definition.Risk, Scope: definition.Scope,
+			Surfaces:            slices.Clone(definition.Surfaces), Risk: definition.Risk, Scope: cloneScope(definition.Scope),
 		})
 	}
 	slices.SortFunc(result, func(a, b CatalogItem) int {
@@ -286,7 +347,7 @@ func (r *Registry) Risk(name string) (tooldomain.ToolRiskLevel, bool) {
 
 func (r *Registry) Scope(name string) (*ScopeRule, bool) {
 	item, ok := r.definitions[name]
-	return item.Scope, ok
+	return cloneScope(item.Scope), ok
 }
 
 func (r *Registry) Register(definitions ...Definition) error {

@@ -72,6 +72,9 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	t.Run("ExternalCapabilityOpenAPIContract", func(t *testing.T) {
 		assertExternalCapabilityOpenAPIContract(t, engine.Routes())
 	})
+	t.Run("ContentRouteOpenAPIContract", func(t *testing.T) {
+		assertContentRouteOpenAPIContract(t, engine.Routes())
+	})
 
 	foundUpdate := false
 	foundLike := false
@@ -275,6 +278,63 @@ func assertExternalCapabilityOpenAPIContract(t *testing.T, routes gin.RoutesInfo
 	for key := range registered {
 		if !documented[key] {
 			t.Errorf("registered external capability operation missing from OpenAPI: %s", key)
+		}
+	}
+}
+
+func assertContentRouteOpenAPIContract(t *testing.T, routes gin.RoutesInfo) {
+	t.Helper()
+	raw, err := os.ReadFile("../config/openapi.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var spec struct {
+		Paths map[string]map[string]yaml.Node `yaml:"paths"`
+	}
+	if err := yaml.Unmarshal(raw, &spec); err != nil {
+		t.Fatalf("parse OpenAPI: %v", err)
+	}
+	// OpenAPI forbids distinct templated paths that have the same hierarchy,
+	// even when their parameter names differ (e.g. {id} versus {slugOrID}).
+	templated := regexp.MustCompile(`\{[^{}]+\}`)
+	shapes := make(map[string]string)
+	for path := range spec.Paths {
+		shape := templated.ReplaceAllString(path, "{}")
+		if previous, ok := shapes[shape]; ok {
+			t.Errorf("duplicate OpenAPI path hierarchy: %s and %s", previous, path)
+		}
+		shapes[shape] = path
+	}
+
+	ginParam := regexp.MustCompile(`:[^/]+`)
+	registered := make(map[string]bool)
+	for _, route := range routes {
+		if !strings.HasPrefix(route.Path, "/api/") {
+			continue
+		}
+		path := ginParam.ReplaceAllStringFunc(strings.TrimPrefix(route.Path, "/api"), func(param string) string {
+			return "{" + strings.TrimPrefix(param, ":") + "}"
+		})
+		registered[route.Method+" "+path] = true
+	}
+	for _, op := range []struct {
+		method string
+		path   string
+	}{
+		{"get", "/tags/summary"},
+		{"get", "/pages/nav"},
+		{"get", "/pages/{slug}"},
+		{"get", "/posts/{slugOrID}"},
+		{"put", "/posts/{slugOrID}"},
+		{"delete", "/posts/{slugOrID}"},
+	} {
+		key := strings.ToUpper(op.method) + " " + op.path
+		if !registered[key] {
+			t.Errorf("content operation not registered: %s", key)
+		}
+		node, ok := spec.Paths[op.path][op.method]
+		if !ok || node.Kind != yaml.MappingNode {
+			t.Errorf("content operation missing or invalid in OpenAPI: %s", key)
 		}
 	}
 }

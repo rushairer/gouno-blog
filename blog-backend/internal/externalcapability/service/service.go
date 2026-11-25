@@ -17,7 +17,6 @@ import (
 	externaldomain "github.com/rushairer/blog-backend/internal/externalcapability/domain"
 	"github.com/rushairer/blog-backend/internal/ratelimit"
 	"github.com/rushairer/blog-backend/internal/tool"
-	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"go.uber.org/zap"
 )
 
@@ -51,14 +50,21 @@ type ClientRepository interface {
 	RecordAudit(context.Context, externaldomain.InvocationAudit) error
 }
 
+// ReadCapabilities is the consumer-sized Tool contract for machine clients.
+// Agent/Workflow proposal and mutation dispatch are deliberately absent.
+type ReadCapabilities interface {
+	ExternalReadCatalog() []tool.CatalogItem
+	InvokeExternalRead(context.Context, []string, string, json.RawMessage) (json.RawMessage, error)
+}
+
 type Service struct {
 	repo    ClientRepository
-	tools   *tool.Registry
+	tools   ReadCapabilities
 	limiter ratelimit.Limiter
 	logger  *zap.Logger
 }
 
-func New(repo ClientRepository, tools *tool.Registry, limiter ratelimit.Limiter, logger *zap.Logger) *Service {
+func New(repo ClientRepository, tools ReadCapabilities, limiter ratelimit.Limiter, logger *zap.Logger) *Service {
 	if limiter == nil {
 		limiter = ratelimit.NewMemoryLimiter()
 	}
@@ -72,14 +78,7 @@ func (s *Service) ExternalCatalog() []tool.CatalogItem {
 	if s.tools == nil {
 		return nil
 	}
-	items := s.tools.CatalogForSurface("external")
-	result := make([]tool.CatalogItem, 0, len(items))
-	for _, item := range items {
-		if item.Risk == tooldomain.ToolRiskRead {
-			result = append(result, item)
-		}
-	}
-	return result
+	return s.tools.ExternalReadCatalog()
 }
 
 func (s *Service) CatalogForClient(client *externaldomain.Client) []tool.CatalogItem {
@@ -317,25 +316,18 @@ func (s *Service) Invoke(ctx context.Context, client *externaldomain.Client, cap
 	if client == nil || client.ID <= 0 || !slices.Contains(client.Capabilities, capability) {
 		return nil, ErrForbidden
 	}
-	if s.tools == nil || !s.tools.SupportsSurface(capability, "external") {
+	if s.tools == nil {
 		return nil, ErrForbidden
 	}
-	risk, ok := s.tools.Risk(capability)
-	if !ok || risk != tooldomain.ToolRiskRead {
+	output, invokeErr := s.tools.InvokeExternalRead(ctx, client.Capabilities, capability, arguments)
+	if errors.Is(invokeErr, tool.ErrUnauthorized) {
 		return nil, ErrForbidden
 	}
-	if !json.Valid(arguments) {
-		return nil, ErrInvalid
-	}
-	_, output, proposal, invokeErr := s.tools.Invoke(ctx, client.Capabilities, capability, arguments)
 	if errors.Is(invokeErr, tool.ErrInvalidArgument) {
 		return nil, ErrInvalid
 	}
 	if invokeErr != nil {
 		return nil, invokeErr
-	}
-	if proposal != nil {
-		return nil, ErrForbidden
 	}
 	completed = true
 	return output, nil

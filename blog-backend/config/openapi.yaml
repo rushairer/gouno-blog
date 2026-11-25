@@ -109,7 +109,13 @@ paths:
   /posts/{slugOrID}:
     get:
       summary: Get a post by slug or ID
-      description: Retrieve a single blog post details by its slug or unique ID.
+      description: |
+        Retrieve a post by numeric ID or slug. Anonymous readers can read published posts;
+        unpublished content is available only when the Blog-local read policy authorizes the current member.
+        A missing or hidden post returns 404.
+      security:
+        - {}
+        - BlogSessionCookie: []
       parameters:
         - name: slugOrID
           in: path
@@ -131,16 +137,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /posts/{id}:
     put:
       summary: Update an existing post
       description: Modify an existing blog post details. Requires administrator authentication.
       security:
         - BlogSessionCookie: []
       parameters:
-        - name: id
+        - name: slugOrID
           in: path
-          description: Post numeric ID
+          description: Numeric post ID (write operations do not accept a slug)
           required: true
           schema:
             type: integer
@@ -174,9 +179,9 @@ paths:
       security:
         - BlogSessionCookie: []
       parameters:
-        - name: id
+        - name: slugOrID
           in: path
-          description: Post numeric ID
+          description: Numeric post ID (write operations do not accept a slug)
           required: true
           schema:
             type: integer
@@ -195,7 +200,7 @@ paths:
   /tags:
     get:
       summary: List all unique tags
-      description: Retrieve a list of all unique tags used across all posts.
+      description: Retrieve unique tags used by published posts, sorted by tag.
       responses:
         '200':
           description: A list of tags
@@ -203,6 +208,82 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TagsResponse'
+
+  /tags/summary:
+    get:
+      operationId: listPublishedTagSummaries
+      summary: List tags with published post counts
+      description: Counts only published posts, ordered by descending count and then tag name.
+      security: []
+      responses:
+        '200':
+          description: Published tag summaries, or an empty array.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishedTagSummaryResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /pages/nav:
+    get:
+      operationId: listPublishedNavigationPages
+      summary: List published navigation pages
+      description: Only published pages marked show_in_nav, ordered by sort_order and ID. The content field is empty in this list.
+      security: []
+      responses:
+        '200':
+          description: Navigation pages, or an empty array.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationPageListResponse'
+        '500':
+          description: Failed to list nav pages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /pages/{slug}:
+    get:
+      operationId: getPageBySlug
+      summary: Read a page by slug
+      description: |
+        Published pages are public. Drafts are visible only to active Blog members
+        with content.manage permission. Missing and unauthorized draft pages both return 404.
+      security:
+        - {}
+        - BlogSessionCookie: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Page including its full content.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlogPageResponse'
+        '404':
+          description: Page not found or not readable by this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /admin/posts:
     get:
@@ -2107,6 +2188,56 @@ components:
             pageSize:
               type: integer
               example: 10
+    PublishedTagSummaryResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: integer, enum: [200]}
+        message: {type: string, enum: [success]}
+        data:
+          type: array
+          items:
+            type: object
+            required: [name, post_count]
+            properties:
+              name: {type: string}
+              post_count: {type: integer, format: int64, minimum: 1}
+    BlogPage:
+      type: object
+      required: [id, title, slug, content, summary, template, status, allow_comments, show_in_nav, sort_order, seo_title, seo_description, created_at, updated_at]
+      properties:
+        id: {type: integer, format: int64}
+        title: {type: string}
+        slug: {type: string}
+        content: {type: string}
+        summary: {type: string}
+        template: {type: string}
+        status: {type: string, enum: [draft, published]}
+        allow_comments: {type: boolean}
+        show_in_nav: {type: boolean}
+        sort_order: {type: integer}
+        seo_title: {type: string}
+        seo_description: {type: string}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    NavigationPageListResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: integer, enum: [200]}
+        message: {type: string, enum: [success]}
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlogPage'
+    BlogPageResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: integer, enum: [200]}
+        message: {type: string, enum: [success]}
+        data:
+          $ref: '#/components/schemas/BlogPage'
     TagsResponse:
       type: object
       properties:
@@ -2153,7 +2284,7 @@ components:
           example: 400
         message:
           type: string
-          example: "Key: 'CreatePostRequest.Title' Error:Field validation for 'Title' failed on the 'required' tag"
+          example: "invalid request"
         data:
           type: object
           nullable: true

@@ -68,15 +68,35 @@ func NewRedisLimiter(dsn string) (*RedisLimiter, error) {
 	return &RedisLimiter{client: redis.NewClient(options)}, nil
 }
 
+// Create a counter with its TTL in one operation. Existing counters retain
+// their original fixed-window deadline. Repair persistent counters left by
+// the previous separate INCR/EXPIRE implementation without resetting usage.
+var fixedWindowScript = redis.NewScript(`
+local ttl = redis.call("PTTL", KEYS[1])
+if ttl == -2 then
+    redis.call("SET", KEYS[1], "1", "PX", ARGV[1])
+    return 1
+end
+local count = redis.call("INCR", KEYS[1])
+if ttl == -1 then
+    redis.call("PEXPIRE", KEYS[1], ARGV[1])
+end
+return count
+`)
+
 func (l *RedisLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, error) {
-	count, err := l.client.Incr(ctx, "blog:interaction:"+key).Result()
-	if err != nil {
-		return true, err
+	if limit <= 0 || window <= 0 {
+		return false, nil
 	}
-	if count == 1 {
-		if err := l.client.Expire(ctx, "blog:interaction:"+key, window).Err(); err != nil {
-			return true, err
-		}
+	windowMillis := window.Milliseconds()
+	if windowMillis == 0 {
+		windowMillis = 1
+	}
+	count, err := fixedWindowScript.Run(ctx, l.client, []string{"blog:interaction:" + key}, windowMillis).Int64()
+	if err != nil {
+		// Callers retain their existing outage policy. Never report an
+		// affirmative decision for an unconfirmed Redis operation.
+		return false, err
 	}
 	return count <= int64(limit), nil
 }

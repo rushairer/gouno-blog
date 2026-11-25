@@ -235,3 +235,106 @@ func TestExternalContentCatalogNeverExposesAdminStateReaders(t *testing.T) {
 		}
 	}
 }
+
+func TestExternalReadDispatchCannotReachWriteProposalOrAgentOnlyTools(t *testing.T) {
+	calls := 0
+	execute := func(context.Context, json.RawMessage) (any, error) {
+		calls++
+		return map[string]bool{"ok": true}, nil
+	}
+	propose := func(context.Context, json.RawMessage) (*Proposal, error) {
+		calls++
+		return &Proposal{ActionType: "unexpected"}, nil
+	}
+	registry := New(
+		Definition{Name: "read", Risk: tooldomain.ToolRiskRead, Surfaces: []string{"external"}, Execute: execute},
+		Definition{Name: "agent", Risk: tooldomain.ToolRiskRead, Execute: execute},
+		Definition{Name: "write", Risk: tooldomain.ToolRiskWrite, Surfaces: []string{"external"}, Execute: execute},
+		Definition{Name: "propose", Risk: tooldomain.ToolRiskPropose, Surfaces: []string{"external"}, Propose: propose},
+		Definition{Name: "unbound", Risk: tooldomain.ToolRiskRead, Surfaces: []string{"external"}},
+		Definition{Name: "mixed", Risk: tooldomain.ToolRiskRead, Surfaces: []string{"external"}, Execute: execute, Propose: propose},
+	)
+	catalog := registry.ExternalReadCatalog()
+	if len(catalog) != 1 || catalog[0].Name != "read" {
+		t.Fatalf("external read catalog = %#v", catalog)
+	}
+	for _, name := range []string{"agent", "write", "propose", "unbound", "mixed", "missing"} {
+		result, err := registry.InvokeExternalRead(context.Background(), []string{name}, name, json.RawMessage(`{}`))
+		if result != nil || !errors.Is(err, ErrUnauthorized) || calls != 0 {
+			t.Fatalf("%s reached dispatch: result=%s err=%v calls=%d", name, result, err, calls)
+		}
+	}
+	if _, err := registry.InvokeExternalRead(context.Background(), nil, "read", json.RawMessage(`{}`)); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("missing grant: %v", err)
+	}
+	if _, err := registry.InvokeExternalRead(context.Background(), []string{"read"}, "read", json.RawMessage(`{`)); !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("invalid arguments: %v", err)
+	}
+	if calls != 0 {
+		t.Fatalf("unauthorized or invalid call reached handler: %d", calls)
+	}
+	result, err := registry.InvokeExternalRead(context.Background(), []string{"read"}, "read", json.RawMessage(`{}`))
+	if err != nil || string(result) != `{"ok":true}` || calls != 1 {
+		t.Fatalf("authorized read: result=%s err=%v calls=%d", result, err, calls)
+	}
+}
+
+func TestRegistryOwnsAndReturnsDetachedAuthorityMetadata(t *testing.T) {
+	for _, register := range []bool{false, true} {
+		definition := Definition{
+			Name: "agent.read", Risk: tooldomain.ToolRiskRead, Surfaces: []string{"agent"},
+			Parameters: json.RawMessage(`{"type":"object"}`),
+			Configuration: json.RawMessage(`{"type":"object"}`),
+			DefaultBinding: json.RawMessage(`{"limit":10}`),
+			Output: json.RawMessage(`{"type":"object"}`),
+			Scope: &ScopeRule{ResourceType: "post", OutputKeys: []string{"id"}},
+			Execute: func(context.Context, json.RawMessage) (any, error) {
+				return nil, nil
+			},
+		}
+		registry := New()
+		if register {
+			if err := registry.Register(definition); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			registry = New(definition)
+		}
+		definition.Surfaces[0] = "external"
+		definition.Scope.ResourceType = "page"
+		definition.Scope.OutputKeys[0] = "other"
+		definition.Parameters[0] = '!'
+		definition.Configuration[0] = '!'
+		definition.DefaultBinding[0] = '!'
+		definition.Output[0] = '!'
+		// Mutate each public metadata view and verify the next reader sees the
+		// original authority and schemas, not these accidental modifications.
+		for _, item := range append(registry.Catalog(), registry.CatalogForSurface("agent")...) {
+			item.Surfaces[0] = "external"
+			item.Scope.ResourceType = "page"
+			item.Scope.OutputKeys[0] = "other"
+			item.Parameters[0] = '!'
+			item.ConfigurationSchema[0] = '!'
+			item.DefaultBinding[0] = '!'
+			item.Output[0] = '!'
+		}
+		scope, ok := registry.Scope("agent.read")
+		if !ok || scope == nil {
+			t.Fatal("scope missing")
+		}
+		scope.ResourceType = "page"
+		scope.OutputKeys[0] = "other"
+		definitions := registry.Definitions([]string{"agent.read"})
+		if len(definitions) != 1 {
+			t.Fatalf("agent definitions = %#v", definitions)
+		}
+		definitions[0].Parameters[0] = '!'
+		item := registry.Catalog()[0]
+		if registry.SupportsSurface("agent.read", "external") || len(registry.ExternalReadCatalog()) != 0 ||
+			item.Scope.ResourceType != "post" || item.Scope.OutputKeys[0] != "id" ||
+			string(item.Parameters) != `{"type":"object"}` || string(item.ConfigurationSchema) != `{"type":"object"}` ||
+			string(item.DefaultBinding) != `{"limit":10}` || string(item.Output) != `{"type":"object"}` {
+			t.Fatalf("registry metadata changed after caller mutation: %#v", item)
+		}
+	}
+}
