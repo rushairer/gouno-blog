@@ -5,6 +5,7 @@ This directory contains **current contracts** and **historical evidence**. They 
 ## Current architecture and security contracts
 
 - [As-Is system architecture, annotated flow and SVG](architecture/README.md) — Public Blog + Blog Admin (one React SPA), Go backend embedding Confidential BFF, separate GOSSO and GOSSO Admin, Caddy, PostgreSQL/Redis.
+- [API surfaces and contract ownership](architecture/api-boundaries.md) — browser BFF, public content, external capability and webhook boundaries; current documentation coverage and contract work order.
 - [Identity/SDK/transport boundary](auth-client-boundary.md) — current BFF mode, session and local-authorization rules.
 - [OIDC/BFF architecture decision](oidc-bff-split-adr.md) — normative split-origin and OAuth client constraints.
 - [AI workflow design](ai-workbench-automation-plan.md) — compare with current code before implementing changes.

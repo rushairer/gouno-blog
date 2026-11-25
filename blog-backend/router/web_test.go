@@ -5,11 +5,14 @@ import (
 	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
+	externalcontroller "github.com/rushairer/blog-backend/internal/externalcapability/controller"
 	analyticsrepository "github.com/rushairer/blog-backend/internal/analytics/repository"
 	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
@@ -32,6 +35,7 @@ import (
 	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	"github.com/rushairer/blog-backend/middleware"
 	auth "github.com/rushairer/gouno/auth"
+	"go.yaml.in/yaml/v3"
 )
 
 type routerPostVersionRestorer struct{}
@@ -61,7 +65,12 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		AnalyticsSvc:      analyticsservice.New(analyticsrepository.New(nil)),
 		RecommendationSvc: recommendationservice.New(recommendationrepository.New(nil)),
 		PostVersionSvc:    postversionservice.New(postversionrepository.New(nil), routerPostVersionRestorer{}),
+		ExternalCtrl:      externalcontroller.New(nil), // Registration only; do not dispatch its service.
 		Verifier:          auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
+	})
+
+	t.Run("ExternalCapabilityOpenAPIContract", func(t *testing.T) {
+		assertExternalCapabilityOpenAPIContract(t, engine.Routes())
 	})
 
 	foundUpdate := false
@@ -183,5 +192,89 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	engine.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("health status=%d, want %d when database is unavailable", response.Code, http.StatusServiceUnavailable)
+	}
+}
+
+// Compare actual Gin registrations, not a source regex, against the two
+// external capability API families. Internal routes outside these families
+// are not automatically promoted to supported external contracts.
+func assertExternalCapabilityOpenAPIContract(t *testing.T, routes gin.RoutesInfo) {
+	t.Helper()
+	raw, err := os.ReadFile("../config/openapi.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var spec struct {
+		Paths map[string]map[string]yaml.Node `yaml:"paths"`
+	}
+	if err := yaml.Unmarshal(raw, &spec); err != nil {
+		t.Fatalf("parse OpenAPI: %v", err)
+	}
+	surface := func(path string) string {
+		switch {
+		case path == "/external/v1" || strings.HasPrefix(path, "/external/v1/"):
+			return "ExternalAPIKey"
+		case path == "/admin/external-api" || strings.HasPrefix(path, "/admin/external-api/"):
+			return "BlogSessionCookie"
+		default:
+			return ""
+		}
+	}
+	ginParam := regexp.MustCompile(`:[^/]+`)
+	registered := make(map[string]string)
+	for _, route := range routes {
+		if !strings.HasPrefix(route.Path, "/api/") {
+			continue
+		}
+		path := strings.TrimPrefix(route.Path, "/api")
+		security := surface(path)
+		if security == "" {
+			continue
+		}
+		path = ginParam.ReplaceAllStringFunc(path, func(param string) string {
+			return "{" + strings.TrimPrefix(param, ":") + "}"
+		})
+		registered[route.Method+" "+path] = security
+	}
+	if len(registered) < 9 {
+		t.Fatalf("external capability registration incomplete: %v", registered)
+	}
+	documented := make(map[string]bool)
+	for path, item := range spec.Paths {
+		security := surface(path)
+		if security == "" {
+			continue
+		}
+		for method, node := range item {
+			switch method {
+			case "get", "post", "put", "patch", "delete", "head", "options", "trace":
+			default:
+				continue
+			}
+			key := strings.ToUpper(method) + " " + path
+			documented[key] = true
+			if registered[key] != security {
+				t.Errorf("OpenAPI operation not registered: %s", key)
+			}
+			var operation struct {
+				Security []map[string][]string `yaml:"security"`
+			}
+			if err := node.Decode(&operation); err != nil {
+				t.Errorf("%s: invalid operation: %v", key, err)
+				continue
+			}
+			if len(operation.Security) != 1 || len(operation.Security[0]) != 1 {
+				t.Errorf("%s: expected exactly one %s security requirement", key, security)
+				continue
+			}
+			if scopes, ok := operation.Security[0][security]; !ok || len(scopes) != 0 {
+				t.Errorf("%s: wrong security requirement: %v", key, operation.Security)
+			}
+		}
+	}
+	for key := range registered {
+		if !documented[key] {
+			t.Errorf("registered external capability operation missing from OpenAPI: %s", key)
+		}
 	}
 }

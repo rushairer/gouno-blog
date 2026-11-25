@@ -11,6 +11,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Security
 
+- Bound External Capability invocation audit writes to an independent two-second deadline; require audit acknowledgement before returning successful Tool output, keep original denial/rate-limit contracts, and log redacted audit failures. Document the two external v1 operations and their response envelopes.
 - Refresh the shared Backend/Seed Go builder and Alpine runtime digests, pin patched OpenSSL libraries (3.5.9-r1), and pin Nginx 1.30.7 slim by immutable index. Keep both scanners and runtime checks; group shared Docker updates by dependency name to avoid incompatible single-directory updates.
 
 ## [1.6.0] - 2026-11-11

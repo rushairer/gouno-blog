@@ -339,6 +339,8 @@ func currentClient(c *gin.Context) (*externaldomain.Client, bool) {
 
 func writeError(c *gin.Context, err error) {
 	switch {
+	case errors.Is(err, externalservice.ErrAuditUnavailable):
+		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "external capability operation failed"))
 	case errors.Is(err, externalservice.ErrInvalid):
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid external capability request"))
 	case errors.Is(err, externalservice.ErrUnauthorized):

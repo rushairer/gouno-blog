@@ -412,7 +412,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 	}
 	externalCtrl = externalcontroller.New(externalservice.New(
-		externalrepository.New(cfg.DB), toolRegistry, externalLimiter,
+		externalrepository.New(cfg.DB), toolRegistry, externalLimiter, cfg.Logger,
 	))
 
 	verifier := gounoAuth.NewVerifier(cfg.JWKSURL)
