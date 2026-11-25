@@ -219,6 +219,10 @@ func (s *modelBoundaryRuns) RecordUsage(context.Context, *domain.UsageEvent) err
 	return s.usageErr
 }
 
+func (s *modelBoundaryRuns) SaveRunCitations(context.Context, int64, []domain.AgentCitation) error {
+	return nil
+}
+
 func (s *modelBoundaryRuns) CreateToolCall(context.Context, *domain.AgentToolCall) error {
 	s.toolRows++
 	return errors.New("unexpected Tool dispatch")
@@ -443,4 +447,27 @@ func (*cancellingModelProvider) Model() string { return "test" }
 func (p *cancellingModelProvider) Generate(context.Context, provider.Request) (provider.Result, error) {
 	p.cancel()
 	return provider.Result{Text: "answer", InputTokens: 8, OutputTokens: 2}, nil
+}
+
+func TestRunnerSuccessfulOutcomeNeverRewrittenAfterUnacknowledgedCommit(t *testing.T) {
+	commitErr := errors.New("success commit acknowledgement lost")
+	versionID := int64(9)
+	runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID}}
+	client := &modelBoundaryProvider{result: provider.Result{Text: "answer", InputTokens: 12, OutputTokens: 6}}
+	lifecycle := &recordingRunLifecycle{finishErr: commitErr}
+	notifications := &recordingRunNotifications{}
+	runner := &Runner{
+		runs: runs, tools: tool.New(), lifecycle: lifecycle, notifications: notifications,
+		management: &modelBoundaryManagement{
+			agent: &domain.Agent{ID: 2, MonthlyTokenBudget: 1000},
+			skill: &domain.AgentSkill{MaxSteps: 1, MaxInputTokens: 10000, MaxOutputTokens: 100},
+			client: client,
+		},
+	}
+	err := runner.execute(context.Background(), 1, false)
+	if !errors.Is(err, commitErr) || lifecycle.calls != 1 || lifecycle.status != domain.AgentRunSucceeded ||
+		lifecycle.inputTokens != 12 || lifecycle.outputTokens != 6 || notifications.calls != 0 ||
+		runs.usages != 1 || len(client.requests) != 1 {
+		t.Fatalf("unconfirmed success was rewritten or replayed: err=%v lifecycle=%#v notifications=%d", err, lifecycle, notifications.calls)
+	}
 }
