@@ -237,6 +237,7 @@ const providerAttempts = 3
 func generateWithRetry(ctx context.Context, client provider.Provider, request provider.Request) (provider.Result, int, error) {
 	var (
 		lastErr  error
+		observed provider.Result
 		attempts int
 	)
 	for attempt := 1; attempt <= providerAttempts; attempt++ {
@@ -249,7 +250,14 @@ func generateWithRetry(ctx context.Context, client provider.Provider, request pr
 			return result, attempt, nil
 		}
 		lastErr = err
-		if attempt == providerAttempts || !provider.RetryableTextRejection(err) {
+		// Partial model output is never executable after a failed decode.
+		// Retain only observed usage and bounded request evidence.
+		observed = provider.Result{
+			InputTokens: max(result.InputTokens, 0), OutputTokens: max(result.OutputTokens, 0),
+			Evidence: result.Evidence,
+		}
+		if observed.InputTokens > 0 || observed.OutputTokens > 0 ||
+			attempt == providerAttempts || !provider.RetryableTextRejection(err) {
 			break
 		}
 		delay := time.Duration(1<<(attempt-1)) * time.Second
@@ -263,7 +271,7 @@ func generateWithRetry(ctx context.Context, client provider.Provider, request pr
 	if attempts == 1 {
 		attemptWord = "attempt"
 	}
-	return provider.Result{}, attempts, fmt.Errorf("provider request failed after %d %s: %w", attempts, attemptWord, lastErr)
+	return observed, attempts, fmt.Errorf("provider request failed after %d %s: %w", attempts, attemptWord, lastErr)
 }
 
 // modelTools is the actual turn authority, not merely a presentation hint.
@@ -382,22 +390,25 @@ func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, o
 			MaxTokens: min(limits.maxOutputTokens, int(remainingTokens)),
 			DispatchAudit: newRunTextDispatchAudit(r.runs, run.ID, run.AgentID, requestID, profile),
 		})
+		// Preserve observed tokens even when the response cannot be safely
+		// decoded or completed. A failed call with no usage does not prove
+		// zero provider billing and must not create a fabricated usage row.
+		outcome.inputTokens += result.InputTokens
+		outcome.outputTokens += result.OutputTokens
+		if err == nil || result.InputTokens > 0 || result.OutputTokens > 0 {
+			usage := &domain.UsageEvent{
+				RunID: run.ID, RequestID: requestID, Provider: profile.ProviderType, Model: client.Model(),
+				InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, CompletedAt: time.Now().UTC(),
+			}
+			if usageErr := r.runs.RecordUsage(ctx, usage); usageErr != nil {
+				return errors.Join(err, usageErr)
+			}
+		}
 		if err != nil {
 			return err
 		}
 		if attempts > 1 {
 			finalText = fmt.Sprintf("Provider request recovered after %d attempts.", attempts)
-		}
-		// Keep observed usage even when later validation, Tool execution or
-		// usage persistence fails. It is not an upstream billing guarantee.
-		outcome.inputTokens += result.InputTokens
-		outcome.outputTokens += result.OutputTokens
-		usage := &domain.UsageEvent{
-			RunID: run.ID, RequestID: requestID, Provider: profile.ProviderType, Model: client.Model(),
-			InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, CompletedAt: time.Now().UTC(),
-		}
-		if err := r.runs.RecordUsage(ctx, usage); err != nil {
-			return err
 		}
 		if err := validateModelToolCalls(tools, result.ToolCalls); err != nil {
 			return err

@@ -60,9 +60,9 @@ func TestOpenAIToolNamesRoundTrip(t *testing.T) {
 					if body["stream"] == true {
 						w.Header().Set("Content-Type", "text/event-stream")
 						if protocol == "responses" {
-							_, _ = fmt.Fprintf(w, "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"item_1\",\"call_id\":\"call_1\",\"name\":%q}}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"item_1\",\"delta\":\"{}\"}\n\n", name)
+							_, _ = fmt.Fprintf(w, "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"item_1\",\"call_id\":\"call_1\",\"name\":%q}}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"item_1\",\"delta\":\"{}\"}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n\n", name)
 						} else {
-							_, _ = fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_1\",\"function\":{\"name\":%q,\"arguments\":\"{}\"}}]}}]}\n\ndata: [DONE]\n\n", name)
+							_, _ = fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_1\",\"function\":{\"name\":%q,\"arguments\":\"{}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n", name)
 						}
 					} else if protocol == "responses" {
 						_, _ = fmt.Fprintf(w, `{"output":[{"type":"function_call","call_id":"call_1","name":%q,"arguments":"{}"}]}`, name)
