@@ -6,8 +6,19 @@ import (
 	"encoding/json"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
+	"github.com/rushairer/blog-backend/internal/provider"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 )
+
+// RunnerManagement exposes only the model and versioned execution inputs
+// required by Runner, rather than all Agent/Provider administration.
+type RunnerManagement interface {
+	GetAgent(context.Context, int64) (*domain.Agent, error)
+	GetSkillVersion(context.Context, int64) (*domain.AgentSkill, error)
+	ResolveAgentProvider(context.Context, *domain.Agent) (*providerdomain.ProviderProfile, error)
+	AgentProviderClient(context.Context, *domain.Agent) (*providerdomain.ProviderProfile, provider.Provider, error)
+}
 
 type RunnerRunStore interface {
 	CreateRun(context.Context, *domain.AgentRun) error

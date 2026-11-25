@@ -20,6 +20,12 @@ The Tool Registry owns executable Tool definitions, surface classification, risk
 
 Registration owns copies of mutable schema, surface and scope metadata. Catalog, provider definitions and scope queries return detached copies so consumers cannot silently change authority through an alias. Registry registration and binding remain startup operations, not a concurrent runtime plugin lifecycle.
 
+## Agent model execution contract
+
+Runner consumes only the model and locked Skill version inputs from Agent Management. It checks all returned Tool names against the actual request's offered definitions before dispatching any call. The last synthesis turn cannot execute Tools, stale grants cannot cross the Agent surface, and preview does not execute write-risk Tools or persist approvals. Normal-run publication, strict scope and approval contracts remain unchanged. Dry-run still records execution/usage and may consume Provider resources.
+
+Agent-level retries use a typed HTTP 429 rejection, not substring matching. Timeouts, transport/decode errors and 5xx are not automatically replayed. Existing explicit text protocol negotiation is separate; neither an HTTP rejection nor local usage evidence guarantees provider-side billing behavior. Agent run claim/terminal fencing, persisted failed-run token totals and complete per-attempt Provider evidence remain separate audit work.
+
 ## Audit semantics
 
 An authorized read-only Tool invocation returns a successful result only after its invocation audit insert is acknowledged. An audit failure or timeout withholds the result and returns a fixed 500. Existing denied, malformed, and rate-limited response contracts are preserved; audit failures on those paths are logged as redacted operational errors. Invocation and rate-limit audit writes use a two-second context independent of request cancellation. No failed or ambiguous insert is automatically replayed. Successful catalog discovery is distinct from invocation; malformed JSON rejected before Tool dispatch does not represent an invocation. The audit record describes the attempted operation, not proof of response delivery. No new database schema, external write capability, or exactly-once guarantee is introduced.

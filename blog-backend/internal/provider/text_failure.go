@@ -10,6 +10,19 @@ import (
 
 var openAIToolNameParameter = regexp.MustCompile(`^tools\[[0-9]{1,6}\](\.function)?\.name$`)
 
+// RetryableTextRejection permits a bounded Agent-level retry only for an
+// actual HTTP 429 rejection. Transport/decode errors and HTTP 5xx can follow
+// accepted, billed work; neither a timeout nor arbitrary response text proves
+// that another generation is safe. Protocol/stream negotiation stays separate.
+// This is not a billing guarantee, and must never be used for image requests.
+func RetryableTextRejection(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	var upstreamErr *upstreamHTTPError
+	return errors.As(err, &upstreamErr) && upstreamErr.StatusCode == http.StatusTooManyRequests
+}
+
 func TextFailureCode(err error) string {
 	var requestErr *openAITextRequestError
 	if !errors.As(err, &requestErr) {

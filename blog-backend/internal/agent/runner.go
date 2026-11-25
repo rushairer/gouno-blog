@@ -44,12 +44,12 @@ type Runner struct {
 	mediaCandidates RunnerMediaCandidateStore
 	notifications   RunnerNotificationWriter
 	lifecycle       RunnerRunLifecycle
-	management      *ManagementService
+	management      RunnerManagement
 	tools           *tool.Registry
 	posts           *postservice.PostService
 }
 
-func NewRunner(deps RunnerDependencies, management *ManagementService, tools *tool.Registry, posts *postservice.PostService) *Runner {
+func NewRunner(deps RunnerDependencies, management RunnerManagement, tools *tool.Registry, posts *postservice.PostService) *Runner {
 	return &Runner{
 		runs: deps.Runs, approvals: deps.Approvals, workflowScopes: deps.WorkflowScopes,
 		mediaCandidates: deps.MediaCandidates, notifications: deps.Notifications, lifecycle: deps.Lifecycle,
@@ -194,13 +194,16 @@ func generateWithRetry(ctx context.Context, client provider.Provider, request pr
 		attempts int
 	)
 	for attempt := 1; attempt <= providerAttempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return provider.Result{}, attempts, err
+		}
 		attempts = attempt
 		result, err := client.Generate(ctx, request)
 		if err == nil {
 			return result, attempt, nil
 		}
 		lastErr = err
-		if attempt == providerAttempts || !retryableProviderError(err) {
+		if attempt == providerAttempts || !provider.RetryableTextRejection(err) {
 			break
 		}
 		delay := time.Duration(1<<(attempt-1)) * time.Second
@@ -217,10 +220,39 @@ func generateWithRetry(ctx context.Context, client provider.Provider, request pr
 	return provider.Result{}, attempts, fmt.Errorf("provider request failed after %d %s: %w", attempts, attemptWord, lastErr)
 }
 
-func retryableProviderError(err error) bool {
-	text := strings.ToLower(err.Error())
-	return strings.Contains(text, "timeout") || strings.Contains(text, "deadline exceeded") ||
-		strings.Contains(text, "returned 429") || strings.Contains(text, "returned 5")
+// modelTools is the actual turn authority, not merely a presentation hint.
+// Preview may read and compute proposals but must not invoke write Tools.
+func (r *Runner) modelTools(skill *domain.AgentSkill, dryRun, finalTurn bool) []provider.ToolDefinition {
+	if finalTurn {
+		return nil
+	}
+	definitions := r.tools.Definitions(skill.Capabilities)
+	if !dryRun {
+		return definitions
+	}
+	result := make([]provider.ToolDefinition, 0, len(definitions))
+	for _, definition := range definitions {
+		risk, ok := r.tools.Risk(definition.Name)
+		if ok && (risk == tooldomain.ToolRiskRead || risk == tooldomain.ToolRiskPropose) {
+			result = append(result, definition)
+		}
+	}
+	return result
+}
+
+// Validate the entire model response before dispatching any of its calls.
+// A final synthesis turn has no offered Tools, even when the Skill has grants.
+func validateModelToolCalls(offered []provider.ToolDefinition, calls []provider.ToolCall) error {
+	allowed := make(map[string]struct{}, len(offered))
+	for _, definition := range offered {
+		allowed[definition.Name] = struct{}{}
+	}
+	for _, call := range calls {
+		if _, ok := allowed[call.Name]; !ok {
+			return fmt.Errorf("%w: model requested a Tool not offered for this turn", tool.ErrUnauthorized)
+		}
+	}
+	return nil
 }
 
 func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
@@ -287,13 +319,16 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 		}
 		requestID := fmt.Sprintf("run_%d_step_%d_%d", run.ID, step+1, time.Now().UnixNano())
 		instructions := platformInstructions + contentPublicationInstruction(skill.ContentPublishMode) + runScopeInstruction + "\n\nAgent instructions:\n" + skill.SystemPrompt
-		tools := r.tools.Definitions(skill.Capabilities)
-		if step == limits.maxSteps-1 {
+		finalTurn := step == limits.maxSteps-1
+		tools := r.modelTools(skill, dryRun, finalTurn)
+		if dryRun {
+			instructions += "\nThis is a preview. You may read and prepare proposals, but must not execute write tools or claim a change was applied."
+		}
+		if finalTurn {
 			// Reserve the final model turn for synthesis. Without this, an Agent
 			// can spend every step discovering more material and be marked as a
 			// successful run with no useful operator-facing conclusion.
 			instructions += "\n\nThis is the final step. Do not call tools. Return a concise, evidence-based final summary using the information already collected."
-			tools = nil
 		}
 		result, attempts, err := generateWithRetry(ctx, client, provider.Request{
 			Instructions: instructions,
@@ -313,6 +348,9 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, CompletedAt: time.Now().UTC(),
 		}
 		if err := r.runs.RecordUsage(ctx, usage); err != nil {
+			return err
+		}
+		if err := validateModelToolCalls(tools, result.ToolCalls); err != nil {
 			return err
 		}
 		messages = append(messages, provider.Message{
@@ -352,7 +390,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			var proposal *tool.Proposal
 			invokeErr := r.authorizeScopedTool(ctx, run, requested.Name, effectiveArguments, risk)
 			if invokeErr == nil {
-				risk, rawResult, proposal, invokeErr = r.invokeTool(ctx, run, skill, requested.Name, effectiveArguments)
+				risk, rawResult, proposal, invokeErr = r.invokeTool(ctx, run, skill, requested.Name, effectiveArguments, dryRun)
 			}
 			if invokeErr == nil {
 				rawResult, invokeErr = r.filterScopedDiscoveryResult(ctx, run, requested.Name, rawResult)
@@ -726,7 +764,17 @@ func (r *Runner) recordDiscoveredResources(ctx context.Context, run *domain.Agen
 	return walk(value)
 }
 
-func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *domain.AgentSkill, name string, arguments json.RawMessage) (tooldomain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
+func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *domain.AgentSkill, name string, arguments json.RawMessage, dryRun bool) (tooldomain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
+	risk, ok := r.tools.Risk(name)
+	if !ok || !r.tools.SupportsSurface(name, "agent") || !slices.Contains(skill.Capabilities, name) {
+		return risk, nil, nil, tool.ErrUnauthorized
+	}
+	if risk != tooldomain.ToolRiskRead && risk != tooldomain.ToolRiskPropose && risk != tooldomain.ToolRiskWrite {
+		return risk, nil, nil, tool.ErrUnauthorized
+	}
+	if dryRun && risk == tooldomain.ToolRiskWrite {
+		return risk, nil, nil, tool.ErrUnauthorized
+	}
 	if name == "media.create_image_task" {
 		return r.createImageTask(ctx, run, skill, arguments)
 	}

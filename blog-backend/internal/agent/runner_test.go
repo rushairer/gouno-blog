@@ -6,8 +6,15 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"net/http"
+	"net/http/httptest"
+	"time"
 
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
+	"github.com/rushairer/blog-backend/internal/tool"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 )
 
 func TestApproximateInputBytesIncludesToolContext(t *testing.T) {
@@ -98,5 +105,211 @@ func TestGenerateWithRetryReportsActualAttemptsForNonRetryableError(t *testing.T
 	}
 	if !strings.Contains(err.Error(), "provider request failed after 1 attempt:") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGenerateWithRetryDoesNotReplayAmbiguousOrMisleadingFailures(t *testing.T) {
+	for _, status := range []int{http.StatusBadRequest, http.StatusUnauthorized, http.StatusInternalServerError, http.StatusServiceUnavailable} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			calls := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.WriteHeader(status)
+				_, _ = w.Write([]byte(`{"error":{"message":"timeout; upstream returned 429; retry now"}}`))
+			}))
+			defer server.Close()
+			client, err := provider.NewHTTPProviderWithConfig("openai", server.URL, "secret", "model", "responses", "never", []string{"127.0.0.1"}, time.Second)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, attempts, err := generateWithRetry(context.Background(), client, provider.Request{})
+			if err == nil || calls != 1 || attempts != 1 {
+				t.Fatalf("status=%d attempts=%d HTTP=%d err=%v", status, attempts, calls, err)
+			}
+		})
+	}
+	for _, cause := range []error{context.DeadlineExceeded, errors.New("transport timeout"), errors.New("returned 429")} {
+		client := &retryTestProvider{err: cause}
+		_, attempts, err := generateWithRetry(context.Background(), client, provider.Request{})
+		if !errors.Is(err, cause) || attempts != 1 || client.calls != 1 {
+			t.Fatalf("ambiguous failure was replayed: attempts=%d calls=%d err=%v", attempts, client.calls, err)
+		}
+	}
+}
+
+func TestGenerateWithRetryRetainsBoundedTypedRateLimitRecovery(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		if calls == 1 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"recovered"}}],"usage":{"prompt_tokens":2,"completion_tokens":1}}`))
+	}))
+	defer server.Close()
+	client, err := provider.NewHTTPProviderWithConfig("openai", server.URL, "secret", "model", "chat_completions", "never", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, attempts, err := generateWithRetry(context.Background(), client, provider.Request{})
+	if err != nil || calls != 2 || attempts != 2 || result.Text != "recovered" {
+		t.Fatalf("typed 429 recovery: result=%#v calls=%d attempts=%d err=%v", result, calls, attempts, err)
+	}
+}
+
+func TestGenerateWithRetryDoesNotDispatchCancelledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	client := &retryTestProvider{err: errors.New("must not execute")}
+	_, attempts, err := generateWithRetry(ctx, client, provider.Request{})
+	if !errors.Is(err, context.Canceled) || attempts != 0 || client.calls != 0 {
+		t.Fatalf("cancelled context dispatched: attempts=%d calls=%d err=%v", attempts, client.calls, err)
+	}
+}
+
+// These fakes embed the remaining ports deliberately: unexpected persistence
+// or administrative calls fail the test instead of silently succeeding.
+type modelBoundaryManagement struct {
+	RunnerManagement
+	agent  *domain.Agent
+	skill  *domain.AgentSkill
+	client provider.Provider
+}
+
+func (m *modelBoundaryManagement) GetAgent(context.Context, int64) (*domain.Agent, error) {
+	return m.agent, nil
+}
+
+func (m *modelBoundaryManagement) GetSkillVersion(context.Context, int64) (*domain.AgentSkill, error) {
+	return m.skill, nil
+}
+
+func (m *modelBoundaryManagement) AgentProviderClient(context.Context, *domain.Agent) (*providerdomain.ProviderProfile, provider.Provider, error) {
+	return nil, m.client, nil
+}
+
+type modelBoundaryRuns struct {
+	RunnerRunStore
+	run      *domain.AgentRun
+	starts   int
+	usages   int
+	toolRows int
+}
+
+func (s *modelBoundaryRuns) GetRun(context.Context, int64) (*domain.AgentRun, error) {
+	return s.run, nil
+}
+
+func (s *modelBoundaryRuns) StartRun(context.Context, int64) error {
+	s.starts++
+	return nil
+}
+
+func (s *modelBoundaryRuns) MonthlyTokenUsage(context.Context, int64) (int64, error) {
+	return 0, nil
+}
+
+func (s *modelBoundaryRuns) RecordUsage(context.Context, *domain.UsageEvent) error {
+	s.usages++
+	return nil
+}
+
+func (s *modelBoundaryRuns) CreateToolCall(context.Context, *domain.AgentToolCall) error {
+	s.toolRows++
+	return errors.New("unexpected Tool dispatch")
+}
+
+type modelBoundaryProvider struct {
+	requests []provider.Request
+	result   provider.Result
+}
+
+func (*modelBoundaryProvider) Name() string { return "test" }
+func (*modelBoundaryProvider) Model() string { return "test" }
+
+func (p *modelBoundaryProvider) Generate(_ context.Context, request provider.Request) (provider.Result, error) {
+	p.requests = append(p.requests, request)
+	return p.result, nil
+}
+
+func TestRunnerRejectsUnadvertisedBatchBeforeAnyToolSideEffect(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		steps       int
+		preview     bool
+		badTool     string
+		wantOffered []string
+	}{
+		{"final-synthesis", 1, false, "content.create_post", nil},
+		{"preview-write", 2, true, "media.create_image_task", []string{"read", "proposal"}},
+		{"stale-external-grant", 2, false, "external.read", []string{"read", "proposal", "content.create_post", "media.create_image_task"}},
+		{"unknown-tool", 2, false, "not.registered", []string{"read", "proposal", "content.create_post", "media.create_image_task"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			executed := 0
+			read := func(context.Context, json.RawMessage) (any, error) {
+				executed++
+				return map[string]bool{"ok": true}, nil
+			}
+			registry := tool.New(
+				tool.Definition{Name: "read", Risk: tooldomain.ToolRiskRead, Execute: read},
+				tool.Definition{Name: "proposal", Risk: tooldomain.ToolRiskPropose},
+				tool.Definition{Name: "content.create_post", Risk: tooldomain.ToolRiskWrite},
+				tool.Definition{Name: "media.create_image_task", Risk: tooldomain.ToolRiskWrite},
+				tool.Definition{Name: "external.read", Risk: tooldomain.ToolRiskRead, Surfaces: []string{"external"}, Execute: read},
+			)
+			client := &modelBoundaryProvider{result: provider.Result{
+				InputTokens: 10, OutputTokens: 3,
+				ToolCalls: []provider.ToolCall{
+					{ID: "call-read", Name: "read", Arguments: json.RawMessage(`{}`)},
+					{ID: "call-denied", Name: tc.badTool, Arguments: json.RawMessage(`{}`)},
+				},
+			}}
+			versionID := int64(9)
+			runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID}}
+			runner := &Runner{
+				runs: runs, tools: registry,
+				management: &modelBoundaryManagement{
+					agent: &domain.Agent{ID: 2, MonthlyTokenBudget: 10000},
+					skill: &domain.AgentSkill{Capabilities: []string{"read", "proposal", "content.create_post", "media.create_image_task", "external.read"}, MaxSteps: tc.steps, MaxInputTokens: 10000, MaxOutputTokens: 100},
+					client: client,
+				},
+			}
+			err := runner.execute(context.Background(), 1, tc.preview)
+			if !errors.Is(err, tool.ErrUnauthorized) || executed != 0 || runs.toolRows != 0 || runs.usages != 1 || runs.starts != 1 || len(client.requests) != 1 {
+				t.Fatalf("boundary failure: err=%v effects=%d rows=%d usage=%d starts=%d requests=%d", err, executed, runs.toolRows, runs.usages, runs.starts, len(client.requests))
+			}
+			offered := client.requests[0].Tools
+			if len(offered) != len(tc.wantOffered) {
+				t.Fatalf("offered=%#v want=%v", offered, tc.wantOffered)
+			}
+			for i, definition := range offered {
+				if definition.Name != tc.wantOffered[i] {
+					t.Fatalf("offered=%#v want=%v", offered, tc.wantOffered)
+				}
+			}
+		})
+	}
+}
+
+func TestRunnerDirectDispatchPreservesAgentSurfaceAndPreviewFence(t *testing.T) {
+	executed := 0
+	registry := tool.New(
+		tool.Definition{Name: "external.read", Risk: tooldomain.ToolRiskRead, Surfaces: []string{"external"}, Execute: func(context.Context, json.RawMessage) (any, error) {
+			executed++
+			return nil, nil
+		}},
+		tool.Definition{Name: "content.create_post", Risk: tooldomain.ToolRiskWrite},
+		tool.Definition{Name: "media.create_image_task", Risk: tooldomain.ToolRiskWrite},
+	)
+	skill := &domain.AgentSkill{Capabilities: []string{"external.read", "content.create_post", "media.create_image_task"}}
+	runner := &Runner{tools: registry}
+	for _, name := range skill.Capabilities {
+		_, result, proposal, err := runner.invokeTool(context.Background(), &domain.AgentRun{ID: 1}, skill, name, json.RawMessage(`{}`), true)
+		if !errors.Is(err, tool.ErrUnauthorized) || result != nil || proposal != nil || executed != 0 {
+			t.Fatalf("unexpected dispatch: %s result=%s proposal=%#v err=%v effects=%d", name, result, proposal, err, executed)
+		}
 	}
 }
