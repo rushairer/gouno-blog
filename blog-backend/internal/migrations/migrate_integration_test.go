@@ -92,7 +92,7 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	for _, table := range []string{
 		"post_reactions", "comment_reports", "notifications", "post_versions",
 		"media_assets", "analytics_events", "ai_provider_profiles", "ai_agents",
-		"ai_agent_runs", "ai_tool_calls", "ai_approvals", "ai_usage_events",
+		"ai_agent_runs", "ai_tool_calls", "ai_approvals", "ai_usage_events", "ai_text_dispatch_audits",
 		"ai_embedding_profiles", "ai_content_index_jobs", "ai_content_chunks",
 		"ai_retrieval_metrics", "ai_retrieval_eval_cases",
 		"ai_skill_versions",

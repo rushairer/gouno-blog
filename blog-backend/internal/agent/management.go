@@ -63,8 +63,17 @@ func (s *ManagementService) DefaultWritingClient(ctx context.Context) (*provider
 	}
 	for _, profile := range profiles {
 		if profile.Enabled && profile.IsDefaultWriting {
-			client, err := s.ProviderClient(ctx, profile.ID)
-			return profile, client, err
+			// Re-read the selected default once to reject a concurrently
+			// disabled/reassigned selection. Build and return that same snapshot.
+			selected, err := s.GetProvider(ctx, profile.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			if !selected.Enabled || !selected.IsDefaultWriting {
+				return nil, nil, ErrDefaultWritingProviderRequired
+			}
+			client, err := s.providerClientFromProfile(selected)
+			return selected, client, err
 		}
 	}
 	return nil, nil, ErrDefaultWritingProviderRequired
@@ -185,7 +194,7 @@ func (s *ManagementService) AgentProviderClient(ctx context.Context, agent *doma
 		if err != nil {
 			return nil, nil, err
 		}
-		client, err := s.ProviderClient(ctx, *agent.ProviderProfileID)
+		client, err := s.providerClientFromProfile(profile)
 		return profile, client, err
 	}
 	profile, client, err := s.DefaultWritingClient(ctx)
@@ -200,7 +209,13 @@ func (s *ManagementService) ProviderClient(ctx context.Context, id int64) (provi
 	if err != nil {
 		return nil, err
 	}
-	if !profile.Enabled {
+	return s.providerClientFromProfile(profile)
+}
+
+// Construct the HTTP client and its evidence identity from the same fetched
+// profile, never a second read whose model, endpoint or credential may differ.
+func (s *ManagementService) providerClientFromProfile(profile *providerdomain.ProviderProfile) (provider.Provider, error) {
+	if profile == nil || !profile.Enabled {
 		return nil, fmt.Errorf("%w: provider is disabled", ErrInvalid)
 	}
 	key, err := s.secrets.DecryptWithAAD(

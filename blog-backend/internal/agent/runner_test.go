@@ -188,7 +188,7 @@ func (m *modelBoundaryManagement) GetSkillVersion(context.Context, int64) (*doma
 }
 
 func (m *modelBoundaryManagement) AgentProviderClient(context.Context, *domain.Agent) (*providerdomain.ProviderProfile, provider.Provider, error) {
-	return nil, m.client, nil
+	return &providerdomain.ProviderProfile{ID: 1, ProviderType: "openai", Vendor: "openai", Model: m.client.Model()}, m.client, nil
 }
 
 type modelBoundaryRuns struct {
@@ -199,6 +199,7 @@ type modelBoundaryRuns struct {
 	toolRows int
 	claimErr error
 	usageErr error
+	lastUsage *domain.UsageEvent
 }
 
 func (s *modelBoundaryRuns) GetRun(context.Context, int64) (*domain.AgentRun, error) {
@@ -214,8 +215,10 @@ func (s *modelBoundaryRuns) MonthlyTokenUsage(context.Context, int64) (int64, er
 	return 0, nil
 }
 
-func (s *modelBoundaryRuns) RecordUsage(context.Context, *domain.UsageEvent) error {
+func (s *modelBoundaryRuns) RecordUsage(_ context.Context, event *domain.UsageEvent) error {
 	s.usages++
+	copy := *event
+	s.lastUsage = &copy
 	return s.usageErr
 }
 
@@ -233,7 +236,7 @@ type modelBoundaryProvider struct {
 	result   provider.Result
 }
 
-func (*modelBoundaryProvider) Name() string { return "test" }
+func (*modelBoundaryProvider) Name() string { return "openai" }
 func (*modelBoundaryProvider) Model() string { return "test" }
 
 func (p *modelBoundaryProvider) Generate(_ context.Context, request provider.Request) (provider.Result, error) {
@@ -441,7 +444,7 @@ type cancellingModelProvider struct {
 	cancel context.CancelFunc
 }
 
-func (*cancellingModelProvider) Name() string { return "test" }
+func (*cancellingModelProvider) Name() string { return "openai" }
 func (*cancellingModelProvider) Model() string { return "test" }
 
 func (p *cancellingModelProvider) Generate(context.Context, provider.Request) (provider.Result, error) {
@@ -452,7 +455,7 @@ func (p *cancellingModelProvider) Generate(context.Context, provider.Request) (p
 func TestRunnerSuccessfulOutcomeNeverRewrittenAfterUnacknowledgedCommit(t *testing.T) {
 	commitErr := errors.New("success commit acknowledgement lost")
 	versionID := int64(9)
-	runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID}}
+	runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID, Provider: "queued", Model: "old-model"}}
 	client := &modelBoundaryProvider{result: provider.Result{Text: "answer", InputTokens: 12, OutputTokens: 6}}
 	lifecycle := &recordingRunLifecycle{finishErr: commitErr}
 	notifications := &recordingRunNotifications{}
@@ -469,5 +472,8 @@ func TestRunnerSuccessfulOutcomeNeverRewrittenAfterUnacknowledgedCommit(t *testi
 		lifecycle.inputTokens != 12 || lifecycle.outputTokens != 6 || notifications.calls != 0 ||
 		runs.usages != 1 || len(client.requests) != 1 {
 		t.Fatalf("unconfirmed success was rewritten or replayed: err=%v lifecycle=%#v notifications=%d", err, lifecycle, notifications.calls)
+	}
+	if runs.lastUsage == nil || string(runs.lastUsage.Provider) != client.Name() || runs.lastUsage.Model != client.Model() {
+		t.Fatalf("usage attributed to queued rather than actual client: %#v", runs.lastUsage)
 	}
 }
