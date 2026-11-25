@@ -35,7 +35,7 @@ func (p *HTTPProvider) openAIGenerateText(ctx context.Context, req Request) (Res
 		return resResp, nil
 	}
 	if !shouldFallbackOpenAITextProtocol(errResp) {
-		return Result{}, errResp
+		return resResp, errResp
 	}
 	return p.openAIChatCompletions(ctx, req)
 }
@@ -98,7 +98,9 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 	}
 	defer resp.Body.Close()
 	if streaming {
-		return decodeOpenAIChatStream(resp)
+		result, err := decodeOpenAIChatStream(resp)
+		result.Evidence = p.responseEvidence(resp, false)
+		return result, err
 	}
 
 	var decoded struct {
@@ -152,8 +154,6 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 }
 
 func decodeOpenAIChatStream(resp *http.Response) (Result, error) {
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), 16*1024*1024)
 	var text strings.Builder
 	var lastStop string
 	var inputTokens, outputTokens int64
@@ -164,16 +164,9 @@ func decodeOpenAIChatStream(resp *http.Response) (Result, error) {
 	toolCalls := map[int]*streamedToolCall{}
 	toolOrder := make([]int, 0)
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if !strings.HasPrefix(line, "data:") {
-			continue
-		}
-		dataStr := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if dataStr == "" || dataStr == "[DONE]" {
-			continue
-		}
+	err := consumeTextSSE(resp.Body, func(data string) error {
 		var chunk struct {
+			Error json.RawMessage `json:"error"`
 			Choices []struct {
 				Delta struct {
 					Content string `json:"content"`
@@ -193,50 +186,83 @@ func decodeOpenAIChatStream(resp *http.Response) (Result, error) {
 				CompletionTokens int64 `json:"completion_tokens"`
 			} `json:"usage"`
 		}
-		if err := json.Unmarshal([]byte(dataStr), &chunk); err == nil {
-			if len(chunk.Choices) > 0 {
-				choice := chunk.Choices[0]
-				text.WriteString(choice.Delta.Content)
-				for _, delta := range choice.Delta.ToolCalls {
-					call, ok := toolCalls[delta.Index]
-					if !ok {
-						call = &streamedToolCall{}
-						toolCalls[delta.Index] = call
-						toolOrder = append(toolOrder, delta.Index)
-					}
-					if delta.ID != "" {
-						call.ID = delta.ID
-					}
-					if delta.Function.Name != "" {
-						call.Name = delta.Function.Name
-					}
-					call.Arguments.WriteString(delta.Function.Arguments)
-				}
-				if choice.FinishReason != "" {
-					lastStop = choice.FinishReason
-				}
-			}
-			if chunk.Usage != nil {
-				inputTokens = chunk.Usage.PromptTokens
-				outputTokens = chunk.Usage.CompletionTokens
-			}
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			return ErrTextStreamInvalid
 		}
+		if chunk.Usage != nil {
+			inputTokens = max(inputTokens, chunk.Usage.PromptTokens)
+			outputTokens = max(outputTokens, chunk.Usage.CompletionTokens)
+		}
+		if len(chunk.Error) > 0 && string(chunk.Error) != "null" {
+			return ErrTextStreamRejected
+		}
+		if len(chunk.Choices) == 0 {
+			return nil // a trailing usage-only chunk is legal
+		}
+		choice := chunk.Choices[0]
+		if lastStop != "" && (choice.Delta.Content != "" || len(choice.Delta.ToolCalls) > 0 ||
+			(choice.FinishReason != "" && choice.FinishReason != lastStop)) {
+			return ErrTextStreamInvalid
+		}
+		text.WriteString(choice.Delta.Content)
+		for _, delta := range choice.Delta.ToolCalls {
+			if delta.Index < 0 {
+				return ErrTextStreamInvalid
+			}
+			call, ok := toolCalls[delta.Index]
+			if !ok {
+				call = &streamedToolCall{}
+				toolCalls[delta.Index] = call
+				toolOrder = append(toolOrder, delta.Index)
+			}
+			if delta.ID != "" {
+				if call.ID != "" && call.ID != delta.ID {
+					return ErrTextStreamInvalid
+				}
+				call.ID = delta.ID
+			}
+			if delta.Function.Name != "" {
+				if call.Name != "" && call.Name != delta.Function.Name {
+					return ErrTextStreamInvalid
+				}
+				call.Name = delta.Function.Name
+			}
+			call.Arguments.WriteString(delta.Function.Arguments)
+		}
+		if choice.FinishReason != "" {
+			lastStop = choice.FinishReason
+		}
+		return nil
+	})
+	// Failed streams return usage observations only, never executable output.
+	observed := Result{InputTokens: inputTokens, OutputTokens: outputTokens}
+	if err != nil {
+		return observed, err
 	}
-	result := Result{
-		Text: text.String(), StopReason: lastStop,
-		InputTokens: inputTokens, OutputTokens: outputTokens,
+	// Accept an explicit finish reason followed by clean EOF for compatible
+	// gateways that omit [DONE]. [DONE] alone is not completion evidence.
+	if lastStop != "stop" && lastStop != "tool_calls" {
+		return observed, ErrTextStreamIncomplete
 	}
+	if (lastStop == "tool_calls") != (len(toolOrder) > 0) {
+		return observed, ErrTextStreamInvalid
+	}
+	result := observed
+	result.Text, result.StopReason = text.String(), lastStop
 	for _, index := range toolOrder {
 		call := toolCalls[index]
 		arguments := json.RawMessage(call.Arguments.String())
-		if len(arguments) == 0 {
-			arguments = json.RawMessage(`{}`)
+		if !validStreamToolCall(call.ID, call.Name, arguments) {
+			return observed, ErrTextStreamInvalid
 		}
 		result.ToolCalls = append(result.ToolCalls, ToolCall{
 			ID: call.ID, Name: call.Name, Arguments: arguments,
 		})
 	}
-	return result, scanner.Err()
+	if !uniqueStreamToolIDs(result.ToolCalls) {
+		return observed, ErrTextStreamInvalid
+	}
+	return result, nil
 }
 
 func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result, error) {
@@ -290,7 +316,9 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 	}
 	defer resp.Body.Close()
 	if streaming {
-		return decodeOpenAIResponsesStream(resp)
+		result, err := decodeOpenAIResponsesStream(resp)
+		result.Evidence = p.responseEvidence(resp, false)
+		return result, err
 	}
 	var decoded struct {
 		Output []struct {
@@ -340,10 +368,8 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 }
 
 func decodeOpenAIResponsesStream(resp *http.Response) (Result, error) {
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), 16*1024*1024)
 	var text strings.Builder
-	var lastStop string
+	var completed bool
 	var inputTokens, outputTokens int64
 	type streamedToolCall struct {
 		ID, Name string
@@ -352,15 +378,7 @@ func decodeOpenAIResponsesStream(resp *http.Response) (Result, error) {
 	toolCalls := map[string]*streamedToolCall{}
 	toolOrder := make([]string, 0)
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if !strings.HasPrefix(line, "data:") {
-			continue
-		}
-		dataStr := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if dataStr == "" || dataStr == "[DONE]" {
-			continue
-		}
+	err := consumeTextSSE(resp.Body, func(data string) error {
 		var chunk struct {
 			Type   string `json:"type"`
 			Delta  string `json:"delta"`
@@ -369,94 +387,156 @@ func decodeOpenAIResponsesStream(resp *http.Response) (Result, error) {
 			CallID string `json:"call_id"`
 			Name   string `json:"name"`
 			Item *struct {
+				Type string `json:"type"`
 				ID string `json:"id"`
 				CallID string `json:"call_id"`
 				Name string `json:"name"`
 				Arguments string `json:"arguments"`
 			} `json:"item"`
-			Usage  *struct {
-				InputTokens  int64 `json:"input_tokens"`
+			Usage *struct {
+				InputTokens int64 `json:"input_tokens"`
 				OutputTokens int64 `json:"output_tokens"`
 			} `json:"usage"`
 			Response struct {
 				OutputText string `json:"output_text"`
-				Status     string `json:"status"`
+				Status string `json:"status"`
 				Usage *struct {
-					InputTokens  int64 `json:"input_tokens"`
+					InputTokens int64 `json:"input_tokens"`
 					OutputTokens int64 `json:"output_tokens"`
 				} `json:"usage"`
 			} `json:"response"`
 		}
-		if err := json.Unmarshal([]byte(dataStr), &chunk); err == nil {
-			if chunk.Type == "response.output_text.delta" && chunk.Delta != "" {
-				text.WriteString(chunk.Delta)
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			return ErrTextStreamInvalid
+		}
+		if chunk.Usage != nil {
+			inputTokens = max(inputTokens, chunk.Usage.InputTokens)
+			outputTokens = max(outputTokens, chunk.Usage.OutputTokens)
+		}
+		if chunk.Response.Usage != nil {
+			inputTokens = max(inputTokens, chunk.Response.Usage.InputTokens)
+			outputTokens = max(outputTokens, chunk.Response.Usage.OutputTokens)
+		}
+		switch chunk.Type {
+		case "error", "response.failed":
+			return ErrTextStreamRejected
+		case "response.incomplete", "response.cancelled":
+			return ErrTextStreamIncomplete
+		}
+		if chunk.Status == "failed" || chunk.Response.Status == "failed" {
+			return ErrTextStreamRejected
+		}
+		if chunk.Status == "incomplete" || chunk.Response.Status == "incomplete" ||
+			chunk.Status == "cancelled" || chunk.Response.Status == "cancelled" {
+			return ErrTextStreamIncomplete
+		}
+		if completed {
+			// The completion event is the final model event. Do not accept
+			// new output or Tool deltas after that boundary.
+			return ErrTextStreamInvalid
+		}
+		if chunk.Type == "response.completed" {
+			if (chunk.Response.Status != "" && chunk.Response.Status != "completed") ||
+				(chunk.Status != "" && chunk.Status != "completed") {
+				return ErrTextStreamInvalid
 			}
 			if chunk.Response.OutputText != "" && text.Len() == 0 {
 				text.WriteString(chunk.Response.OutputText)
 			}
-			key := chunk.ItemID
-			if chunk.Item != nil {
-				if key == "" {
-					key = chunk.Item.ID
-				}
-				if key == "" {
-					key = chunk.Item.CallID
-				}
-			}
+			completed = true
+			return nil
+		}
+		if chunk.Type == "response.output_text.delta" {
+			text.WriteString(chunk.Delta)
+			return nil
+		}
+		isDelta := chunk.Type == "response.function_call_arguments.delta"
+		isItem := chunk.Type == "response.output_item.added" || chunk.Type == "response.output_item.done"
+		if !isDelta && !isItem {
+			return nil
+		}
+		// Responses streams also emit ordinary message/reasoning output
+		// items. Only function calls (or legacy items with explicit call
+		// identity) are executable Tools.
+		if isItem && (chunk.Item == nil ||
+			(chunk.Item.Type != "function_call" && !(chunk.Item.Type == "" && chunk.Item.CallID != "" && chunk.Item.Name != ""))) {
+			return nil
+		}
+		key := chunk.ItemID
+		if key == "" && chunk.Item != nil {
+			key = chunk.Item.ID
 			if key == "" {
-				key = chunk.CallID
-			}
-			if (chunk.Type == "response.output_item.added" || chunk.Type == "response.function_call_arguments.delta" || chunk.Type == "response.output_item.done") && key != "" {
-				call, ok := toolCalls[key]
-				if !ok {
-					call = &streamedToolCall{}
-					toolCalls[key] = call
-					toolOrder = append(toolOrder, key)
-				}
-				if chunk.Item != nil {
-					if chunk.Item.CallID != "" { call.ID = chunk.Item.CallID }
-					if chunk.Item.Name != "" { call.Name = chunk.Item.Name }
-					if chunk.Type == "response.output_item.done" && chunk.Item.Arguments != "" && call.Arguments.Len() == 0 {
-						call.Arguments.WriteString(chunk.Item.Arguments)
-					}
-				}
-				if chunk.CallID != "" { call.ID = chunk.CallID }
-				if chunk.Name != "" { call.Name = chunk.Name }
-				if chunk.Type == "response.function_call_arguments.delta" {
-					call.Arguments.WriteString(chunk.Delta)
-				}
-			}
-			if chunk.Status != "" {
-				lastStop = chunk.Status
-			}
-			if chunk.Response.Status != "" {
-				lastStop = chunk.Response.Status
-			}
-			if chunk.Usage != nil {
-				inputTokens = chunk.Usage.InputTokens
-				outputTokens = chunk.Usage.OutputTokens
-			}
-			if chunk.Response.Usage != nil {
-				inputTokens = chunk.Response.Usage.InputTokens
-				outputTokens = chunk.Response.Usage.OutputTokens
+				key = chunk.Item.CallID
 			}
 		}
+		if key == "" {
+			key = chunk.CallID
+		}
+		if key == "" {
+			return ErrTextStreamInvalid
+		}
+		call, ok := toolCalls[key]
+		if !ok {
+			call = &streamedToolCall{}
+			toolCalls[key] = call
+			toolOrder = append(toolOrder, key)
+		}
+		callID, name := chunk.CallID, chunk.Name
+		if chunk.Item != nil {
+			if chunk.Item.CallID != "" {
+				callID = chunk.Item.CallID
+			}
+			if chunk.Item.Name != "" {
+				name = chunk.Item.Name
+			}
+			if chunk.Type == "response.output_item.done" && chunk.Item.Arguments != "" {
+				if call.Arguments.Len() == 0 {
+					call.Arguments.WriteString(chunk.Item.Arguments)
+				} else if call.Arguments.String() != chunk.Item.Arguments {
+					return ErrTextStreamInvalid
+				}
+			}
+		}
+		if callID != "" {
+			if call.ID != "" && call.ID != callID {
+				return ErrTextStreamInvalid
+			}
+			call.ID = callID
+		}
+		if name != "" {
+			if call.Name != "" && call.Name != name {
+				return ErrTextStreamInvalid
+			}
+			call.Name = name
+		}
+		if isDelta {
+			call.Arguments.WriteString(chunk.Delta)
+		}
+		return nil
+	})
+	observed := Result{InputTokens: inputTokens, OutputTokens: outputTokens}
+	if err != nil {
+		return observed, err
 	}
-	result := Result{
-		Text: text.String(), StopReason: lastStop,
-		InputTokens: inputTokens, OutputTokens: outputTokens,
+	if !completed {
+		return observed, ErrTextStreamIncomplete
 	}
+	result := observed
+	result.Text, result.StopReason = text.String(), "completed"
 	for _, key := range toolOrder {
 		call := toolCalls[key]
 		arguments := json.RawMessage(call.Arguments.String())
-		if len(arguments) == 0 {
-			arguments = json.RawMessage(`{}`)
+		if !validStreamToolCall(call.ID, call.Name, arguments) {
+			return observed, ErrTextStreamInvalid
 		}
 		result.ToolCalls = append(result.ToolCalls, ToolCall{
 			ID: call.ID, Name: call.Name, Arguments: arguments,
 		})
 	}
-	return result, scanner.Err()
+	if !uniqueStreamToolIDs(result.ToolCalls) {
+		return observed, ErrTextStreamInvalid
+	}
+	return result, nil
 }
 
 func (p *HTTPProvider) openAIGenerateImage(ctx context.Context, req ImageRequest) (ImageResult, error) {

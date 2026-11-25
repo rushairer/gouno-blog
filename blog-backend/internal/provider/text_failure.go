@@ -24,6 +24,14 @@ func RetryableTextRejection(err error) bool {
 }
 
 func TextFailureCode(err error) string {
+	switch {
+	case errors.Is(err, ErrTextStreamIncomplete):
+		return "provider_stream_incomplete"
+	case errors.Is(err, ErrTextStreamInvalid):
+		return "provider_stream_invalid"
+	case errors.Is(err, ErrTextStreamRejected):
+		return "provider_stream_failed"
+	}
 	if errors.Is(err, ErrTextDispatchStartUnconfirmed) {
 		return "provider_dispatch_audit_start_unconfirmed"
 	}
@@ -89,6 +97,12 @@ func TextFailureCode(err error) string {
 
 func TextFailureMessage(code string) string {
 	switch code {
+	case "provider_stream_incomplete":
+		return "Provider stream ended without confirmed model completion; no Tool output was accepted."
+	case "provider_stream_invalid":
+		return "Provider stream contained invalid data or Tool calls; no Tool output was accepted."
+	case "provider_stream_failed":
+		return "Provider stream reported a failed response; inspect the invocation evidence before retrying."
 	case "provider_dispatch_audit_start_unconfirmed":
 		return "Provider dispatch audit was not acknowledged; the associated HTTP call was not sent."
 	case "provider_dispatch_audit_finish_unconfirmed":
