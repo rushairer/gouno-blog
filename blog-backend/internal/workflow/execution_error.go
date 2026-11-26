@@ -20,12 +20,15 @@ func agentRunExecutionError(run *domain.AgentRun) error {
 // A returned worker is not evidence of a completed Agent run. In particular,
 // a lost claim/finalization acknowledgement may leave a nonterminal row.
 func agentRunOutcomeError(run *domain.AgentRun) error {
+	if run == nil {
+		return unconfirmedWorkflowEvidence(fmt.Errorf("missing Agent run outcome"))
+	}
 	switch run.Status {
 	case domain.AgentRunSucceeded, domain.AgentRunAwaitingApproval:
 		return nil
 	case domain.AgentRunFailed, domain.AgentRunCancelled:
 		return agentRunExecutionError(run)
 	default:
-		return fmt.Errorf("Agent run %d did not reach confirmed completion; inspect its state before retrying", run.ID)
+		return unconfirmedWorkflowEvidence(fmt.Errorf("Agent run %d did not reach confirmed completion", run.ID))
 	}
 }

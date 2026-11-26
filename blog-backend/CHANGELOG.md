@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Quarantine unconfirmed Workflow child Agent admission and observation. Verify child/parent/version identity before dispatch and after execution, stop on unknown admission/read faults or nonterminal outcomes, and never persist a retryable failed checkpoint from unconfirmed evidence. Keep typed admission rejections, confirmed terminal diagnostics, preview dispatch and existing approval semantics.
+
 - Fail closed on Workflow checkpoint read/decode/insert faults, same-run failed checkpoints, unconfirmed interaction creation and pending-state queries. Preserve running claims rather than creating retryable failures or reporting success; ForEach cannot downgrade evidence faults to partial success. Separate explicit retry and already-dispatched sibling effects remain subject to independent reconciliation.
 
 - Remove automatic startup requeue of claimed Workflow runs. Drain only queued work and preserve existing running rows and their evidence across replica startup. Interrupted external effects require independent operator reconciliation; checkpoint and explicit retry safety remain separate.

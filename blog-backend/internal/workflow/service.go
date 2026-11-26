@@ -1187,26 +1187,18 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 				}
 			}
 			if err == nil {
-				raw, _ := json.Marshal(stepInput)
-				agentRun, queueErr := s.runner.QueueWorkflow(ctx, step.AgentID, run.TriggeredByPrincipalID, raw, run.WorkflowVersionID, run.ID)
-				if queueErr != nil {
-					err = queueErr
-				} else {
-					if run.DryRun {
-						s.runner.ExecutePreview(ctx, agentRun.ID)
-					} else {
-						s.runner.Execute(ctx, agentRun.ID)
-					}
-					agentRun, err = s.runner.GetRun(ctx, agentRun.ID)
+				raw, marshalErr := json.Marshal(stepInput)
+				if marshalErr != nil {
+					return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(marshalErr)
+				}
+				var agentRun *domain.AgentRun
+				agentRun, err = runWorkflowModel(ctx, s.runner, run, step.AgentID, raw)
+				if agentRun != nil {
+					stepOutput = agentRun
+					totalInput += agentRun.InputTokens
+					totalOutput += agentRun.OutputTokens
 					if err == nil {
-						stepOutput = agentRun
-						totalInput += agentRun.InputTokens
-						totalOutput += agentRun.OutputTokens
-						if outcomeErr := agentRunOutcomeError(agentRun); outcomeErr != nil {
-							err = outcomeErr
-						} else {
-							awaiting = awaiting || agentRun.Status == domain.AgentRunAwaitingApproval
-						}
+						awaiting = awaiting || agentRun.Status == domain.AgentRunAwaitingApproval
 					}
 				}
 			}
@@ -1479,6 +1471,10 @@ func resolvePointer(document any, pointer string) (any, error) {
 }
 
 func (s *Service) recordStep(ctx context.Context, runID int64, step workflowdomain.WorkflowStep, iteration *int, input, output any, started time.Time, stepErr error) error {
+	// Never manufacture a retryable failed checkpoint from an uncertain effect.
+	if errors.Is(stepErr, errWorkflowEvidenceUnconfirmed) {
+		return stepErr
+	}
 	rawInput, err := json.Marshal(input)
 	if err != nil {
 		return unconfirmedWorkflowEvidence(err)
