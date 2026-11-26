@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Fence Workflow Planner initial and correction responses with protocol-specific completion and exactly one offered draft submission (or text without Tool calls). Reject ambiguous Tool batches, preserve the actual correction failure, and decode each response into a fresh envelope. No automatic correction after uncertain Provider outcomes, no Agent audit fabrication, and no image behavior change.
+
 - Select Provider connection-test modality before dispatch using a single persisted profile snapshot. Never issue an image request in response to failed text generation (including auth, quota, transport and decode errors); retain the selected operation's real failure and configured protocol. HTTP-count regressions cover text, image roles, known image models and cancellation.
 
 - Require explicit protocol completion for governed Agent non-stream OpenAI, Anthropic and Gemini text responses, and validate Tool-call identity/arguments before returning executable output. Preserve observed usage and bounded correlation evidence on failure; record the corresponding decode outcome and do not replay. Legacy non-Agent callers and image behavior remain separate.

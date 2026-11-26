@@ -160,7 +160,7 @@ func (p *HTTPProvider) geminiGenerate(ctx context.Context, req Request) (Result,
 		Evidence: evidence,
 	}
 
-	if req.DispatchAudit != nil {
+	if req.requiresCompleteTextResponse() {
 		if decoded.PromptFeedback.BlockReason != "" {
 			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, ErrTextResponseRejected
 		}
@@ -181,7 +181,7 @@ func (p *HTTPProvider) geminiGenerate(ctx context.Context, req Request) (Result,
 			if part.FunctionCall != nil {
 				callID := fmt.Sprintf("call_%d", idx)
 				args := part.FunctionCall.Args
-				if len(args) == 0 {
+				if len(args) == 0 && !req.requiresCompleteTextResponse() {
 					args = json.RawMessage(`{}`)
 				}
 				result.ToolCalls = append(result.ToolCalls, ToolCall{
@@ -193,7 +193,7 @@ func (p *HTTPProvider) geminiGenerate(ctx context.Context, req Request) (Result,
 		}
 	}
 
-	if req.DispatchAudit != nil {
+	if req.requiresCompleteTextResponse() {
 		if err := validateGeminiCompletion(result.StopReason, result.ToolCalls); err != nil {
 			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, err
 		}
