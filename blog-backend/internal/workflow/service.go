@@ -911,59 +911,92 @@ func (s *Service) Execute(ctx context.Context, runID int64) {
 			return
 		}
 	}
-	if err := s.execute(ctx, runID); err != nil {
-		code, message := "workflow_failed", safeError(err)
-		changed, updateErr := s.execution.FailRun(ctx, runID, code, message)
-		if updateErr != nil || !changed {
-			return
-		}
-		recipientPrincipalID, name, workflowID, queryErr := s.execution.FailureNotificationTarget(ctx, runID)
-		if queryErr == nil && recipientPrincipalID != nil {
-			_ = s.agents.Notify(ctx, *recipientPrincipalID, "ai_workflow_failed", "Workflow 运行失败："+name, message,
-				"/admin/ai-ops?tab=records&record=workflow&workflow="+strconv.FormatInt(workflowID, 10)+"&run="+strconv.FormatInt(runID, 10), "workflow-run-"+strconv.FormatInt(runID, 10))
-		}
-	}
+	_ = s.execute(ctx, runID)
 }
 
+const workflowFinalizationTimeout = 5 * time.Second
+
+type workflowExecutionOutcome struct {
+	status                    string
+	output                    json.RawMessage
+	inputTokens, outputTokens int64
+}
+
+// A losing or uncertain claim never authorizes execution or finalization.
 func (s *Service) execute(ctx context.Context, runID int64) error {
 	run, err := s.execution.ClaimRun(ctx, runID)
 	if err != nil {
 		return err
 	}
+	if run == nil || run.ID != runID || run.Status != "running" {
+		return errors.New("workflow execution claim was not confirmed")
+	}
+	outcome, err := s.executeClaimed(ctx, run)
+	return s.finishExecution(ctx, runID, outcome, err)
+}
+
+func (s *Service) finishExecution(ctx context.Context, runID int64, outcome workflowExecutionOutcome, executionErr error) error {
+	// Terminal persistence may outlive worker cancellation, but is bounded.
+	// An uncertain completion acknowledgement never authorizes a failure write.
+	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), workflowFinalizationTimeout)
+	defer cancel()
+	if executionErr == nil {
+		return s.execution.CompleteRun(finishCtx, runID, outcome.status, outcome.output, outcome.inputTokens, outcome.outputTokens)
+	}
+	code, message := "workflow_failed", safeError(executionErr)
+	changed, updateErr := s.execution.FailRun(finishCtx, runID, code, message)
+	if updateErr != nil {
+		return errors.Join(executionErr, updateErr)
+	}
+	if !changed {
+		return executionErr
+	}
+	recipientPrincipalID, name, workflowID, queryErr := s.execution.FailureNotificationTarget(finishCtx, runID)
+	if queryErr == nil && recipientPrincipalID != nil {
+		_ = s.agents.Notify(finishCtx, *recipientPrincipalID, "ai_workflow_failed", "Workflow 运行失败："+name, message,
+			"/admin/ai-ops?tab=records&record=workflow&workflow="+strconv.FormatInt(workflowID, 10)+"&run="+strconv.FormatInt(runID, 10), "workflow-run-"+strconv.FormatInt(runID, 10))
+	}
+	return executionErr
+}
+
+func (s *Service) executeClaimed(ctx context.Context, run *workflowdomain.WorkflowRun) (workflowExecutionOutcome, error) {
 	stepsRaw, err := s.definitions.VersionStepsByID(ctx, run.WorkflowVersionID)
 	if err != nil {
-		return err
+		return workflowExecutionOutcome{}, err
 	}
 	var steps []workflowdomain.WorkflowStep
 	if err := json.Unmarshal(stepsRaw, &steps); err != nil {
-		return err
+		return workflowExecutionOutcome{}, err
 	}
 	var input any
 	if err := json.Unmarshal(run.Input, &input); err != nil {
-		return err
+		return workflowExecutionOutcome{}, err
 	}
 	if hasResourceQuery(steps) {
 		// Retries replay the query snapshot, so only reset the aggregate for a new run.
 		if err := s.execution.ResetResourceQueryStats(ctx, run.WorkflowID, run.ID); err != nil {
-			return err
+			return workflowExecutionOutcome{}, err
 		}
 	}
 	document := map[string]any{"input": input, "steps": map[string]any{}}
 	output, awaiting, inputTokens, outputTokens, err := s.executeSteps(ctx, run, steps, document, nil, nil)
 	if err != nil {
-		return err
+		return workflowExecutionOutcome{}, err
 	}
 	status := "succeeded"
 	if awaiting {
 		status = "awaiting_approval"
-		if pending, queryErr := s.execution.PendingInteractionCount(ctx, runID); queryErr == nil && pending > 0 {
+		if pending, queryErr := s.execution.PendingInteractionCount(ctx, run.ID); queryErr == nil && pending > 0 {
 			status = "waiting_for_user"
 		}
-	} else if pendingMedia, queryErr := s.mediaRuns.HasPending(ctx, runID); queryErr == nil && pendingMedia {
+	} else if pendingMedia, queryErr := s.mediaRuns.HasPending(ctx, run.ID); queryErr == nil && pendingMedia {
 		status = "waiting_for_user"
 	}
-	rawOutput, _ := json.Marshal(output)
-	return s.execution.CompleteRun(ctx, runID, status, rawOutput, inputTokens, outputTokens)
+	rawOutput, err := json.Marshal(output)
+	if err != nil {
+		return workflowExecutionOutcome{}, err
+	}
+	return workflowExecutionOutcome{status: status, output: rawOutput, inputTokens: inputTokens, outputTokens: outputTokens}, nil
 }
 
 func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.WorkflowRun, steps []workflowdomain.WorkflowStep, document map[string]any, item any, iteration *int) (any, bool, int64, int64, error) {

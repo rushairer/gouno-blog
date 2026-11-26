@@ -257,7 +257,7 @@ func TestRetryFailedForEachIterationUsesOriginalInput(t *testing.T) {
 			"steps": []map[string]any{{"id": "value", "type": "output", "output_pointer": "/item/value"}}},
 	})
 	t.Cleanup(func() { cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0) })
-	service := &Service{runReads: workflowrepository.NewRunReadRepository(db), metrics: workflowrepository.NewMetricsRepository(db), execution: newTestExecutionCoordinator(db), dispatch: newTestDispatchCoordinator(db), approvalTargets: newTestApprovalTargetReader(db), admission: newTestRunAdmissionCoordinator(db), mediaRuns: newTestMediaRunCoordinator(db), definitions: workflowrepository.NewDefinitionRepository(db)}
+	service := &Service{runReads: workflowrepository.NewRunReadRepository(db), metrics: workflowrepository.NewMetricsRepository(db), execution: newTestExecutionCoordinator(db), dispatch: newTestDispatchCoordinator(db), approvalTargets: newTestApprovalTargetReader(db), admission: newTestRunAdmissionCoordinator(db), mediaRuns: newTestMediaRunCoordinator(db), definitions: workflowrepository.NewDefinitionRepository(db), agents: newResourceQueryManagement(db)}
 	var runID int64
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,'{"items":[{"value":"ok"},{"missing":true}]}') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
 		t.Fatal(err)
@@ -277,6 +277,13 @@ func TestRetryFailedForEachIterationUsesOriginalInput(t *testing.T) {
 	}
 	if err := service.execute(ctx, retry.ID); err == nil {
 		t.Fatal("expected selected failed iteration to fail again")
+	}
+	var retryStatus string
+	if err := db.QueryRowContext(ctx, `SELECT status FROM ai_workflow_runs WHERE id=$1`, retry.ID).Scan(&retryStatus); err != nil {
+		t.Fatal(err)
+	}
+	if retryStatus != "failed" {
+		t.Fatalf("retry run status = %q, want failed", retryStatus)
 	}
 	var iterationZero, iterationOne int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FILTER (WHERE iteration=0), COUNT(*) FILTER (WHERE iteration=1) FROM ai_workflow_step_runs WHERE workflow_run_id=$1 AND step_id='value'`, retry.ID).Scan(&iterationZero, &iterationOne); err != nil {
