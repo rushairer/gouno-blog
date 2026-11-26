@@ -268,11 +268,31 @@ func TestRetryFailedForEachIterationUsesOriginalInput(t *testing.T) {
 	if _, err := service.RetryFailed(ctx, runID, "value", []int{0}, nil); err == nil {
 		t.Fatal("successful iteration must not be retried")
 	}
+	// Move the same child to a different parent in the current version.
+	// The source run still executes version 1. Deriving the parent from
+	// version 2 would select every iteration of the original parent.
+	var newerVersionID int64
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_versions(workflow_id,version,input_schema,steps,scope_policy,created_by_principal_id)
+		SELECT workflow_id,2,input_schema,'[{"id":"new_batch","type":"for_each","collection_pointer":"/input/items","max_items":3,"continue_on_error":true,"steps":[{"id":"value","type":"output","output_pointer":"/item/value"}]}]',scope_policy,created_by_principal_id
+		FROM ai_workflow_versions WHERE id=$1 RETURNING id`, versionID).Scan(&newerVersionID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := db.ExecContext(ctx, `UPDATE ai_workflows SET current_version=1 WHERE id=$1`, workflowID); err != nil {
+			t.Error(err)
+		}
+		if _, err := db.ExecContext(ctx, `DELETE FROM ai_workflow_versions WHERE id=$1`, newerVersionID); err != nil {
+			t.Error(err)
+		}
+	})
+	if _, err := db.ExecContext(ctx, `UPDATE ai_workflows SET current_version=2 WHERE id=$1`, workflowID); err != nil {
+		t.Fatal(err)
+	}
 	retry, err := service.RetryFailed(ctx, runID, "value", []int{1}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if retry.Status != "queued" || retry.RetryOfRunID == nil || *retry.RetryOfRunID != runID || retry.RetryStepID == nil || *retry.RetryStepID != "batch" {
+	if retry.Status != "queued" || retry.WorkflowVersionID != versionID || retry.RetryOfRunID == nil || *retry.RetryOfRunID != runID || retry.RetryStepID == nil || *retry.RetryStepID != "batch" {
 		t.Fatalf("retry metadata = %#v", retry)
 	}
 	if err := service.execute(ctx, retry.ID); err == nil {
