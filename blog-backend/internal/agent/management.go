@@ -240,23 +240,47 @@ func (s *ManagementService) providerClientFromProfile(profile *providerdomain.Pr
 	)
 }
 
+// providerHealthCheckUsesImage selects a modality from the persisted profile,
+// never from an upstream error. The image-only default role also supports
+// custom multimodal gateways without guessing their model names.
+func providerHealthCheckUsesImage(profile *providerdomain.ProviderProfile) bool {
+	model := strings.ToLower(strings.TrimSpace(profile.Model))
+	switch profile.ProviderType {
+	case providerdomain.ProviderGemini:
+		if profile.ProtocolMode == "predict" || strings.Contains(model, "imagen") {
+			return true
+		}
+	case providerdomain.ProviderOpenAI:
+		if strings.HasPrefix(model, "dall-e") || strings.HasPrefix(model, "gpt-image-") {
+			return true
+		}
+	}
+	return profile.IsDefaultImage && !profile.IsDefaultWriting
+}
+
 func (s *ManagementService) TestProvider(ctx context.Context, id int64) (time.Duration, error) {
-	client, err := s.ProviderClient(ctx, id)
+	profile, err := s.GetProvider(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	client, err := s.providerClientFromProfile(profile)
 	if err != nil {
 		return 0, err
 	}
 	start := time.Now()
-	_, err = client.Generate(ctx, provider.Request{
-		Instructions: "Return exactly OK.", Messages: []provider.Message{{Role: "user", Content: "health check"}},
-		MaxTokens: 8,
-	})
-	if err != nil {
-		// If text generation failed (e.g. image-only model like Imagen/DALL-E), test image generation
-		if imgGen, ok := client.(provider.ImageGenerator); ok {
-			if _, imgErr := imgGen.GenerateImage(ctx, provider.ImageRequest{Prompt: "health check"}); imgErr == nil {
-				return time.Since(start), nil
-			}
+	if providerHealthCheckUsesImage(profile) {
+		imgGen, ok := client.(provider.ImageGenerator)
+		if !ok {
+			return time.Since(start), errors.New("provider does not support image generation")
 		}
+		_, err = imgGen.GenerateImage(ctx, provider.ImageRequest{Prompt: "health check"})
+	} else {
+		_, err = client.Generate(ctx, provider.Request{
+			Instructions: "Return exactly OK.", Messages: []provider.Message{{Role: "user", Content: "health check"}},
+			MaxTokens: 8,
+		})
+	}
+	if err != nil {
 		return time.Since(start), fmt.Errorf("provider connection test failed: %w", err)
 	}
 	return time.Since(start), nil

@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Select Provider connection-test modality before dispatch using a single persisted profile snapshot. Never issue an image request in response to failed text generation (including auth, quota, transport and decode errors); retain the selected operation's real failure and configured protocol. HTTP-count regressions cover text, image roles, known image models and cancellation.
+
 - Require explicit protocol completion for governed Agent non-stream OpenAI, Anthropic and Gemini text responses, and validate Tool-call identity/arguments before returning executable output. Preserve observed usage and bounded correlation evidence on failure; record the corresponding decode outcome and do not replay. Legacy non-Agent callers and image behavior remain separate.
 - Bind RSS and Sitemap absolute URLs to the server-configured Blog OIDC callback origin rather than client-supplied Host/X-Forwarded-Host/X-Forwarded-Proto. Fail closed on invalid/missing configuration and regression-test hostile forwarded headers on real Gin routes. Expand the first-order HTTP error disclosure Go AST guard from ten to sixteen independently scoped non-Connector controllers with positive/negative probes for direct and aliased `err.Error()` serialization. The separately frozen Connector transport risk remains tracked, not implicitly modified.
 

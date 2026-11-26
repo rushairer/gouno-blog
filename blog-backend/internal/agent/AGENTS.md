@@ -21,6 +21,11 @@ The repository-root `AGENTS.md` remains authoritative. These additional rules ap
 - The reviewed-release transaction must lock/fence the exact candidate/attempt, atomically persist status and a unique append-only decision, and reject duplicate/stale/active non-uncertain attempts. No Provider call, image attach, publication, object DELETE, lease reset, or automatic re-generation belongs in the decision. A later new generation is a separate human-triggered action.
 - Keep stored image bytes on any initial `CreateMedia` error, including cancellation, zero returned ID and `sql.ErrNoRows`. The metadata INSERT may already have committed. This port does not provide the final candidate CAS's definitive-miss guarantee. Do not delete, re-generate or automatically collect possible orphans; this also applies to direct editor images.
 
+## Provider connection checks
+
+- Select text or image modality from the same persisted profile snapshot used to construct the client before dispatch: explicit Gemini Predict / Imagen model families and recognized OpenAI image model families select image; otherwise an image-only default role selects image, and text/both/unassigned defaults select text. The existing adapter protocol configuration still determines the endpoint; this does not add native image endpoints or infer support for arbitrary model names.
+- Never invoke image generation because a text connection check failed, or vice versa. Preserve the actual selected operation's error, existing narrow text protocol negotiation, and image no-replay. A connection check may incur Provider charges and is not a governed Agent or Media Candidate audit.
+
 ## Model execution authority
 
 - Only a Tool actually offered in the current model request may be invoked. Check the entire returned batch before any Tool dispatch, even if its names appear in a locked Skill. The last synthesis turn offers no Tools and rejects unsolicited calls. Model usage is recorded before this check; a rejected response must fail the run.
