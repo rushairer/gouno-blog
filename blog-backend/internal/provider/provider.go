@@ -66,6 +66,13 @@ type Request struct {
 	// never becomes part of an upstream request body. Implementations that
 	// make HTTP requests must honor it for every explicit dispatch.
 	DispatchAudit TextDispatchAudit `json:"-"`
+	// RequireCompleteTextResponse enables protocol completion and Tool validation
+	// independently of the durable Agent dispatch audit.
+	RequireCompleteTextResponse bool `json:"-"`
+}
+
+func (r Request) requiresCompleteTextResponse() bool {
+	return r.DispatchAudit != nil || r.RequireCompleteTextResponse
 }
 
 type Result struct {

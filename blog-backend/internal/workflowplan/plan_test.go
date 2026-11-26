@@ -15,12 +15,12 @@ import (
 func TestWorkflowDraftTextPrefersStructuredToolArguments(t *testing.T) {
 	result := provider.Result{
 		Text:      `not JSON`,
-		ToolCalls: []provider.ToolCall{{Name: workflowDraftToolName, Arguments: json.RawMessage(`{"intent":{},"workflow":{}}`)}},
+		ToolCalls: []provider.ToolCall{{ID: "c1", Name: workflowDraftToolName, Arguments: json.RawMessage(`{"intent":{},"workflow":{}}`)}},
 	}
-	if got := workflowDraftText(result); got != `{"intent":{},"workflow":{}}` {
+	if got, err := workflowDraftText(result); err != nil || got != `{"intent":{},"workflow":{}}` {
 		t.Fatalf("workflowDraftText() = %q", got)
 	}
-	if got := workflowDraftText(provider.Result{Text: `{"intent":{},"workflow":{}}`}); got == "" {
+	if got, err := workflowDraftText(provider.Result{Text: `{"intent":{},"workflow":{}}`}); err != nil || got == "" {
 		t.Fatal("text fallback should support compatible gateways")
 	}
 }

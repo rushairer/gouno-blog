@@ -217,14 +217,22 @@ func workflowDraftTool() provider.ToolDefinition {
 	}
 }
 
-func workflowDraftText(result provider.Result) string {
-	for _, call := range result.ToolCalls {
-		if call.Name == workflowDraftToolName && len(call.Arguments) > 0 {
-			return string(call.Arguments)
-		}
+func workflowDraftText(result provider.Result) (string, error) {
+	// The planner offers one submission tool; never select a first match
+	// from an ambiguous or unsolicited batch.
+	if len(result.ToolCalls) == 0 {
+		return result.Text, nil
 	}
-	// Preserve compatibility with gateways that ignore forced function calling.
-	return result.Text
+	if len(result.ToolCalls) != 1 {
+		return "", provider.ErrTextResponseInvalid
+	}
+	call := result.ToolCalls[0]
+	var object map[string]json.RawMessage
+	if call.Name != workflowDraftToolName || strings.TrimSpace(call.ID) == "" ||
+		json.Unmarshal(call.Arguments, &object) != nil || object == nil {
+		return "", provider.ErrTextResponseInvalid
+	}
+	return string(call.Arguments), nil
 }
 
 func plannerMaxTokens(profile *providerdomain.ProviderProfile) int {
@@ -549,14 +557,22 @@ func PlanWorkflow(
 		Messages:     []provider.Message{{Role: "user", Content: string(payload)}},
 		Tools:        []provider.ToolDefinition{workflowDraftTool()},
 		ToolChoice:   workflowDraftToolName,
-		MaxTokens:    maxTokens,
+		MaxTokens:                   maxTokens,
+		RequireCompleteTextResponse: true,
 	})
+	if err != nil {
+		return nil, err
+	}
+	responseText, err := workflowDraftText(result)
 	if err != nil {
 		return nil, err
 	}
 	var envelope plannerEnvelope
 	warning := ""
 	decodeDraft := func(text string) ([]string, bool) {
+		// A correction replaces the rejected response, never merges with it.
+		envelope = plannerEnvelope{}
+		warning = ""
 		draftJSON, validJSON := ExtractWorkflowDraftJSON(text)
 		if !validJSON || json.Unmarshal(draftJSON, &envelope) != nil {
 			return []string{"response must be valid JSON with top-level intent and workflow"}, false
@@ -567,19 +583,28 @@ func PlanWorkflow(
 		validationErrors := validatePlannerEnvelope(&envelope, agents, toolsCatalog)
 		return validationErrors, len(validationErrors) == 0
 	}
-	validationErrors, validDraft := decodeDraft(workflowDraftText(result))
+	validationErrors, validDraft := decodeDraft(responseText)
 	if !validDraft {
-		correctionPayload, _ := json.Marshal(map[string]any{"goal": prompt, "available_agents": available, "available_tools": relevantTools, "validation_errors": validationErrors, "previous_response": workflowDraftText(result)})
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		correctionPayload, _ := json.Marshal(map[string]any{"goal": prompt, "available_agents": available, "available_tools": relevantTools, "validation_errors": validationErrors, "previous_response": responseText})
 		correction, correctionErr := client.Generate(ctx, provider.Request{
 			Instructions: WorkflowPlannerCorrectionPrompt,
 			Messages:     []provider.Message{{Role: "user", Content: string(correctionPayload)}},
 			Tools:        []provider.ToolDefinition{workflowDraftTool()},
 			ToolChoice:   workflowDraftToolName,
-			MaxTokens:    maxTokens,
+			MaxTokens:                   maxTokens,
+			RequireCompleteTextResponse: true,
 		})
-		if correctionErr == nil {
-			validationErrors, validDraft = decodeDraft(workflowDraftText(correction))
+		if correctionErr != nil {
+			return nil, correctionErr
 		}
+		correctionText, err := workflowDraftText(correction)
+		if err != nil {
+			return nil, err
+		}
+		validationErrors, validDraft = decodeDraft(correctionText)
 	}
 	if !validDraft {
 		return nil, fmt.Errorf("%w: %s", ErrPlannerContract, strings.Join(validationErrors, "; "))
