@@ -43,7 +43,16 @@ func TestAgentExecutionFailureReportsSafeCauseNotInvalidWorkflow(t *testing.T) {
 			if store.step == nil || store.step.Status != "failed" || store.step.ErrorMessage == nil || *store.step.ErrorMessage != message {
 				t.Fatalf("step diagnostic differs from run diagnostic: %#v", store.step)
 			}
+			// A failed claim is not an execution failure owned by this worker.
 			service.Execute(context.Background(), 58)
+			if store.runCode != "" || store.runMessage != "" {
+				t.Fatalf("unconfirmed claim wrote a run diagnostic: %q / %q", store.runCode, store.runMessage)
+			}
+			// Exercise failure finalization separately, after execution ownership
+			// has been established by the caller.
+			if finishErr := service.finishExecution(context.Background(), 58, workflowExecutionOutcome{}, err); !errors.Is(finishErr, err) {
+				t.Fatalf("finalization lost the execution error: %v", finishErr)
+			}
 			if store.runCode != "workflow_failed" || store.runMessage != message {
 				t.Fatalf("run diagnostic differs from step diagnostic: %q / %q", store.runCode, store.runMessage)
 			}
