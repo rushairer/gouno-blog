@@ -224,3 +224,154 @@ func TestExecutionCheckpointOwnsRunAndStepState(t *testing.T) {
 		t.Fatalf("run status=%q", status)
 	}
 }
+
+// Discard a successful real database claim acknowledgement.
+type workflowClaimAckLossStore struct{ ExecutionStore }
+
+func (s workflowClaimAckLossStore) ClaimRun(ctx context.Context, runID int64) (*workflowdomain.WorkflowRun, error) {
+	if _, err := s.ExecutionStore.ClaimRun(ctx, runID); err != nil {
+		return nil, err
+	}
+	return nil, errExecutionInjected
+}
+
+type workflowCompletionAckLossStore struct {
+	ExecutionStore
+	commit bool
+}
+
+func (s workflowCompletionAckLossStore) CompleteRun(ctx context.Context, runID int64, status string, output json.RawMessage, inputTokens, outputTokens int64) error {
+	if s.commit {
+		if err := s.ExecutionStore.CompleteRun(ctx, runID, status, output, inputTokens, outputTokens); err != nil {
+			return err
+		}
+	}
+	return errExecutionInjected
+}
+
+func newExecutionFenceRun(t *testing.T, db *sql.DB) int64 {
+	t.Helper()
+	workflowID, versionID := admissionWorkflowVersion(t, db)
+	var runID int64
+	if err := db.QueryRow(`INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,status,input,trigger_kind)
+        VALUES($1,$2,'queued','{}','manual') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM ai_workflow_runs WHERE id=$1`, runID) })
+	return runID
+}
+
+func assertExecutionFenceStatus(t *testing.T, db *sql.DB, runID int64, want string) {
+	t.Helper()
+	var status string
+	if err := db.QueryRow(`SELECT status FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != want {
+		t.Fatalf("run %d status=%q want=%q", runID, status, want)
+	}
+}
+
+func TestExecutionDuplicateClaimDoesNotFailOwner(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	runID := newExecutionFenceRun(t, db)
+	coordinator := newTestExecutionCoordinator(db)
+	if _, err := coordinator.ClaimRun(ctx, runID); err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{execution: coordinator}
+	if err := service.execute(ctx, runID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("duplicate claim error=%v", err)
+	}
+	assertExecutionFenceStatus(t, db, runID, "running")
+	if err := coordinator.CompleteRun(ctx, runID, "succeeded", []byte(`{}`), 3, 5); err != nil {
+		t.Fatal(err)
+	}
+	assertExecutionFenceStatus(t, db, runID, "succeeded")
+}
+
+func TestExecutionLostClaimAcknowledgementDoesNotFinalize(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	runID := newExecutionFenceRun(t, db)
+	coordinator := NewExecutionCoordinator(dbtx.NewTransactor(db, nil),
+		workflowClaimAckLossStore{workflowrepository.NewExecutionRepository(db)},
+		workflowrepository.NewInteractionRepository(db))
+	service := &Service{execution: coordinator}
+	if err := service.execute(context.Background(), runID); !errors.Is(err, errExecutionInjected) {
+		t.Fatalf("claim error=%v", err)
+	}
+	assertExecutionFenceStatus(t, db, runID, "running")
+}
+
+func TestExecutionCompletionCannotOverwriteCancelledOrTerminalRun(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	coordinator := newTestExecutionCoordinator(db)
+	for _, status := range []string{"queued", "cancelled", "failed", "succeeded", "waiting_for_user", "awaiting_approval"} {
+		t.Run(status, func(t *testing.T) {
+			runID := newExecutionFenceRun(t, db)
+			if status != "queued" {
+				if _, err := coordinator.ClaimRun(ctx, runID); err != nil {
+					t.Fatal(err)
+				}
+				if status == "cancelled" {
+					if err := dbtx.NewTransactor(db, nil).Run(ctx, func(tx *sql.Tx) error {
+						return workflowrepository.NewRunLifecycleRepository().CancelRunTx(ctx, tx, runID)
+					}); err != nil {
+						t.Fatal(err)
+					}
+				} else if _, err := db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2 WHERE id=$1`, runID, status); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := coordinator.CompleteRun(ctx, runID, "succeeded", []byte(`{"late":true}`), 9, 9); !errors.Is(err, sql.ErrNoRows) {
+				t.Fatalf("late completion error=%v", err)
+			}
+			assertExecutionFenceStatus(t, db, runID, status)
+			var inputTokens, outputTokens int64
+			if err := db.QueryRow(`SELECT input_tokens,output_tokens FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&inputTokens, &outputTokens); err != nil {
+				t.Fatal(err)
+			}
+			if inputTokens != 0 || outputTokens != 0 {
+				t.Fatalf("stale completion overwrote usage: %d/%d", inputTokens, outputTokens)
+			}
+		})
+	}
+}
+
+func TestExecutionUnconfirmedCompletionNeverRewritesFailure(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	base := workflowrepository.NewExecutionRepository(db)
+	for _, tc := range []struct {
+		name   string
+		commit bool
+		want   string
+	}{
+		{"before_commit", false, "running"},
+		{"after_commit", true, "succeeded"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			runID := newExecutionFenceRun(t, db)
+			if _, err := base.ClaimRun(ctx, runID); err != nil {
+				t.Fatal(err)
+			}
+			coordinator := NewExecutionCoordinator(dbtx.NewTransactor(db, nil),
+				workflowCompletionAckLossStore{ExecutionStore: base, commit: tc.commit},
+				workflowrepository.NewInteractionRepository(db))
+			service := &Service{execution: coordinator}
+			workerCtx, cancel := context.WithCancel(ctx)
+			cancel()
+			outcome := workflowExecutionOutcome{status: "succeeded", output: []byte(`{}`), inputTokens: 3, outputTokens: 5}
+			if err := service.finishExecution(workerCtx, runID, outcome, nil); !errors.Is(err, errExecutionInjected) {
+				t.Fatalf("completion error=%v", err)
+			}
+			assertExecutionFenceStatus(t, db, runID, tc.want)
+		})
+	}
+}

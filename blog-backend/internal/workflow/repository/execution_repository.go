@@ -65,9 +65,20 @@ func (r *ExecutionRepository) ResetResourceQueryStats(ctx context.Context, workf
 }
 
 func (r *ExecutionRepository) CompleteRun(ctx context.Context, runID int64, status string, output json.RawMessage, inputTokens, outputTokens int64) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2,output=$3,input_tokens=$4,output_tokens=$5,finished_at=NOW() WHERE id=$1`,
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2,output=$3,input_tokens=$4,output_tokens=$5,finished_at=NOW()
+        WHERE id=$1 AND status='running'`,
 		runID, status, output, inputTokens, outputTokens)
-	return err
+	if err != nil {
+		return err
+	}
+	changed, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if changed != 1 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *ExecutionRepository) PendingInteractionCount(ctx context.Context, runID int64) (int, error) {
