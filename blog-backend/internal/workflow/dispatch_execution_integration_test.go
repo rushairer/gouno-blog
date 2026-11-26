@@ -455,3 +455,54 @@ func TestExecutionCheckpointConflictAndFailedHistoryAreNotAcknowledged(t *testin
 	}
 	assertExecutionFenceStatus(t, db, runID, "running")
 }
+
+func TestExecutionResumeAccumulatesNewUsage(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	runID := newExecutionFenceRun(t, db)
+	execution := newTestExecutionCoordinator(db)
+	admission := workflowrepository.NewRunAdmissionRepository(db)
+
+	assertUsage := func(wantIn, wantOut int64) {
+		t.Helper()
+		var in, out int64
+		if err := db.QueryRowContext(ctx, `SELECT input_tokens,output_tokens FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&in, &out); err != nil {
+			t.Fatal(err)
+		}
+		if in != wantIn || out != wantOut {
+			t.Fatalf("usage=%d/%d want=%d/%d", in, out, wantIn, wantOut)
+		}
+	}
+	for _, phase := range []struct {
+		status                 string
+		in, out, sumIn, sumOut int64
+	}{
+		{"waiting_for_user", 3, 5, 3, 5},
+		{"waiting_for_user", 7, 11, 10, 16},
+		{"succeeded", 0, 0, 10, 16},
+	} {
+		if _, err := execution.ClaimRun(ctx, runID); err != nil {
+			t.Fatal(err)
+		}
+		if err := execution.CompleteRun(ctx, runID, phase.status, []byte(`{}`), -1, 0); err == nil {
+			t.Fatal("negative usage was accepted")
+		}
+		assertExecutionFenceStatus(t, db, runID, "running")
+		if err := execution.CompleteRun(ctx, runID, phase.status, []byte(`{}`), phase.in, phase.out); err != nil {
+			t.Fatal(err)
+		}
+		assertUsage(phase.sumIn, phase.sumOut)
+		if err := execution.CompleteRun(ctx, runID, phase.status, []byte(`{}`), phase.in, phase.out); !errors.Is(err, sql.ErrNoRows) {
+			t.Fatalf("duplicate completion error=%v", err)
+		}
+		assertUsage(phase.sumIn, phase.sumOut)
+		if phase.status == "waiting_for_user" {
+			changed, err := admission.ResumeUserRun(ctx, runID)
+			if err != nil || !changed {
+				t.Fatalf("resume changed=%v err=%v", changed, err)
+			}
+		}
+	}
+	assertExecutionFenceStatus(t, db, runID, "succeeded")
+}

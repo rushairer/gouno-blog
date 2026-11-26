@@ -65,7 +65,12 @@ func (r *ExecutionRepository) ResetResourceQueryStats(ctx context.Context, workf
 }
 
 func (r *ExecutionRepository) CompleteRun(ctx context.Context, runID int64, status string, output json.RawMessage, inputTokens, outputTokens int64) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2,output=$3,input_tokens=$4,output_tokens=$5,finished_at=NOW()
+	if inputTokens < 0 || outputTokens < 0 {
+		return errors.New("workflow completion usage cannot be negative")
+	}
+	// The worker reports only newly observed usage for this claim. Resumed
+	// steps reuse checkpoints without counting their historical tokens again.
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2,output=$3,input_tokens=input_tokens+$4,output_tokens=output_tokens+$5,finished_at=NOW()
         WHERE id=$1 AND status='running'`,
 		runID, status, output, inputTokens, outputTokens)
 	if err != nil {
