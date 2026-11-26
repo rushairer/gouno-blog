@@ -105,8 +105,9 @@ func TestAgentRunOutcomeRequiresConfirmedCompletion(t *testing.T) {
 		if (err == nil) != wantSuccess {
 			t.Fatalf("status %s: err=%v", status, err)
 		}
-		if (status == domain.AgentRunQueued || status == domain.AgentRunRunning) && !strings.Contains(err.Error(), "before retrying") {
-			t.Fatalf("unconfirmed outcome must require inspection: %v", err)
+		wantUnconfirmed := status == domain.AgentRunQueued || status == domain.AgentRunRunning
+		if errors.Is(err, errWorkflowEvidenceUnconfirmed) != wantUnconfirmed {
+			t.Fatalf("status %s: unexpected evidence classification: %v", status, err)
 		}
 	}
 }
