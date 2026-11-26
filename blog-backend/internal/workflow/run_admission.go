@@ -28,7 +28,6 @@ type RunAdmissionStore interface {
 	CopyRetryResourcesTx(context.Context, *sql.Tx, int64, int64) error
 	CopyRetryQueryStepsTx(context.Context, *sql.Tx, int64, int64) error
 
-	RecoverInterrupted(context.Context) error
 	ListQueuedRunIDs(context.Context, int) ([]int64, error)
 	ResumeUserRun(context.Context, int64) (bool, error)
 }
@@ -154,10 +153,6 @@ func (c *RunAdmissionCoordinator) Retry(ctx context.Context, runID int64, childS
 		return nil, err
 	}
 	return retry, nil
-}
-
-func (c *RunAdmissionCoordinator) RecoverInterrupted(ctx context.Context) error {
-	return c.store.RecoverInterrupted(ctx)
 }
 
 func (c *RunAdmissionCoordinator) QueuedRunIDs(ctx context.Context, limit int) ([]int64, error) {

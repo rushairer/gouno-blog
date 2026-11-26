@@ -146,12 +146,6 @@ func (r *RunAdmissionRepository) CopyRetryQueryStepsTx(ctx context.Context, tx *
 	return err
 }
 
-func (r *RunAdmissionRepository) RecoverInterrupted(ctx context.Context) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='queued',
-		error_code=NULL,error_message=NULL,started_at=NULL,finished_at=NULL WHERE status='running'`)
-	return err
-}
-
 func (r *RunAdmissionRepository) ListQueuedRunIDs(ctx context.Context, limit int) ([]int64, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id FROM ai_workflow_runs WHERE status='queued' ORDER BY created_at LIMIT $1`, limit)
 	if err != nil {

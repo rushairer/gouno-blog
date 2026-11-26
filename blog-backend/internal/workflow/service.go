@@ -800,9 +800,8 @@ func workflowNext(value *workflowdomain.Workflow) *time.Time {
 }
 
 func (s *Service) StartScheduler(ctx context.Context, interval time.Duration) {
-	// Execution state is persisted. Requeue interrupted work on startup; completed
-	// step rows are replayed, so a recovered run does not repeat successful steps.
-	_ = s.admission.RecoverInterrupted(ctx)
+	// Only queued work may be recovered automatically. A running row can
+	// belong to a live worker or an uncertain external side effect.
 	s.recoverQueuedRuns(ctx)
 	go func() {
 		ticker := time.NewTicker(interval)

@@ -127,7 +127,7 @@ func TestRunRetrySnapshotRollsBackAsOneTransaction(t *testing.T) {
 	}
 }
 
-func TestRunAdmissionRecoveryRequeuesInterruptedRuns(t *testing.T) {
+func TestRunAdmissionRecoveryPreservesClaimedRuns(t *testing.T) {
 	db := testsupport.OpenTestDB(t)
 	t.Cleanup(func() { _ = db.Close() })
 	ctx := context.Background()
@@ -139,16 +139,14 @@ func TestRunAdmissionRecoveryRequeuesInterruptedRuns(t *testing.T) {
 	}
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM ai_workflow_runs WHERE id=$1`, runID) })
 	coordinator := newTestRunAdmissionCoordinator(db)
-	if err := coordinator.RecoverInterrupted(ctx); err != nil {
-		t.Fatal(err)
-	}
+	queuedID := newExecutionFenceRun(t, db)
 	var status string
 	var errorCode, errorMessage sql.NullString
 	var startedAt, finishedAt sql.NullTime
 	if err := db.QueryRow(`SELECT status,error_code,error_message,started_at,finished_at FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&status, &errorCode, &errorMessage, &startedAt, &finishedAt); err != nil {
 		t.Fatal(err)
 	}
-	if status != "queued" || errorCode.Valid || errorMessage.Valid || startedAt.Valid || finishedAt.Valid {
+	if status != "running" || errorCode.String != "old" || errorMessage.String != "old" || !startedAt.Valid || !finishedAt.Valid {
 		t.Fatalf("recovered state status=%q code=%v message=%v started=%v finished=%v", status, errorCode, errorMessage, startedAt, finishedAt)
 	}
 	ids, err := coordinator.QueuedRunIDs(ctx, 10000)
@@ -158,11 +156,13 @@ func TestRunAdmissionRecoveryRequeuesInterruptedRuns(t *testing.T) {
 	found := false
 	for _, id := range ids {
 		if id == runID {
+			t.Fatalf("claimed run %d was exposed for automatic recovery", runID)
+		}
+		if id == queuedID {
 			found = true
-			break
 		}
 	}
 	if !found {
-		t.Fatalf("recovered run %d missing from queued run list", runID)
+		t.Fatalf("queued run %d missing from queued run list", queuedID)
 	}
 }
