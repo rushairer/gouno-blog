@@ -139,10 +139,12 @@ func (c *textDispatchCollector) complete(ctx context.Context, decodeErr error) e
 	}
 	status := "decoded"
 	switch {
-	case errors.Is(decodeErr, ErrTextStreamIncomplete), errors.Is(decodeErr, context.Canceled), errors.Is(decodeErr, context.DeadlineExceeded):
+	case errors.Is(decodeErr, ErrTextStreamIncomplete), errors.Is(decodeErr, ErrTextResponseIncomplete), errors.Is(decodeErr, context.Canceled), errors.Is(decodeErr, context.DeadlineExceeded):
 		status = "incomplete"
-	case errors.Is(decodeErr, ErrTextStreamRejected):
+	case errors.Is(decodeErr, ErrTextStreamRejected), errors.Is(decodeErr, ErrTextResponseRejected):
 		status = "rejected"
+	case errors.Is(decodeErr, ErrTextStreamInvalid), errors.Is(decodeErr, ErrTextResponseInvalid):
+		status = "invalid"
 	case decodeErr != nil:
 		status = "invalid"
 	}

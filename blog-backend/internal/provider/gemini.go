@@ -136,6 +136,10 @@ func (p *HTTPProvider) geminiGenerate(ctx context.Context, req Request) (Result,
 			} `json:"content"`
 			FinishReason string `json:"finishReason"`
 		} `json:"candidates"`
+		ResponseID string `json:"responseId"`
+		PromptFeedback struct {
+			BlockReason string `json:"blockReason"`
+		} `json:"promptFeedback"`
 		UsageMetadata struct {
 			PromptTokenCount     int64 `json:"promptTokenCount"`
 			CandidatesTokenCount int64 `json:"candidatesTokenCount"`
@@ -146,11 +150,27 @@ func (p *HTTPProvider) geminiGenerate(ctx context.Context, req Request) (Result,
 		return Result{}, err
 	}
 
+	evidence := p.responseEvidence(resp, false)
+	if evidence.RequestID == "" {
+		evidence.RequestID = safeDispatchEvidence(decoded.ResponseID)
+	}
 	result := Result{
-		InputTokens:  decoded.UsageMetadata.PromptTokenCount,
+		InputTokens: decoded.UsageMetadata.PromptTokenCount,
 		OutputTokens: decoded.UsageMetadata.CandidatesTokenCount,
+		Evidence: evidence,
 	}
 
+	if req.DispatchAudit != nil {
+		if decoded.PromptFeedback.BlockReason != "" {
+			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, ErrTextResponseRejected
+		}
+		if len(decoded.Candidates) == 0 {
+			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, ErrTextResponseIncomplete
+		}
+		if len(decoded.Candidates) != 1 {
+			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, ErrTextResponseInvalid
+		}
+	}
 	if len(decoded.Candidates) > 0 {
 		cand := decoded.Candidates[0]
 		result.StopReason = cand.FinishReason
@@ -173,6 +193,11 @@ func (p *HTTPProvider) geminiGenerate(ctx context.Context, req Request) (Result,
 		}
 	}
 
+	if req.DispatchAudit != nil {
+		if err := validateGeminiCompletion(result.StopReason, result.ToolCalls); err != nil {
+			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: result.Evidence}, err
+		}
+	}
 	return result, nil
 }
 

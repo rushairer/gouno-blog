@@ -191,6 +191,13 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 			}
 		}
 	}
+	// The image adapter shares this parser without a text audit. Keep its
+	// existing generation and no-replay contract unchanged.
+	if req.DispatchAudit != nil {
+		if err := validateAnthropicCompletion(result.StopReason, result.ToolCalls); err != nil {
+			return Result{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Evidence: evidence}, err
+		}
+	}
 	return result, nil
 }
 
