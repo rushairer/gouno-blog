@@ -38,7 +38,7 @@ func TestRunAdmissionCommitsRunAndInitialResourcesAtomically(t *testing.T) {
 
 	run := &workflowdomain.WorkflowRun{WorkflowID: workflowID, WorkflowVersionID: versionID, Status: "queued", Input: []byte(`{}`), TriggerKind: "manual", SourceRef: marker}
 	resource := workflowdomain.WorkflowResource{ResourceType: "post", ResourceKey: marker, Source: "manual", AccessLevel: "target", Label: "snapshot", VersionToken: "v1", Snapshot: []byte(`{"label":"snapshot"}`)}
-	admitted, err := newTestRunAdmissionCoordinator(db).Admit(ctx, run, []workflowdomain.WorkflowResource{resource}, false)
+	admitted, err := newTestRunAdmissionCoordinator(db).Admit(ctx, run, []workflowdomain.WorkflowResource{resource})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestRunAdmissionRollsBackRunWhenResourcePersistenceFails(t *testing.T) {
 	coordinator := NewRunAdmissionCoordinator(dbtx.NewTransactor(db, nil), failingAdmissionResources{base})
 	run := &workflowdomain.WorkflowRun{WorkflowID: workflowID, WorkflowVersionID: versionID, Status: "queued", Input: []byte(`{}`), TriggerKind: "manual", SourceRef: marker}
 	resource := workflowdomain.WorkflowResource{ResourceType: "post", ResourceKey: marker, Source: "manual", AccessLevel: "target", Label: "snapshot", VersionToken: "v1", Snapshot: []byte(`{}`)}
-	if _, err := coordinator.Admit(ctx, run, []workflowdomain.WorkflowResource{resource}, false); !errors.Is(err, errAdmissionInjected) {
+	if _, err := coordinator.Admit(ctx, run, []workflowdomain.WorkflowResource{resource}); !errors.Is(err, errAdmissionInjected) {
 		t.Fatalf("admit error=%v", err)
 	}
 	var count int

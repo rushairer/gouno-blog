@@ -46,7 +46,7 @@ func TestScheduledResourceQueryRetryKeepsSnapshotAndScope(t *testing.T) {
 	})
 
 	service := &Service{runReads: workflowrepository.NewRunReadRepository(db), metrics: workflowrepository.NewMetricsRepository(db), execution: newTestExecutionCoordinator(db), dispatch: newTestDispatchCoordinator(db), approvalTargets: newTestApprovalTargetReader(db), admission: newTestRunAdmissionCoordinator(db), mediaRuns: newTestMediaRunCoordinator(db), definitions: workflowrepository.NewDefinitionRepository(db), catalog: NewResourceCatalog(db)}
-	run, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, "scheduler", "", true, true)
+	run, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, "scheduler", "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,25 +69,32 @@ func TestScheduledResourceQueryRetryKeepsSnapshotAndScope(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `UPDATE posts SET status='draft' WHERE id=$1`, postID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',finished_at=NOW() WHERE id=$1`, run.ID); err != nil {
+	if _, err := db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',error_code='test_failure',input_tokens=17,output_tokens=23,finished_at=NOW() WHERE id=$1`, run.ID); err != nil {
 		t.Fatal(err)
 	}
-	retry, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, "scheduler", "", true, true)
+	retry, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, "scheduler", "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if retry.ID != run.ID || retry.Status != "queued" {
-		t.Fatalf("retry run = %#v", retry)
+	if retry.ID != run.ID || retry.Status != "failed" || retry.WorkflowVersionID != versionID ||
+		retry.InputTokens != 17 || retry.OutputTokens != 23 || retry.ErrorCode == nil || *retry.ErrorCode != "test_failure" ||
+		retry.FinishedAt == nil {
+		t.Fatalf("duplicate admission changed failed run evidence: %#v", retry)
 	}
 	resources, err = service.ListResources(ctx, run.ID)
 	if err != nil || len(resources) != 1 || resources[0].Source != "query" || resources[0].ResourceKey != fmt.Sprint(postID) {
 		t.Fatalf("retry must retain query scope = %#v, %v", resources, err)
 	}
-	if err := service.execute(ctx, run.ID); err != nil {
+	if after := workflowQuerySnapshot(t, ctx, db, run.ID); after != before {
+		t.Fatalf("duplicate admission changed query snapshot:\nbefore=%s\nafter=%s", before, after)
+	}
+	var status string
+	var inputTokens, outputTokens int64
+	if err := db.QueryRowContext(ctx, `SELECT status,input_tokens,output_tokens FROM ai_workflow_runs WHERE id=$1`, run.ID).Scan(&status, &inputTokens, &outputTokens); err != nil {
 		t.Fatal(err)
 	}
-	if after := workflowQuerySnapshot(t, ctx, db, run.ID); after != before {
-		t.Fatalf("replayed query snapshot changed:\nbefore=%s\nafter=%s", before, after)
+	if status != "failed" || inputTokens != 17 || outputTokens != 23 {
+		t.Fatalf("stored run evidence changed: status=%s tokens=%d/%d", status, inputTokens, outputTokens)
 	}
 }
 

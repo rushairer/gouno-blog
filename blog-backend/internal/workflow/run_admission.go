@@ -17,9 +17,7 @@ import (
 type RunAdmissionStore interface {
 	CreateRunTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRun) (bool, error)
 	LockScheduledRunTx(context.Context, *sql.Tx, int64, string) (*workflowdomain.WorkflowRun, error)
-	RequeueFailedScheduledRunTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRun) (bool, error)
 	InsertAdmissionResourcesTx(context.Context, *sql.Tx, int64, []workflowdomain.WorkflowResource) error
-	ReplaceNonQueryResourcesTx(context.Context, *sql.Tx, int64, []workflowdomain.WorkflowResource) error
 
 	RetrySource(context.Context, int64) (*workflowdomain.WorkflowRun, error)
 	LockRetrySourceTx(context.Context, *sql.Tx, int64) (*workflowdomain.WorkflowRun, error)
@@ -48,7 +46,7 @@ func NewRunAdmissionCoordinator(transactor *dbtx.Transactor, store RunAdmissionS
 	return &RunAdmissionCoordinator{transactor: transactor, store: store}
 }
 
-func (c *RunAdmissionCoordinator) Admit(ctx context.Context, run *workflowdomain.WorkflowRun, resources []workflowdomain.WorkflowResource, retryFailed bool) (*workflowdomain.WorkflowRun, error) {
+func (c *RunAdmissionCoordinator) Admit(ctx context.Context, run *workflowdomain.WorkflowRun, resources []workflowdomain.WorkflowResource) (*workflowdomain.WorkflowRun, error) {
 	if run == nil {
 		return nil, fmt.Errorf("%w: run admission is required", ErrInvalid)
 	}
@@ -74,21 +72,9 @@ func (c *RunAdmissionCoordinator) Admit(ctx context.Context, run *workflowdomain
 		if err != nil {
 			return err
 		}
-		candidate.ID, candidate.Status, candidate.CreatedAt = existing.ID, existing.Status, existing.CreatedAt
-		if existing.Status == "failed" && retryFailed {
-			changed, err := c.store.RequeueFailedScheduledRunTx(ctx, tx, &candidate)
-			if err != nil {
-				return err
-			}
-			if !changed {
-				return sql.ErrNoRows
-			}
-			candidate.Status = "queued"
-			if err := c.store.ReplaceNonQueryResourcesTx(ctx, tx, candidate.ID, resources); err != nil {
-				return err
-			}
-		}
-		admitted = &candidate
+		// A schedule collision returns the persisted run, never a new attempt.
+		// Preserve its immutable version, input, usage and execution evidence.
+		admitted = existing
 		return nil
 	})
 	if err != nil {
