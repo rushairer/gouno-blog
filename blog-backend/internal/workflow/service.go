@@ -375,7 +375,7 @@ func (s *Service) processStoredEvent(ctx context.Context, eventKey, eventType st
 					continue
 				}
 			}
-			run, queueErr := s.queue(ctx, workflow.ID, false, payload, triggeredByPrincipalID, "event", eventKey, true, false)
+			run, queueErr := s.queue(ctx, workflow.ID, false, payload, triggeredByPrincipalID, "event", eventKey, false)
 			if queueErr != nil {
 				continue
 			}
@@ -637,7 +637,7 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 }
 
 func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredByPrincipalID *int64) (*workflowdomain.WorkflowRun, error) {
-	return s.queue(ctx, id, dryRun, input, triggeredByPrincipalID, "manual", "", true, false)
+	return s.queue(ctx, id, dryRun, input, triggeredByPrincipalID, "manual", "", false)
 }
 
 // RetryFailed reruns only failed iterations from a partial for_each run. Query
@@ -724,7 +724,7 @@ func retryIterationSelected(run *workflowdomain.WorkflowRun, stepID string, inde
 	return false
 }
 
-func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredByPrincipalID *int64, triggerKind, sourceRef string, retryFailed, scheduled bool) (*workflowdomain.WorkflowRun, error) {
+func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredByPrincipalID *int64, triggerKind, sourceRef string, scheduled bool) (*workflowdomain.WorkflowRun, error) {
 	value, err := s.Get(ctx, id)
 	if err != nil {
 		return nil, err
@@ -758,7 +758,7 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 		key := time.Now().In(workflowLocation(value.Timezone)).Format("2006-01-02")
 		run.ScheduleKey = &key
 	}
-	return s.admission.Admit(ctx, run, resources, retryFailed)
+	return s.admission.Admit(ctx, run, resources)
 }
 
 // validateRunnableSteps rejects malformed or paused Agent bindings before a
@@ -848,7 +848,7 @@ func (s *Service) tick(ctx context.Context) {
 		return
 	}
 	for _, id := range ids {
-		run, err := s.queue(ctx, id, false, json.RawMessage(`{}`), nil, "scheduler", "", false, true)
+		run, err := s.queue(ctx, id, false, json.RawMessage(`{}`), nil, "scheduler", "", true)
 		if err == nil && run.Status == "queued" {
 			go s.Execute(ctx, run.ID)
 		}

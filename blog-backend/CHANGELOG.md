@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Remove the dormant failed scheduled-run requeue path. Duplicate schedule keys return the original persisted Run without resetting its status, version, input, usage or resource/checkpoint evidence. New schedule slots remain independent; no external replay guarantee is implied.
+
 - Bind failed-iteration retry admission to the source run's exact Workflow version and original ForEach parent, rather than the current definition. Prevent a later parent rename/move from silently widening old-run iteration selection; preserve the deleted-Workflow denial and verify the behavior against migrated PostgreSQL.
 
 - Quarantine unconfirmed Workflow child Agent admission and observation. Verify child/parent/version identity before dispatch and after execution, stop on unknown admission/read faults or nonterminal outcomes, and never persist a retryable failed checkpoint from unconfirmed evidence. Keep typed admission rejections, confirmed terminal diagnostics, preview dispatch and existing approval semantics.
