@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Remove automatic startup requeue of claimed Workflow runs. Drain only queued work and preserve existing running rows and their evidence across replica startup. Interrupted external effects require independent operator reconciliation; checkpoint and explicit retry safety remain separate.
+
 - Fence Workflow execution by an acknowledged queued-to-running claim. Losing or uncertain claims cannot fail another worker's run; completion updates require running status and a confirmed affected row, preserving cancellation and terminal state. Bound finalization independently of worker cancellation and never rewrite an uncertain completion as failure. Real PostgreSQL regressions cover duplicate claims, lost acknowledgements and stale completion.
 
 - Fence Workflow Planner initial and correction responses with protocol-specific completion and exactly one offered draft submission (or text without Tool calls). Reject ambiguous Tool batches, preserve the actual correction failure, and decode each response into a fresh envelope. No automatic correction after uncertain Provider outcomes, no Agent audit fabrication, and no image behavior change.
