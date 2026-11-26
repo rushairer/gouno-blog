@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Fail closed on Workflow checkpoint read/decode/insert faults, same-run failed checkpoints, unconfirmed interaction creation and pending-state queries. Preserve running claims rather than creating retryable failures or reporting success; ForEach cannot downgrade evidence faults to partial success. Separate explicit retry and already-dispatched sibling effects remain subject to independent reconciliation.
+
 - Remove automatic startup requeue of claimed Workflow runs. Drain only queued work and preserve existing running rows and their evidence across replica startup. Interrupted external effects require independent operator reconciliation; checkpoint and explicit retry safety remain separate.
 
 - Fence Workflow execution by an acknowledged queued-to-running claim. Losing or uncertain claims cannot fail another worker's run; completion updates require running status and a confirmed affected row, preserving cancellation and terminal state. Bound finalization independently of worker cancellation and never rewrite an uncertain completion as failure. Real PostgreSQL regressions cover duplicate claims, lost acknowledgements and stale completion.
