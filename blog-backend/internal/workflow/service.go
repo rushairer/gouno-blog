@@ -667,11 +667,21 @@ func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID stri
 	if source.Status != "succeeded" {
 		return nil, fmt.Errorf("%w: only a completed partial run can be retried", ErrInvalid)
 	}
-	workflow, err := s.Get(ctx, source.WorkflowID)
+	// Retry executes the source run's immutable version, not the current
+	// editable definition. A parent from a newer version could otherwise
+	// fail to match at execution and silently select every old iteration.
+	rawSteps, err := s.definitions.RetryVersionSteps(ctx, source.WorkflowID, source.WorkflowVersionID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
-	parentStepID := findForEachParent(workflow.Steps, childStepID)
+	var steps []workflowdomain.WorkflowStep
+	if err := json.Unmarshal(rawSteps, &steps); err != nil {
+		return nil, err
+	}
+	parentStepID := findForEachParent(steps, childStepID)
 	if parentStepID == "" {
 		return nil, fmt.Errorf("%w: child step %q is not inside a for_each", ErrInvalid, childStepID)
 	}

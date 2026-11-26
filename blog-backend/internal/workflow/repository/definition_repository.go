@@ -172,6 +172,16 @@ func (r *DefinitionRepository) Delete(ctx context.Context, id int64) (bool, erro
 	return changed > 0, nil
 }
 
+// RetryVersionSteps binds admission to the source run's exact version and
+// preserves the existing requirement that its Workflow is not deleted.
+func (r *DefinitionRepository) RetryVersionSteps(ctx context.Context, workflowID, versionID int64) (json.RawMessage, error) {
+	var raw json.RawMessage
+	err := r.db.QueryRowContext(ctx, `SELECT v.steps FROM ai_workflow_versions v
+		JOIN ai_workflows w ON w.id=v.workflow_id
+		WHERE v.id=$1 AND w.id=$2 AND w.deleted_at IS NULL`, versionID, workflowID).Scan(&raw)
+	return raw, err
+}
+
 func (r *DefinitionRepository) VersionStepsByID(ctx context.Context, versionID int64) (json.RawMessage, error) {
 	var raw json.RawMessage
 	err := r.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE id=$1`, versionID).Scan(&raw)
