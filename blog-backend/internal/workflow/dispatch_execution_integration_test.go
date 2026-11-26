@@ -375,3 +375,83 @@ func TestExecutionUnconfirmedCompletionNeverRewritesFailure(t *testing.T) {
 		})
 	}
 }
+
+type checkpointAckLossStore struct {
+	ExecutionStore
+	commit bool
+}
+
+func (s checkpointAckLossStore) RecordStep(ctx context.Context, step *workflowdomain.WorkflowStepRun) error {
+	if s.commit {
+		if err := s.ExecutionStore.RecordStep(ctx, step); err != nil {
+			return err
+		}
+	}
+	return errExecutionInjected
+}
+
+func TestExecutionCheckpointAcknowledgementLossPreservesClaim(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name     string
+		commit   bool
+		wantRows int
+	}{
+		{"before_insert", false, 0},
+		{"after_insert", true, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			runID := newExecutionFenceRun(t, db)
+			base := workflowrepository.NewExecutionRepository(db)
+			run, err := base.ClaimRun(ctx, runID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s := &Service{execution: NewExecutionCoordinator(dbtx.NewTransactor(db, nil),
+				checkpointAckLossStore{ExecutionStore: base, commit: tc.commit}, workflowrepository.NewInteractionRepository(db))}
+			doc := map[string]any{"input": map[string]any{}, "steps": map[string]any{}}
+			steps := []workflowdomain.WorkflowStep{{ID: "first", Type: "output", OutputPointer: "/input"}, {ID: "blocked", Type: "model"}}
+			_, _, _, _, err = s.executeSteps(ctx, run, steps, doc, nil, nil)
+			if !errors.Is(err, errWorkflowEvidenceUnconfirmed) || !errors.Is(err, errExecutionInjected) {
+				t.Fatalf("checkpoint error=%v", err)
+			}
+			if err := s.finishExecution(ctx, runID, workflowExecutionOutcome{}, err); !errors.Is(err, errWorkflowEvidenceUnconfirmed) {
+				t.Fatalf("finish error=%v", err)
+			}
+			assertExecutionFenceStatus(t, db, runID, "running")
+			var rows int
+			if err := db.QueryRowContext(ctx, "SELECT count(*) FROM ai_workflow_step_runs WHERE workflow_run_id=$1", runID).Scan(&rows); err != nil || rows != tc.wantRows {
+				t.Fatalf("checkpoint rows=%d err=%v", rows, err)
+			}
+		})
+	}
+}
+
+func TestExecutionCheckpointConflictAndFailedHistoryAreNotAcknowledged(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	runID := newExecutionFenceRun(t, db)
+	base := workflowrepository.NewExecutionRepository(db)
+	run, err := base.ClaimRun(ctx, runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	step := &workflowdomain.WorkflowStepRun{WorkflowRunID: runID, StepID: "model", StepType: "model", Status: "failed",
+		Input: json.RawMessage("{}"), Output: json.RawMessage("null"), StartedAt: time.Now()}
+	if err := base.RecordStep(ctx, step); err != nil {
+		t.Fatal(err)
+	}
+	if err := base.RecordStep(ctx, step); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("duplicate insert error=%v", err)
+	}
+	s := &Service{execution: NewExecutionCoordinator(dbtx.NewTransactor(db, nil), base, workflowrepository.NewInteractionRepository(db))}
+	doc := map[string]any{"input": map[string]any{}, "steps": map[string]any{}}
+	_, _, _, _, err = s.executeSteps(ctx, run, []workflowdomain.WorkflowStep{{ID: "model", Type: "model"}}, doc, nil, nil)
+	if !errors.Is(err, errWorkflowEvidenceUnconfirmed) {
+		t.Fatalf("failed checkpoint authorized replay: %v", err)
+	}
+	assertExecutionFenceStatus(t, db, runID, "running")
+}

@@ -915,6 +915,21 @@ func (s *Service) Execute(ctx context.Context, runID int64) {
 
 const workflowFinalizationTimeout = 5 * time.Second
 
+// Evidence faults must not become retryable failed runs. An already committed
+// checkpoint/effect may have lost its acknowledgement.
+var errWorkflowEvidenceUnconfirmed = errors.New("workflow execution evidence not confirmed; inspect persisted state before recovery")
+
+type workflowEvidenceError struct{ cause error }
+
+func (e workflowEvidenceError) Error() string { return errWorkflowEvidenceUnconfirmed.Error() }
+func (e workflowEvidenceError) Unwrap() []error {
+	return []error{errWorkflowEvidenceUnconfirmed, e.cause}
+}
+
+func unconfirmedWorkflowEvidence(cause error) error {
+	return workflowEvidenceError{cause: cause}
+}
+
 type workflowExecutionOutcome struct {
 	status                    string
 	output                    json.RawMessage
@@ -935,6 +950,11 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 }
 
 func (s *Service) finishExecution(ctx context.Context, runID int64, outcome workflowExecutionOutcome, executionErr error) error {
+	if errors.Is(executionErr, errWorkflowEvidenceUnconfirmed) {
+		// Preserve the acknowledged claim. Neither a retry nor a successful
+		// terminal state is authorized by missing or uncertain evidence.
+		return executionErr
+	}
 	// Terminal persistence may outlive worker cancellation, but is bounded.
 	// An uncertain completion acknowledgement never authorizes a failure write.
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), workflowFinalizationTimeout)
@@ -985,11 +1005,21 @@ func (s *Service) executeClaimed(ctx context.Context, run *workflowdomain.Workfl
 	status := "succeeded"
 	if awaiting {
 		status = "awaiting_approval"
-		if pending, queryErr := s.execution.PendingInteractionCount(ctx, run.ID); queryErr == nil && pending > 0 {
+		pending, queryErr := s.execution.PendingInteractionCount(ctx, run.ID)
+		if queryErr != nil {
+			return workflowExecutionOutcome{}, unconfirmedWorkflowEvidence(queryErr)
+		}
+		if pending > 0 {
 			status = "waiting_for_user"
 		}
-	} else if pendingMedia, queryErr := s.mediaRuns.HasPending(ctx, run.ID); queryErr == nil && pendingMedia {
-		status = "waiting_for_user"
+	} else {
+		pendingMedia, queryErr := s.mediaRuns.HasPending(ctx, run.ID)
+		if queryErr != nil {
+			return workflowExecutionOutcome{}, unconfirmedWorkflowEvidence(queryErr)
+		}
+		if pendingMedia {
+			status = "waiting_for_user"
+		}
 	}
 	rawOutput, err := json.Marshal(output)
 	if err != nil {
@@ -1015,8 +1045,14 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 		// is resolved. Match the write key, including the iteration, so resume
 		// never reuses another item's output or repeats completed model calls.
 		if step.Type != "human_interaction" {
-			previous, found, _ := s.execution.CompletedStepOutput(ctx, run.ID, step.ID, iterationValue)
-			if found && len(previous) > 0 && json.Unmarshal(previous, &stepOutput) == nil {
+			previous, found, readErr := s.execution.CompletedStepOutput(ctx, run.ID, step.ID, iterationValue)
+			if readErr != nil {
+				return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(readErr)
+			}
+			if found {
+				if decodeErr := json.Unmarshal(previous, &stepOutput); decodeErr != nil {
+					return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(decodeErr)
+				}
 				if step.Type == "model" {
 					stepOutput, err = s.enrichApprovedModelOutput(ctx, run.ID, stepOutput)
 					if err != nil {
@@ -1028,8 +1064,14 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 				continue
 			}
 		} else {
-			response, found, _ := s.execution.ResolvedInteractionResponse(ctx, run.ID, step.ID)
-			if found && len(response) > 0 && json.Unmarshal(response, &stepOutput) == nil {
+			response, found, readErr := s.execution.ResolvedInteractionResponse(ctx, run.ID, step.ID)
+			if readErr != nil {
+				return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(readErr)
+			}
+			if found {
+				if decodeErr := json.Unmarshal(response, &stepOutput); decodeErr != nil {
+					return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(decodeErr)
+				}
 				document["steps"].(map[string]any)[step.ID] = stepOutput
 				output = stepOutput
 				continue
@@ -1038,8 +1080,7 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 		switch step.Type {
 		case "resource_query":
 			if replay, found, replayErr := s.replayedResourceQuery(ctx, run.ID, step.ID); replayErr != nil {
-				err = replayErr
-				break
+				return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(replayErr)
 			} else if found {
 				stepOutput = replay
 				if len(replay) == 0 {
@@ -1129,7 +1170,9 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 					err = fmt.Errorf("%w: resource query returned no matching resources", ErrInvalid)
 					break
 				}
-				s.recordStep(ctx, run.ID, step, iteration, nil, stepOutput, started, nil)
+				if checkpointErr := s.recordStep(ctx, run.ID, step, iteration, nil, stepOutput, started, nil); checkpointErr != nil {
+					return nil, awaiting, totalInput, totalOutput, checkpointErr
+				}
 				document["steps"].(map[string]any)[step.ID] = stepOutput
 				return map[string]any{"status": "no_matching_resources", "resource_type": step.ResourceType}, awaiting, totalInput, totalOutput, nil
 			}
@@ -1222,12 +1265,23 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 					for result := range resultCh {
 						resultsByIndex[result.index] = result
 					}
+					// Evidence failure outranks normal per-item business failures,
+					// even if the first failed item was earlier in index order.
 					for _, index := range selected {
 						result := resultsByIndex[index]
-						childOutput, childAwaiting, inTokens, outTokens, childErr := result.output, result.awaiting, result.inTokens, result.outTokens, result.err
-						totalInput += inTokens
-						totalOutput += outTokens
-						awaiting = awaiting || childAwaiting
+						totalInput += result.inTokens
+						totalOutput += result.outTokens
+						awaiting = awaiting || result.awaiting
+						if errors.Is(result.err, errWorkflowEvidenceUnconfirmed) {
+							err = result.err
+						}
+					}
+					if err != nil {
+						return nil, awaiting, totalInput, totalOutput, err
+					}
+					for _, index := range selected {
+						result := resultsByIndex[index]
+						childOutput, childErr := result.output, result.err
 						if childErr != nil {
 							if !step.ContinueOnError {
 								err = childErr
@@ -1288,15 +1342,18 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 			}
 			var taskID int64
 			taskID, err = s.execution.CreateInteraction(ctx, run.ID, step.ID, interactionType, schema, payload, options, expires)
-			if err == nil {
-				stepOutput = map[string]any{"status": "waiting_for_user", "interaction_task_id": taskID, "interaction_type": interactionType}
-				awaiting = true
+			if err != nil {
+				return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(err)
 			}
+			stepOutput = map[string]any{"status": "waiting_for_user", "interaction_task_id": taskID, "interaction_type": interactionType}
+			awaiting = true
 		case "output":
 			stepOutput, err = resolvePointer(document, step.OutputPointer)
 			output = stepOutput
 		}
-		s.recordStep(ctx, run.ID, step, iteration, stepInput, stepOutput, started, err)
+		if checkpointErr := s.recordStep(ctx, run.ID, step, iteration, stepInput, stepOutput, started, err); checkpointErr != nil {
+			return nil, awaiting, totalInput, totalOutput, checkpointErr
+		}
 		if err != nil {
 			return nil, awaiting, totalInput, totalOutput, err
 		}
@@ -1421,9 +1478,15 @@ func resolvePointer(document any, pointer string) (any, error) {
 	return current, nil
 }
 
-func (s *Service) recordStep(ctx context.Context, runID int64, step workflowdomain.WorkflowStep, iteration *int, input, output any, started time.Time, stepErr error) {
-	rawInput, _ := json.Marshal(input)
-	rawOutput, _ := json.Marshal(output)
+func (s *Service) recordStep(ctx context.Context, runID int64, step workflowdomain.WorkflowStep, iteration *int, input, output any, started time.Time, stepErr error) error {
+	rawInput, err := json.Marshal(input)
+	if err != nil {
+		return unconfirmedWorkflowEvidence(err)
+	}
+	rawOutput, err := json.Marshal(output)
+	if err != nil {
+		return unconfirmedWorkflowEvidence(err)
+	}
 	status := "succeeded"
 	var errorMessage *string
 	if stepErr != nil {
@@ -1442,7 +1505,10 @@ func (s *Service) recordStep(ctx context.Context, runID int64, step workflowdoma
 		ErrorMessage:  errorMessage,
 		StartedAt:     started,
 	}
-	_ = s.execution.RecordStep(ctx, checkpoint)
+	if err := s.execution.RecordStep(ctx, checkpoint); err != nil {
+		return unconfirmedWorkflowEvidence(err)
+	}
+	return nil
 }
 
 func safeError(err error) string {

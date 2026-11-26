@@ -89,12 +89,21 @@ func (r *ExecutionRepository) PendingInteractionCount(ctx context.Context, runID
 
 func (r *ExecutionRepository) CompletedStepOutput(ctx context.Context, runID int64, stepID string, iteration int) (json.RawMessage, bool, error) {
 	var output json.RawMessage
-	err := r.db.QueryRowContext(ctx, `SELECT output FROM ai_workflow_step_runs
-        WHERE workflow_run_id=$1 AND step_id=$2 AND iteration=$3 AND status='succeeded' ORDER BY id DESC LIMIT 1`, runID, stepID, iteration).Scan(&output)
+	var status string
+	err := r.db.QueryRowContext(ctx, `SELECT status,output FROM ai_workflow_step_runs
+        WHERE workflow_run_id=$1 AND step_id=$2 AND iteration=$3 ORDER BY id DESC LIMIT 1`, runID, stepID, iteration).Scan(&status, &output)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
-	return output, err == nil, err
+	if err != nil {
+		return nil, false, err
+	}
+	if status != "succeeded" {
+		// A same-run failed checkpoint is not proof that its effects can be
+		// replayed. Explicit partial retries have a distinct run identity.
+		return nil, false, errors.New("existing workflow checkpoint is not successful")
+	}
+	return output, true, nil
 }
 
 func (r *ExecutionRepository) ResolvedInteractionResponse(ctx context.Context, runID int64, stepID string) (json.RawMessage, bool, error) {
@@ -147,10 +156,20 @@ func (r *ExecutionRepository) RecordStep(ctx context.Context, step *workflowdoma
 	if step.Iteration != nil {
 		iteration = *step.Iteration
 	}
-	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs
+	result, err := r.db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs
         (workflow_run_id,step_id,step_type,status,input,output,error_message,started_at,iteration,finished_at)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
         ON CONFLICT (workflow_run_id,step_id,iteration) DO NOTHING`,
 		step.WorkflowRunID, step.StepID, step.StepType, step.Status, step.Input, step.Output, step.ErrorMessage, step.StartedAt, iteration)
-	return err
+	if err != nil {
+		return err
+	}
+	changed, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if changed != 1 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
