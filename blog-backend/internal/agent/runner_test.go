@@ -523,3 +523,60 @@ func TestRunnerFailedStreamRetainsObservedUsageAndNeverDispatches(t *testing.T) 
 		t.Fatalf("failed stream replayed or lost usage: err=%v calls=%d effects=%d runs=%#v terminal=%#v", err, client.calls, executed, runs, lifecycle)
 	}
 }
+
+func TestEffectiveLimitsNeverWidenLockedSkill(t *testing.T) {
+	skill := &domain.AgentSkill{MaxSteps: 2, MaxInputTokens: 1200, MaxOutputTokens: 400}
+	for _, tc := range []struct {
+		name string
+		agent domain.Agent
+		want effectiveRunLimits
+	}{
+		{"inherit", domain.Agent{}, effectiveRunLimits{2, 1200, 400}},
+		{"tighten", domain.Agent{MaxStepsOverride: intPointerForLockedLimitTest(1), MaxInputTokensOverride: intPointerForLockedLimitTest(800), MaxOutputTokensOverride: intPointerForLockedLimitTest(200)}, effectiveRunLimits{1, 800, 200}},
+		{"newer skill overrides", domain.Agent{MaxStepsOverride: intPointerForLockedLimitTest(5), MaxInputTokensOverride: intPointerForLockedLimitTest(6000), MaxOutputTokensOverride: intPointerForLockedLimitTest(900)}, effectiveRunLimits{2, 1200, 400}},
+		{"mixed", domain.Agent{MaxStepsOverride: intPointerForLockedLimitTest(5), MaxInputTokensOverride: intPointerForLockedLimitTest(800), MaxOutputTokensOverride: intPointerForLockedLimitTest(900)}, effectiveRunLimits{2, 800, 400}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := effectiveLimits(&tc.agent, skill); got != tc.want {
+				t.Fatalf("limits=%#v want=%#v", got, tc.want)
+			}
+		})
+	}
+}
+
+func intPointerForLockedLimitTest(value int) *int { return &value }
+
+func TestRunnerReboundAgentCannotWidenLockedSkillTurn(t *testing.T) {
+	oldVersion, newVersion := int64(9), int64(10)
+	runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &oldVersion}}
+	client := &modelBoundaryProvider{result: provider.Result{
+		InputTokens: 10, OutputTokens: 3,
+		ToolCalls: []provider.ToolCall{{ID: "call-read", Name: "read", Arguments: json.RawMessage(`{}`)}},
+	}}
+	executed := 0
+	registry := tool.New(tool.Definition{Name: "read", Risk: tooldomain.ToolRiskRead,
+		Execute: func(context.Context, json.RawMessage) (any, error) {
+			executed++
+			return nil, nil
+		},
+	})
+	lifecycle := &recordingRunLifecycle{}
+	runner := &Runner{
+		runs: runs, tools: registry, lifecycle: lifecycle, notifications: &recordingRunNotifications{},
+		management: &modelBoundaryManagement{
+			agent: &domain.Agent{ID: 2, SkillVersionID: &newVersion, MonthlyTokenBudget: 1000,
+				MaxStepsOverride: intPointerForLockedLimitTest(3), MaxOutputTokensOverride: intPointerForLockedLimitTest(500)},
+			skill: &domain.AgentSkill{Capabilities: []string{"read"}, MaxSteps: 1, MaxInputTokens: 10000, MaxOutputTokens: 100},
+			client: client,
+		},
+	}
+	err := runner.execute(context.Background(), 1, false)
+	if !errors.Is(err, tool.ErrUnauthorized) || executed != 0 || runs.toolRows != 0 || len(client.requests) != 1 ||
+		lifecycle.calls != 1 || lifecycle.status != domain.AgentRunFailed {
+		t.Fatalf("locked final-turn boundary changed: err=%v effects=%d requests=%d terminal=%#v", err, executed, len(client.requests), lifecycle)
+	}
+	request := client.requests[0]
+	if request.MaxTokens != 100 || len(request.Tools) != 0 {
+		t.Fatalf("locked request limits changed: maxTokens=%d tools=%d", request.MaxTokens, len(request.Tools))
+	}
+}

@@ -62,3 +62,7 @@ Retain the unit tests in `generation_attempt_audit_test.go`, real-database tests
 `generation_persistence_integration_test.go` exercises the full generation entrypoint with a real local HTTP provider, migrated PostgreSQL and real local media bytes, including committed-before-ACK-loss faults. `../provider/image_no_replay_test.go` counts actual HTTP requests across protocol and failure modes. Ordinary upload parity is covered separately by `../media/controller/upload_persistence_integration_test.go`.
 
 Operational interpretation and remaining limitations: `../../../docs/quality/media-generation-attempt-audit.md`. Issue #338 remains open until provider-specific recovery and other outstanding approval boundaries are actually verified.
+
+## Locked Skill execution limits
+
+- A queued Run uses its persisted Skill version, while the current Agent may have been rebound to a newer Skill. At admission and execution use the lower of each locked Skill limit and the current Agent override (steps, input, output); a newer version's otherwise-valid override must never widen an older Run's authority or turn its final synthesis turn into a Tool-enabled turn. Management validation remains unchanged. This does not snapshot every mutable Agent field or turn approximate input limits into exact Provider billing caps.
