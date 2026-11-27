@@ -35,6 +35,28 @@ func (r *ExecutionRepository) ClaimRun(ctx context.Context, runID int64) (*workf
 			return nil, err
 		}
 	}
+	// Admission evidence is not proof of external effects. Require ownership
+	// before returning a dispatchable claim, including historical queued retries.
+	// An uncertain or unowned claim remains running for operator inspection.
+	if run.TriggerKind == "retry" || run.RetryOfRunID != nil || run.RetryStepID != nil || len(run.RetryIterations) != 0 {
+		if run.TriggerKind != "retry" || run.RetryOfRunID == nil || *run.RetryOfRunID <= 0 || run.RetryStepID == nil || len(run.RetryIterations) == 0 {
+			return nil, errors.New("workflow retry admission identity is unconfirmed")
+		}
+		var owned, selected int
+		var sourceMatches bool
+		err := r.db.QueryRowContext(ctx, `SELECT COUNT(*),
+			COUNT(*) FILTER (WHERE iteration IN (SELECT value::integer FROM jsonb_array_elements_text($3::jsonb) AS items(value))),
+			EXISTS (SELECT 1 FROM ai_workflow_runs s WHERE s.id=$1 AND s.workflow_id=$4
+				AND s.workflow_version_id=$5 AND s.status='succeeded' AND s.trigger_kind <> 'retry' AND s.retry_of_run_id IS NULL)
+			FROM ai_workflow_retry_admissions WHERE source_run_id=$1 AND retry_run_id=$2`,
+			*run.RetryOfRunID, run.ID, retryIterations, run.WorkflowID, run.WorkflowVersionID).Scan(&owned, &selected, &sourceMatches)
+		if err != nil {
+			return nil, err
+		}
+		if !sourceMatches || owned != len(run.RetryIterations) || selected != owned {
+			return nil, errors.New("workflow retry admission ownership is unconfirmed")
+		}
+	}
 	return run, nil
 }
 

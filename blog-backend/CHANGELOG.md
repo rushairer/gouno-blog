@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Bind consumed retry indices to their exact retry Run and verify ownership before dispatch. Historical overlapping admissions remain unowned and cannot execute; removing a competing Run does not resolve ambiguous evidence. Unique extant history is backfilled without claiming external replay safety.
+
 - Record consumed Workflow retry indices in a durable admission ledger independent of retry Run deletion. Reject overlapping terminal retries and retry descendants; allow disjoint selections after active retries finish. Backfill extant history only; previously deleted records and external effects remain unreconciled.
 
 - Stop assigning new ForEach iterations when a worker reports unconfirmed execution evidence, while draining already assigned siblings and retaining their observed usage. Preserve ordinary per-item failure handling and quarantine the batch without claiming in-flight effects were cancelled.
