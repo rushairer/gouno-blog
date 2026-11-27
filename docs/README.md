@@ -10,6 +10,7 @@ This directory contains **current contracts** and **historical evidence**. They 
 - [OIDC/BFF architecture decision](oidc-bff-split-adr.md) — normative split-origin and OAuth client constraints.
 - [AI workflow design](ai-workbench-automation-plan.md) — compare with current code before implementing changes.
 - [Agent approval incident recovery](quality/agent-approval-in-doubt-recovery.md) and [manual media recovery](quality/media-generation-manual-recovery.md) — operational runbooks; do not replace them with dated incident reports.
+- [AI Platform acceptance matrix](quality/ai-platform-acceptance.md) — scoped engineering evidence, outstanding risks and stage exit conditions; not a release or deployment certificate.
 - [Workflow claimed-run reconciliation](quality/workflow-claimed-run-reconciliation.md) — bounded read-only operator triage; never a replay or recovery authorization.
 - [Current release's immutable manifest](releases/release-manifest-v1.6.0.md) and root [Release Checklist](../RELEASE_CHECKLIST.md). Release publication is not evidence of Staging or production deployment.
 

@@ -525,16 +525,18 @@ type effectiveRunLimits struct {
 	maxSteps, maxInputTokens, maxOutputTokens int
 }
 
+// A queued run retains its Skill version even if the Agent is later rebound.
+// Current Agent overrides may tighten, but never widen that locked authority.
 func effectiveLimits(agent *domain.Agent, skill *domain.AgentSkill) effectiveRunLimits {
 	limits := effectiveRunLimits{skill.MaxSteps, skill.MaxInputTokens, skill.MaxOutputTokens}
 	if agent.MaxStepsOverride != nil {
-		limits.maxSteps = *agent.MaxStepsOverride
+		limits.maxSteps = min(limits.maxSteps, *agent.MaxStepsOverride)
 	}
 	if agent.MaxInputTokensOverride != nil {
-		limits.maxInputTokens = *agent.MaxInputTokensOverride
+		limits.maxInputTokens = min(limits.maxInputTokens, *agent.MaxInputTokensOverride)
 	}
 	if agent.MaxOutputTokensOverride != nil {
-		limits.maxOutputTokens = *agent.MaxOutputTokensOverride
+		limits.maxOutputTokens = min(limits.maxOutputTokens, *agent.MaxOutputTokensOverride)
 	}
 	return limits
 }

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Cap Agent execution overrides at the Run's locked Skill version limits, even when the Agent was rebound after queueing. Preserve the locked final synthesis turn and output cap; retain valid tighter overrides.
+
 - Retain observed Workflow usage in acknowledged failure transitions, including a failed phase following a human-interaction resume. Do not erase earlier usage or retry unconfirmed failure writes; uncertain execution evidence remains quarantined.
 
 - Serialize explicit Workflow retry admission per source Run; reject another admission while a direct retry is queued, running, waiting for user or awaiting approval, including disjoint iteration selections. This guards concurrent admission, not terminal replay or external idempotency.
