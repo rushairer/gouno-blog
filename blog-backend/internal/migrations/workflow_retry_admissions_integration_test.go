@@ -27,7 +27,16 @@ func TestWorkflowRetryAdmissionUpgradePreservesExistingSelections(t *testing.T) 
 	if count := countIdentity(t, db, `SELECT count(*) FROM ai_workflow_retry_admissions WHERE source_run_id=$1`, sourceID); count != 3 {
 		t.Fatalf("backfilled %d indices, want 3", count)
 	}
+	if count := countIdentity(t, db, `SELECT count(*) FROM ai_workflow_retry_admissions WHERE source_run_id=$1 AND iteration=2 AND retry_run_id IS NULL`, sourceID); count != 1 {
+		t.Fatalf("overlapping history must remain unowned: %d", count)
+	}
+	if count := countIdentity(t, db, `SELECT count(*) FROM ai_workflow_retry_admissions WHERE source_run_id=$1 AND retry_run_id IS NOT NULL`, sourceID); count != 2 {
+		t.Fatalf("unique extant selection owners: %d", count)
+	}
 	execIdentity(t, db, `DELETE FROM ai_workflow_runs WHERE retry_of_run_id=$1`, sourceID)
+	if count := countIdentity(t, db, `SELECT count(*) FROM ai_workflow_retry_admissions WHERE source_run_id=$1 AND retry_run_id IS NOT NULL`, sourceID); count != 2 {
+		t.Fatalf("deleting retries lost their identity evidence: %d", count)
+	}
 	if _, err := db.ExecContext(ctx, insert, sourceID, "[3,4]"); err == nil {
 		t.Fatal("overlapping direct insertion accepted after retry deletion")
 	}

@@ -292,3 +292,58 @@ func TestRunRetryAdmissionRetainsConsumedIterationsAfterDeletion(t *testing.T) {
 		t.Fatalf("admission ledger count=%d err=%v", count, err)
 	}
 }
+
+func TestExecutionRetryClaimRequiresExactAdmissionOwner(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	workflowID, versionID := admissionWorkflowVersion(t, db)
+	var sourceID int64
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,status,trigger_kind)
+		VALUES($1,$2,'succeeded','manual') RETURNING id`, workflowID, versionID).Scan(&sourceID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := db.Exec(`DELETE FROM ai_workflow_runs WHERE id=$1 OR retry_of_run_id=$1`, sourceID); err != nil {
+			t.Error(err)
+		}
+	})
+	const insert = `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,status,trigger_kind,retry_of_run_id,retry_step_id,retry_iterations)
+		VALUES($1,$2,'queued','retry',$3,'batch',$4::jsonb) RETURNING id`
+	execution := newTestExecutionCoordinator(db)
+	for _, tc := range []struct {
+		selection string
+		change    string
+	}{
+		{"[0]", ""},
+		{"[1]", "UPDATE ai_workflow_retry_admissions SET retry_run_id=NULL WHERE retry_run_id=$1"},
+		{"[2]", "UPDATE ai_workflow_retry_admissions SET retry_run_id=retry_run_id+1000000 WHERE retry_run_id=$1"},
+		{"[3,4]", "UPDATE ai_workflow_runs SET retry_iterations='[3]' WHERE id=$1"},
+		{"[5]", "UPDATE ai_workflow_runs SET retry_iterations='[5,5]' WHERE id=$1"},
+	} {
+		var retryID int64
+		if err := db.QueryRowContext(ctx, insert, workflowID, versionID, sourceID, tc.selection).Scan(&retryID); err != nil {
+			t.Fatal(err)
+		}
+		if tc.change == "" {
+			if run, err := execution.ClaimRun(ctx, retryID); err != nil || run == nil || run.ID != retryID {
+				t.Fatalf("valid retry claim: run=%v err=%v", run, err)
+			}
+			continue
+		}
+		if _, err := db.ExecContext(ctx, tc.change, retryID); err != nil {
+			t.Fatal(err)
+		}
+		// No definitions or Agent dependency is wired: a denied claim must
+		// stop the Service before it can execute any step.
+		service := &Service{execution: execution}
+		if err := service.execute(ctx, retryID); err == nil {
+			t.Fatalf("unconfirmed retry owner accepted: %s", tc.selection)
+		}
+		assertExecutionFenceStatus(t, db, retryID, "running")
+		var count int
+		if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_step_runs WHERE workflow_run_id=$1`, retryID).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("denied retry recorded %d steps: %v", count, err)
+		}
+	}
+}
