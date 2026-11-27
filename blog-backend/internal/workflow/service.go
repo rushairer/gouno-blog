@@ -1263,25 +1263,39 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 					if concurrency < 1 {
 						concurrency = 1
 					}
-					jobs := make(chan int)
+					// Assign work and publish an evidence stop under the same lock.
+					// Already assigned siblings may finish, but never authorize a
+					// new iteration after an unconfirmed outcome is observed.
+					var admission sync.Mutex
+					next := 0
+					stopped := false
 					var workers sync.WaitGroup
 					for worker := 0; worker < concurrency && worker < len(selected); worker++ {
 						workers.Add(1)
 						go func() {
 							defer workers.Done()
-							for index := range jobs {
+							for {
+								admission.Lock()
+								if stopped || next == len(selected) {
+									admission.Unlock()
+									return
+								}
+								index := selected[next]
+								next++
+								admission.Unlock()
 								childDocument := cloneDocument(document)
 								childDocument["item"] = items[index]
 								childIteration := index
 								childOutput, childAwaiting, inTokens, outTokens, childErr := s.executeSteps(ctx, run, step.Steps, childDocument, items[index], &childIteration)
+								if errors.Is(childErr, errWorkflowEvidenceUnconfirmed) {
+									admission.Lock()
+									stopped = true
+									admission.Unlock()
+								}
 								resultCh <- iterationResult{index: index, output: childOutput, awaiting: childAwaiting, inTokens: inTokens, outTokens: outTokens, err: childErr}
 							}
 						}()
 					}
-					for _, index := range selected {
-						jobs <- index
-					}
-					close(jobs)
 					workers.Wait()
 					close(resultCh)
 					for result := range resultCh {
@@ -1290,7 +1304,10 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 					// Evidence failure outranks normal per-item business failures,
 					// even if the first failed item was earlier in index order.
 					for _, index := range selected {
-						result := resultsByIndex[index]
+						result, assigned := resultsByIndex[index]
+						if !assigned {
+							continue
+						}
 						totalInput += result.inTokens
 						totalOutput += result.outTokens
 						awaiting = awaiting || result.awaiting
@@ -1300,6 +1317,9 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 					}
 					if err != nil {
 						return nil, awaiting, totalInput, totalOutput, err
+					}
+					if len(resultsByIndex) != len(selected) {
+						return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(errors.New("missing iteration result"))
 					}
 					for _, index := range selected {
 						result := resultsByIndex[index]
