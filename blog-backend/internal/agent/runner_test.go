@@ -580,3 +580,67 @@ func TestRunnerReboundAgentCannotWidenLockedSkillTurn(t *testing.T) {
 		t.Fatalf("locked request limits changed: maxTokens=%d tools=%d", request.MaxTokens, len(request.Tools))
 	}
 }
+
+func TestRunnerInputLimitIncludesCompleteOfferedEnvelope(t *testing.T) {
+	const prompt = "Inspect content."
+	messages := []provider.Message{{Role: "user", Content: "Run your configured blog operation now."}}
+	baseInstructions := platformInstructions + "\n\nAgent instructions:\n" + prompt
+	normalInstructions := platformInstructions + contentPublicationInstruction(domain.ContentPublishApproval) + "\n\nAgent instructions:\n" + prompt
+	baseBytes := approximateInputBytes(baseInstructions, messages)
+	normalBytes := approximateInputBytes(normalInstructions, messages)
+	registry := tool.New(tool.Definition{
+		Name: "read", Risk: tooldomain.ToolRiskRead,
+		Description: strings.Repeat("x", 1024),
+		Parameters: json.RawMessage(`{"type":"object","properties":{"query":{"type":"string"}}}`),
+	})
+	offered := registry.Definitions([]string{"read"})
+	completeBytes := approximateInputBytes(normalInstructions, messages, offered...)
+	if len(offered) != 1 || completeBytes != normalBytes+len(offered[0].Name)+len(offered[0].Description)+len(offered[0].Parameters) {
+		t.Fatalf("Tool envelope not counted: offered=%d bytes=%d", len(offered), completeBytes)
+	}
+	for _, tc := range []struct {
+		name         string
+		steps        int
+		preview      bool
+		capabilities []string
+		maxTokens    int
+		wantRejected bool
+	}{
+		{"publication policy", 2, false, nil, (baseBytes + 3) / 4, true},
+		{"preview policy", 2, true, nil, (normalBytes + 3) / 4, true},
+		{"final synthesis policy", 1, false, nil, (normalBytes + 3) / 4, true},
+		{"offered Tool schema", 2, false, []string{"read"}, (normalBytes + 3) / 4, true},
+		{"complete Tool envelope fits", 2, false, []string{"read"}, (completeBytes + 3) / 4, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			versionID := int64(9)
+			runs := &modelBoundaryRuns{run: &domain.AgentRun{ID: 1, AgentID: 2, SkillVersionID: &versionID}}
+			client := &modelBoundaryProvider{result: provider.Result{Text: "done", InputTokens: 10, OutputTokens: 3}}
+			lifecycle := &recordingRunLifecycle{}
+			runner := &Runner{
+				runs: runs, tools: registry, lifecycle: lifecycle, notifications: &recordingRunNotifications{},
+				management: &modelBoundaryManagement{
+					agent: &domain.Agent{ID: 2, MonthlyTokenBudget: 10000},
+					skill: &domain.AgentSkill{SystemPrompt: prompt, ContentPublishMode: domain.ContentPublishApproval,
+						Capabilities: tc.capabilities, MaxSteps: tc.steps, MaxInputTokens: tc.maxTokens, MaxOutputTokens: 100},
+					client: client,
+				},
+			}
+			err := runner.execute(context.Background(), 1, tc.preview)
+			if tc.wantRejected {
+				if !errors.Is(err, ErrInvalid) || len(client.requests) != 0 || runs.usages != 0 || runs.toolRows != 0 ||
+					lifecycle.calls != 1 || lifecycle.status != domain.AgentRunFailed || lifecycle.inputTokens != 0 || lifecycle.outputTokens != 0 {
+					t.Fatalf("oversized input reached execution: err=%v requests=%d usage=%d terminal=%#v", err, len(client.requests), runs.usages, lifecycle)
+				}
+				return
+			}
+			if err != nil || len(client.requests) != 1 || runs.usages != 1 || lifecycle.status != domain.AgentRunSucceeded {
+				t.Fatalf("valid envelope rejected: err=%v requests=%d terminal=%#v", err, len(client.requests), lifecycle)
+			}
+			req := client.requests[0]
+			if got := approximateInputBytes(req.Instructions, req.Messages, req.Tools...); got != completeBytes || got > tc.maxTokens*4 {
+				t.Fatalf("dispatched envelope bytes=%d expected=%d limit=%d", got, completeBytes, tc.maxTokens*4)
+			}
+		})
+	}
+}

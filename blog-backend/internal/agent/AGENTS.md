@@ -66,3 +66,5 @@ Operational interpretation and remaining limitations: `../../../docs/quality/med
 ## Locked Skill execution limits
 
 - A queued Run uses its persisted Skill version, while the current Agent may have been rebound to a newer Skill. At admission and execution use the lower of each locked Skill limit and the current Agent override (steps, input, output); a newer version's otherwise-valid override must never widen an older Run's authority or turn its final synthesis turn into a Tool-enabled turn. Management validation remains unchanged. This does not snapshot every mutable Agent field or turn approximate input limits into exact Provider billing caps.
+
+- Check the assembled logical model input before each Provider invocation: include the complete publication, Workflow scope, preview and final-synthesis instructions, message history and the actually offered Tool names, descriptions and parameter schemas. A rejected turn must not dispatch or fabricate usage. This is the existing four-bytes-per-token local estimate, not exact Provider serialization, tokenization, or billing.

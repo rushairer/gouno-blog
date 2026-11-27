@@ -36,3 +36,11 @@ All `internal/` paths are relative to `blog-backend/`; test anchors are relative
 5. CMS admission is a later assessment, not authorization to create a new product line. No release, production deploy, secret changes, live Provider requests or production database inspection is authorized by this document.
 
 Do not reopen verified narrow fixes without new evidence. If a required manual or local verification is unavailable, record the exact blocker and hand off rather than marking the stage complete.
+
+## Follow-up checkpoint — 2026-11-27
+
+PR #463 was merged as `43b406f23f708496dc0016c92380705182bfd5c3` after [CI](https://github.com/rushairer/gouno-blog/actions/runs/46012414777), [Images](https://github.com/rushairer/gouno-blog/actions/runs/46012414830) and [BFF compatibility](https://github.com/rushairer/gouno-blog/actions/runs/46012414808) passed. Its predecessor #462 also passed [main CI](https://github.com/rushairer/gouno-blog/actions/runs/46012135358), [image publication](https://github.com/rushairer/gouno-blog/actions/runs/46012135530) and [BFF compatibility](https://github.com/rushairer/gouno-blog/actions/runs/46012135486). Post-merge gates for #463 are separate.
+
+Follow-up review of `runner.go` found that the input estimate ran before publication, preview and final-synthesis instructions were appended and omitted offered Tool descriptions/schemas. This batch checks the complete logical envelope before each invocation; `TestRunnerInputLimitIncludesCompleteOfferedEnvelope` covers rejection without Provider dispatch, usage or Tool effects, and an allowed envelope. New tests are pending CI at submission. The byte estimate is not a tokenizer or a hard invoice limit.
+
+Open issues #338 and #359 remain active. #338 explicitly records the historical cancel/reclaim bypass as remediated by #356, but does not certify external replay or operator recovery. Keep it open pending action-specific and operator evidence. #359 owns platform-wide acceptance; do not infer readiness from this scoped batch. Seven dependency PRs remain separate from these changes. No new product line, UI certification, external request or deployment is authorized.

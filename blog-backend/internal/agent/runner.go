@@ -358,11 +358,6 @@ func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, o
 		}
 	}
 	for step := 0; step < limits.maxSteps; step++ {
-		if approximateInputBytes(
-			platformInstructions+runScopeInstruction+"\n\nAgent instructions:\n"+skill.SystemPrompt, messages,
-		) > limits.maxInputTokens*4 {
-			return fmt.Errorf("%w: assembled model input exceeds the agent input limit", ErrInvalid)
-		}
 		usedTokens, err := r.runs.MonthlyTokenUsage(ctx, value.ID)
 		if err != nil {
 			return err
@@ -383,6 +378,11 @@ func (r *Runner) executeClaimed(ctx context.Context, runID int64, dryRun bool, o
 			// can spend every step discovering more material and be marked as a
 			// successful run with no useful operator-facing conclusion.
 			instructions += "\n\nThis is the final step. Do not call tools. Return a concise, evidence-based final summary using the information already collected."
+		}
+		// Check the complete logical input, including the policy/preview/synthesis
+		// instructions and actually offered Tool definitions, before dispatch.
+		if approximateInputBytes(instructions, messages, tools...) > limits.maxInputTokens*4 {
+			return fmt.Errorf("%w: assembled model input exceeds the agent input limit", ErrInvalid)
 		}
 		result, attempts, err := generateWithRetry(ctx, client, provider.Request{
 			Instructions: instructions,
@@ -988,13 +988,17 @@ func validateCitations(text string, ledger map[string]domain.AgentCitation) []do
 	return items
 }
 
-func approximateInputBytes(instructions string, messages []provider.Message) int {
+// This is a local byte estimate, not provider tokenization or wire framing.
+func approximateInputBytes(instructions string, messages []provider.Message, tools ...provider.ToolDefinition) int {
 	total := len(instructions)
 	for _, message := range messages {
 		total += len(message.Role) + len(message.Content) + len(message.ToolCallID)
 		for _, call := range message.ToolCalls {
 			total += len(call.ID) + len(call.Name) + len(call.Arguments)
 		}
+	}
+	for _, definition := range tools {
+		total += len(definition.Name) + len(definition.Description) + len(definition.Parameters)
 	}
 	return total
 }
