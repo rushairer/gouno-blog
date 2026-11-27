@@ -606,3 +606,33 @@ func TestExecutionFailureUsageAcknowledgementLoss(t *testing.T) {
 		})
 	}
 }
+
+func TestExecutionForEachCheckpointLossStopsUnassignedIterations(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	runID := newExecutionFenceRun(t, db)
+	base := workflowrepository.NewExecutionRepository(db)
+	run, err := base.ClaimRun(ctx, runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := &Service{execution: NewExecutionCoordinator(dbtx.NewTransactor(db, nil),
+		checkpointAckLossStore{ExecutionStore: base, commit: true}, workflowrepository.NewInteractionRepository(db))}
+	doc := map[string]any{"input": map[string]any{"items": []any{1, 2, 3}}, "steps": map[string]any{}}
+	steps := []workflowdomain.WorkflowStep{{ID: "batch", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 3,
+		MaxConcurrency: 1, ContinueOnError: true, Steps: []workflowdomain.WorkflowStep{{ID: "child", Type: "output", OutputPointer: "/item"}}}}
+	_, _, _, _, err = s.executeSteps(ctx, run, steps, doc, nil, nil)
+	if !errors.Is(err, errWorkflowEvidenceUnconfirmed) || !errors.Is(err, errExecutionInjected) {
+		t.Fatalf("checkpoint error=%v", err)
+	}
+	if err := s.finishExecution(ctx, runID, workflowExecutionOutcome{}, err); !errors.Is(err, errWorkflowEvidenceUnconfirmed) {
+		t.Fatalf("finish error=%v", err)
+	}
+	assertExecutionFenceStatus(t, db, runID, "running")
+	var count, first int
+	if err := db.QueryRowContext(ctx, `SELECT count(*),count(*) FILTER (WHERE step_id='child' AND iteration=0)
+		FROM ai_workflow_step_runs WHERE workflow_run_id=$1`, runID).Scan(&count, &first); err != nil || count != 1 || first != 1 {
+		t.Fatalf("checkpoint rows=%d first=%d err=%v", count, first, err)
+	}
+}
