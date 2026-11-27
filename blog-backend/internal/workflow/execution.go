@@ -13,7 +13,7 @@ import (
 
 type ExecutionStore interface {
 	ClaimRun(context.Context, int64) (*workflowdomain.WorkflowRun, error)
-	FailRun(context.Context, int64, string, string) (bool, error)
+	FailRun(context.Context, int64, string, string, int64, int64) (bool, error)
 	FailureNotificationTarget(context.Context, int64) (*int64, string, int64, error)
 	ResetResourceQueryStats(context.Context, int64, int64) error
 	CompleteRun(context.Context, int64, string, json.RawMessage, int64, int64) error
@@ -55,8 +55,8 @@ func (c *ExecutionCoordinator) ClaimRun(ctx context.Context, runID int64) (*work
 	return c.store.ClaimRun(ctx, runID)
 }
 
-func (c *ExecutionCoordinator) FailRun(ctx context.Context, runID int64, code, message string) (bool, error) {
-	return c.store.FailRun(ctx, runID, code, message)
+func (c *ExecutionCoordinator) FailRun(ctx context.Context, runID int64, code, message string, inputTokens, outputTokens int64) (bool, error) {
+	return c.store.FailRun(ctx, runID, code, message, inputTokens, outputTokens)
 }
 
 func (c *ExecutionCoordinator) FailureNotificationTarget(ctx context.Context, runID int64) (*int64, string, int64, error) {

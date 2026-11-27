@@ -506,3 +506,103 @@ func TestExecutionResumeAccumulatesNewUsage(t *testing.T) {
 	}
 	assertExecutionFenceStatus(t, db, runID, "succeeded")
 }
+
+func TestExecutionFailurePreservesObservedUsage(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	runID := newExecutionFenceRun(t, db)
+	execution := newTestExecutionCoordinator(db)
+	if _, err := execution.ClaimRun(ctx, runID); err != nil {
+		t.Fatal(err)
+	}
+	if err := execution.CompleteRun(ctx, runID, "waiting_for_user", []byte(`{}`), 3, 5); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := workflowrepository.NewRunAdmissionRepository(db).ResumeUserRun(ctx, runID); err != nil || !changed {
+		t.Fatalf("resume changed=%v err=%v", changed, err)
+	}
+	if _, err := execution.ClaimRun(ctx, runID); err != nil {
+		t.Fatal(err)
+	}
+	assertUsage := func(status string, wantIn, wantOut int64) {
+		t.Helper()
+		assertExecutionFenceStatus(t, db, runID, status)
+		var in, out int64
+		if err := db.QueryRowContext(ctx, `SELECT input_tokens,output_tokens FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&in, &out); err != nil {
+			t.Fatal(err)
+		}
+		if in != wantIn || out != wantOut {
+			t.Fatalf("usage=%d/%d want=%d/%d", in, out, wantIn, wantOut)
+		}
+	}
+	if changed, err := execution.FailRun(ctx, runID, "test_failure", "test", -1, 0); err == nil || changed {
+		t.Fatalf("negative failure delta changed=%v err=%v", changed, err)
+	}
+	assertUsage("running", 3, 5)
+	service := &Service{execution: execution, agents: newResourceQueryManagement(db)}
+	outcome := workflowExecutionOutcome{inputTokens: 7, outputTokens: 11}
+	if err := service.finishExecution(ctx, runID, outcome, unconfirmedWorkflowEvidence(errExecutionInjected)); !errors.Is(err, errWorkflowEvidenceUnconfirmed) {
+		t.Fatalf("uncertain failure error=%v", err)
+	}
+	assertUsage("running", 3, 5)
+	workerCtx, cancel := context.WithCancel(ctx)
+	cancel()
+	if err := service.finishExecution(workerCtx, runID, outcome, errExecutionInjected); !errors.Is(err, errExecutionInjected) {
+		t.Fatalf("failure error=%v", err)
+	}
+	assertUsage("failed", 10, 16)
+	if changed, err := execution.FailRun(ctx, runID, "test_failure", "duplicate", 7, 11); err != nil || changed {
+		t.Fatalf("duplicate failure changed=%v err=%v", changed, err)
+	}
+	assertUsage("failed", 10, 16)
+}
+
+type workflowFailureAckLossStore struct {
+	ExecutionStore
+	commit bool
+}
+
+func (s workflowFailureAckLossStore) FailRun(ctx context.Context, runID int64, code, message string, inputTokens, outputTokens int64) (bool, error) {
+	if s.commit {
+		if _, err := s.ExecutionStore.FailRun(ctx, runID, code, message, inputTokens, outputTokens); err != nil {
+			return false, err
+		}
+	}
+	return false, errExecutionInjected
+}
+
+func TestExecutionFailureUsageAcknowledgementLoss(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	base := workflowrepository.NewExecutionRepository(db)
+	for _, commit := range []bool{false, true} {
+		t.Run(fmt.Sprintf("commit_%v", commit), func(t *testing.T) {
+			runID := newExecutionFenceRun(t, db)
+			if _, err := base.ClaimRun(ctx, runID); err != nil {
+				t.Fatal(err)
+			}
+			execution := NewExecutionCoordinator(dbtx.NewTransactor(db, nil),
+				workflowFailureAckLossStore{ExecutionStore: base, commit: commit},
+				workflowrepository.NewInteractionRepository(db))
+			service := &Service{execution: execution}
+			outcome := workflowExecutionOutcome{inputTokens: 7, outputTokens: 11}
+			if err := service.finishExecution(ctx, runID, outcome, errors.New("test execution failure")); !errors.Is(err, errExecutionInjected) {
+				t.Fatalf("failure acknowledgement error=%v", err)
+			}
+			wantStatus, wantIn, wantOut := "running", int64(0), int64(0)
+			if commit {
+				wantStatus, wantIn, wantOut = "failed", 7, 11
+			}
+			assertExecutionFenceStatus(t, db, runID, wantStatus)
+			var in, out int64
+			if err := db.QueryRowContext(ctx, `SELECT input_tokens,output_tokens FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&in, &out); err != nil {
+				t.Fatal(err)
+			}
+			if in != wantIn || out != wantOut {
+				t.Fatalf("usage=%d/%d want=%d/%d", in, out, wantIn, wantOut)
+			}
+		})
+	}
+}
