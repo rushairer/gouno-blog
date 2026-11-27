@@ -50,11 +50,14 @@ func TestAgentExecutionFailureReportsSafeCauseNotInvalidWorkflow(t *testing.T) {
 			}
 			// Exercise failure finalization separately, after execution ownership
 			// has been established by the caller.
-			if finishErr := service.finishExecution(context.Background(), 58, workflowExecutionOutcome{}, err); !errors.Is(finishErr, err) {
+			if finishErr := service.finishExecution(context.Background(), 58, workflowExecutionOutcome{inputTokens: 7, outputTokens: 11}, err); !errors.Is(finishErr, err) {
 				t.Fatalf("finalization lost the execution error: %v", finishErr)
 			}
 			if store.runCode != "workflow_failed" || store.runMessage != message {
 				t.Fatalf("run diagnostic differs from step diagnostic: %q / %q", store.runCode, store.runMessage)
+			}
+			if store.inputTokens != 7 || store.outputTokens != 11 {
+				t.Fatalf("failure usage=%d/%d want=7/11", store.inputTokens, store.outputTokens)
 			}
 		})
 	}
@@ -71,10 +74,12 @@ func TestCancelledAndLegacyAgentFailuresRemainActionable(t *testing.T) {
 
 type failureStepStore struct {
 	ExecutionStore
-	step       *workflowdomain.WorkflowStepRun
-	failure    error
-	runCode    string
-	runMessage string
+	step         *workflowdomain.WorkflowStepRun
+	failure      error
+	runCode      string
+	runMessage   string
+	inputTokens  int64
+	outputTokens int64
 }
 
 func (store *failureStepStore) RecordStep(_ context.Context, step *workflowdomain.WorkflowStepRun) error {
@@ -86,8 +91,9 @@ func (store *failureStepStore) ClaimRun(context.Context, int64) (*workflowdomain
 	return nil, store.failure
 }
 
-func (store *failureStepStore) FailRun(_ context.Context, _ int64, code, message string) (bool, error) {
+func (store *failureStepStore) FailRun(_ context.Context, _ int64, code, message string, inputTokens, outputTokens int64) (bool, error) {
 	store.runCode, store.runMessage = code, message
+	store.inputTokens, store.outputTokens = inputTokens, outputTokens
 	return true, nil
 }
 

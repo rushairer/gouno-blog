@@ -38,14 +38,19 @@ func (r *ExecutionRepository) ClaimRun(ctx context.Context, runID int64) (*workf
 	return run, nil
 }
 
-func (r *ExecutionRepository) FailRun(ctx context.Context, runID int64, code, message string) (bool, error) {
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',error_code=$2,error_message=$3,finished_at=NOW()
-        WHERE id=$1 AND status='running'`, runID, code, message)
+func (r *ExecutionRepository) FailRun(ctx context.Context, runID int64, code, message string, inputTokens, outputTokens int64) (bool, error) {
+	if inputTokens < 0 || outputTokens < 0 {
+		return false, errors.New("workflow failure usage cannot be negative")
+	}
+	// Observed usage belongs to this execution phase, even when it fails.
+	// Persist it atomically with the guarded failure transition.
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',error_code=$2,error_message=$3,input_tokens=input_tokens+$4,output_tokens=output_tokens+$5,finished_at=NOW()
+        WHERE id=$1 AND status='running'`, runID, code, message, inputTokens, outputTokens)
 	if err != nil {
 		return false, err
 	}
 	changed, err := result.RowsAffected()
-	return changed > 0, err
+	return changed == 1, err
 }
 
 func (r *ExecutionRepository) FailureNotificationTarget(ctx context.Context, runID int64) (*int64, string, int64, error) {

@@ -973,7 +973,7 @@ func (s *Service) finishExecution(ctx context.Context, runID int64, outcome work
 		return s.execution.CompleteRun(finishCtx, runID, outcome.status, outcome.output, outcome.inputTokens, outcome.outputTokens)
 	}
 	code, message := "workflow_failed", safeError(executionErr)
-	changed, updateErr := s.execution.FailRun(finishCtx, runID, code, message)
+	changed, updateErr := s.execution.FailRun(finishCtx, runID, code, message, outcome.inputTokens, outcome.outputTokens)
 	if updateErr != nil {
 		return errors.Join(executionErr, updateErr)
 	}
@@ -1009,8 +1009,11 @@ func (s *Service) executeClaimed(ctx context.Context, run *workflowdomain.Workfl
 	}
 	document := map[string]any{"input": input, "steps": map[string]any{}}
 	output, awaiting, inputTokens, outputTokens, err := s.executeSteps(ctx, run, steps, document, nil, nil)
+	// Preserve observed usage even if a later step fails. Unconfirmed
+	// evidence still bypasses finalization entirely.
+	outcome := workflowExecutionOutcome{inputTokens: inputTokens, outputTokens: outputTokens}
 	if err != nil {
-		return workflowExecutionOutcome{}, err
+		return outcome, err
 	}
 	status := "succeeded"
 	if awaiting {
@@ -1033,9 +1036,10 @@ func (s *Service) executeClaimed(ctx context.Context, run *workflowdomain.Workfl
 	}
 	rawOutput, err := json.Marshal(output)
 	if err != nil {
-		return workflowExecutionOutcome{}, err
+		return outcome, err
 	}
-	return workflowExecutionOutcome{status: status, output: rawOutput, inputTokens: inputTokens, outputTokens: outputTokens}, nil
+	outcome.status, outcome.output = status, rawOutput
+	return outcome, nil
 }
 
 func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.WorkflowRun, steps []workflowdomain.WorkflowStep, document map[string]any, item any, iteration *int) (any, bool, int64, int64, error) {

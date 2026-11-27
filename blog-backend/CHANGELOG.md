@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Retain observed Workflow usage in acknowledged failure transitions, including a failed phase following a human-interaction resume. Do not erase earlier usage or retry unconfirmed failure writes; uncertain execution evidence remains quarantined.
+
 - Serialize explicit Workflow retry admission per source Run; reject another admission while a direct retry is queued, running, waiting for user or awaiting approval, including disjoint iteration selections. This guards concurrent admission, not terminal replay or external idempotency.
 
 - Preserve observed Workflow token totals across acknowledged human-interaction resume phases. Atomically add only newly executed step usage at each guarded completion, reject negative deltas, and keep zero-work resumes from clearing prior counters. Unconfirmed and failed phase usage reconciliation remains separate.
