@@ -23,6 +23,7 @@ type RunAdmissionStore interface {
 	LockRetrySourceTx(context.Context, *sql.Tx, int64) (*workflowdomain.WorkflowRun, error)
 	CountFailedIterationsTx(context.Context, *sql.Tx, int64, string, []int) (int, error)
 	HasActiveRetryTx(context.Context, *sql.Tx, int64) (bool, error)
+	HasConsumedRetryIterationTx(context.Context, *sql.Tx, int64, []int) (bool, error)
 	CreateRetryRunTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRun) error
 	CopyRetryResourcesTx(context.Context, *sql.Tx, int64, int64) error
 	CopyRetryQueryStepsTx(context.Context, *sql.Tx, int64, int64) error
@@ -105,6 +106,9 @@ func (c *RunAdmissionCoordinator) Retry(ctx context.Context, runID int64, childS
 		if source.Status != "succeeded" {
 			return fmt.Errorf("%w: only a completed partial run can be retried", ErrInvalid)
 		}
+		if source.TriggerKind == "retry" || source.RetryOfRunID != nil {
+			return fmt.Errorf("%w: retry descendants are not eligible for replay", ErrInvalid)
+		}
 		failed, err := c.store.CountFailedIterationsTx(ctx, tx, runID, childStepID, iterations)
 		if err != nil {
 			return err
@@ -122,6 +126,14 @@ func (c *RunAdmissionCoordinator) Retry(ctx context.Context, runID int64, childS
 		}
 		if active {
 			return fmt.Errorf("%w: source run already has an active retry", ErrInvalid)
+		}
+
+		consumed, err := c.store.HasConsumedRetryIterationTx(ctx, tx, runID, iterations)
+		if err != nil {
+			return err
+		}
+		if consumed {
+			return fmt.Errorf("%w: a selected iteration has already been admitted for retry", ErrInvalid)
 		}
 
 		parent := parentStepID

@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Record consumed Workflow retry indices in a durable admission ledger independent of retry Run deletion. Reject overlapping terminal retries and retry descendants; allow disjoint selections after active retries finish. Backfill extant history only; previously deleted records and external effects remain unreconciled.
+
 - Stop assigning new ForEach iterations when a worker reports unconfirmed execution evidence, while draining already assigned siblings and retaining their observed usage. Preserve ordinary per-item failure handling and quarantine the batch without claiming in-flight effects were cancelled.
 
 - Restrict partial Workflow retries to one isolated top-level batch with no unrelated effectful steps or model siblings. Revalidate persisted retry scope before dispatch, quarantine missing query snapshots and reject out-of-range selections rather than widening the batch. Selected failed model replay and terminal retry idempotency remain separate concerns.

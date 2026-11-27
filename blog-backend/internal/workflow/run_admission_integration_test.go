@@ -125,6 +125,12 @@ func TestRunRetrySnapshotRollsBackAsOneTransaction(t *testing.T) {
 	if count != 0 {
 		t.Fatalf("rolled-back retry left %d retry rows", count)
 	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM ai_workflow_retry_admissions WHERE source_run_id=$1`, sourceRunID).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("rolled-back retry left admission evidence: count=%d err=%v", count, err)
+	}
+	if _, err := newTestRunAdmissionCoordinator(db).Retry(ctx, sourceRunID, "child", "batch", []int{1}, nil); err != nil {
+		t.Fatalf("confirmed rollback must not consume the iteration: %v", err)
+	}
 }
 
 func TestRunAdmissionRecoveryPreservesClaimedRuns(t *testing.T) {
@@ -231,5 +237,58 @@ func TestRunRetryAdmissionSerializesActiveRetries(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("expected one retry row, got %d", count)
+	}
+}
+
+func TestRunRetryAdmissionRetainsConsumedIterationsAfterDeletion(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	workflowID, versionID := admissionWorkflowVersion(t, db)
+	var sourceID int64
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,status,input,trigger_kind)
+		VALUES($1,$2,'succeeded','{}','manual') RETURNING id`, workflowID, versionID).Scan(&sourceID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := db.Exec(`DELETE FROM ai_workflow_runs WHERE id=$1 OR retry_of_run_id=$1`, sourceID); err != nil {
+			t.Error(err)
+		}
+	})
+	if _, err := db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs(workflow_run_id,step_id,step_type,iteration,status)
+		VALUES($1,'child','output',1,'failed'),($1,'child','output',2,'failed')`, sourceID); err != nil {
+		t.Fatal(err)
+	}
+	coordinator := newTestRunAdmissionCoordinator(db)
+	first, err := coordinator.Retry(ctx, sourceID, "child", "batch", []int{1}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='succeeded' WHERE id=$1`, first.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs(workflow_run_id,step_id,step_type,iteration,status)
+		VALUES($1,'child','output',1,'failed')`, first.ID); err != nil {
+		t.Fatal(err)
+	}
+	if run, err := coordinator.Retry(ctx, first.ID, "child", "batch", []int{1}, nil); run != nil || !errors.Is(err, ErrInvalid) {
+		t.Fatalf("descendant replay accepted: run=%v err=%v", run, err)
+	}
+	for _, deleted := range []bool{false, true} {
+		if deleted {
+			if _, err := db.ExecContext(ctx, `DELETE FROM ai_workflow_runs WHERE id=$1`, first.ID); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if run, err := coordinator.Retry(ctx, sourceID, "child", "batch", []int{1, 2}, nil); run != nil || !errors.Is(err, ErrInvalid) {
+			t.Fatalf("overlap after deletion=%v: run=%v err=%v", deleted, run, err)
+		}
+	}
+	if _, err := coordinator.Retry(ctx, sourceID, "child", "batch", []int{2}, nil); err != nil {
+		t.Fatalf("disjoint iteration was not consumed: %v", err)
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM ai_workflow_retry_admissions WHERE source_run_id=$1`, sourceID).Scan(&count); err != nil || count != 2 {
+		t.Fatalf("admission ledger count=%d err=%v", count, err)
 	}
 }

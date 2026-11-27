@@ -86,17 +86,17 @@ func (r *RunAdmissionRepository) InsertAdmissionResourcesTx(ctx context.Context,
 
 func scanRetrySource(scanner interface{ Scan(...any) error }) (*workflowdomain.WorkflowRun, error) {
 	var run workflowdomain.WorkflowRun
-	err := scanner.Scan(&run.WorkflowID, &run.WorkflowVersionID, &run.DryRun, &run.Input, &run.Status)
+	err := scanner.Scan(&run.WorkflowID, &run.WorkflowVersionID, &run.DryRun, &run.Input, &run.Status, &run.TriggerKind, &run.RetryOfRunID)
 	return &run, err
 }
 
 func (r *RunAdmissionRepository) RetrySource(ctx context.Context, runID int64) (*workflowdomain.WorkflowRun, error) {
-	return scanRetrySource(r.db.QueryRowContext(ctx, `SELECT workflow_id,workflow_version_id,dry_run,input,status
+	return scanRetrySource(r.db.QueryRowContext(ctx, `SELECT workflow_id,workflow_version_id,dry_run,input,status,trigger_kind,retry_of_run_id
 		FROM ai_workflow_runs WHERE id=$1`, runID))
 }
 
 func (r *RunAdmissionRepository) LockRetrySourceTx(ctx context.Context, tx *sql.Tx, runID int64) (*workflowdomain.WorkflowRun, error) {
-	return scanRetrySource(tx.QueryRowContext(ctx, `SELECT workflow_id,workflow_version_id,dry_run,input,status
+	return scanRetrySource(tx.QueryRowContext(ctx, `SELECT workflow_id,workflow_version_id,dry_run,input,status,trigger_kind,retry_of_run_id
 		FROM ai_workflow_runs WHERE id=$1 FOR UPDATE`, runID))
 }
 
@@ -121,6 +121,20 @@ func (r *RunAdmissionRepository) HasActiveRetryTx(ctx context.Context, tx *sql.T
 	var exists bool
 	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_runs
 		WHERE retry_of_run_id=$1 AND status IN ('queued','running','waiting_for_user','awaiting_approval'))`, sourceRunID).Scan(&exists)
+	return exists, err
+}
+
+// HasConsumedRetryIterationTx checks the durable admission ledger, including
+// retries whose Run records have since been deleted. The source row is locked.
+func (r *RunAdmissionRepository) HasConsumedRetryIterationTx(ctx context.Context, tx *sql.Tx, sourceRunID int64, iterations []int) (bool, error) {
+	raw, err := json.Marshal(iterations)
+	if err != nil {
+		return false, err
+	}
+	var exists bool
+	err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_retry_admissions
+		WHERE source_run_id=$1 AND iteration IN
+		(SELECT value::integer FROM jsonb_array_elements_text($2::jsonb) AS items(value)))`, sourceRunID, raw).Scan(&exists)
 	return exists, err
 }
 
