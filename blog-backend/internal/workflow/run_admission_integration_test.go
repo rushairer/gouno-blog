@@ -166,3 +166,70 @@ func TestRunAdmissionRecoveryPreservesClaimedRuns(t *testing.T) {
 		t.Fatalf("queued run %d missing from queued run list", queuedID)
 	}
 }
+
+func TestRunRetryAdmissionSerializesActiveRetries(t *testing.T) {
+	db := testsupport.OpenTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	workflowID, versionID := admissionWorkflowVersion(t, db)
+	var sourceRunID int64
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,status,input,trigger_kind)
+		VALUES($1,$2,'succeeded','{}','manual') RETURNING id`, workflowID, versionID).Scan(&sourceRunID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := db.Exec(`DELETE FROM ai_workflow_runs WHERE id=$1 OR retry_of_run_id=$1`, sourceRunID); err != nil {
+			t.Error(err)
+		}
+	})
+	if _, err := db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs(workflow_run_id,step_id,step_type,iteration,status)
+		VALUES($1,'child','output',1,'failed'),($1,'child','output',2,'failed')`, sourceRunID); err != nil {
+		t.Fatal(err)
+	}
+	type result struct {
+		run *workflowdomain.WorkflowRun
+		err error
+	}
+	start := make(chan struct{})
+	results := make(chan result, 2)
+	for _, iteration := range []int{1, 2} {
+		go func(iteration int) {
+			<-start
+			run, err := newTestRunAdmissionCoordinator(db).Retry(ctx, sourceRunID, "child", "batch", []int{iteration}, nil)
+			results <- result{run, err}
+		}(iteration)
+	}
+	close(start)
+	var admittedID int64
+	denied := 0
+	for range 2 {
+		got := <-results
+		if got.err == nil && got.run != nil && got.run.ID > 0 {
+			admittedID = got.run.ID
+		} else if errors.Is(got.err, ErrInvalid) && got.run == nil {
+			denied++
+		} else {
+			t.Fatalf("unexpected retry admission: run=%v err=%v", got.run, got.err)
+		}
+	}
+	if admittedID == 0 || denied != 1 {
+		t.Fatalf("expected one admitted and one denied, id=%d denied=%d", admittedID, denied)
+	}
+	coordinator := newTestRunAdmissionCoordinator(db)
+	for _, status := range []string{"queued", "running", "waiting_for_user", "awaiting_approval"} {
+		if _, err := db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2 WHERE id=$1`, admittedID, status); err != nil {
+			t.Fatal(err)
+		}
+		if run, err := coordinator.Retry(ctx, sourceRunID, "child", "batch", []int{1, 2}, nil); run != nil || !errors.Is(err, ErrInvalid) {
+			t.Fatalf("active retry status=%s allowed another run: run=%v err=%v", status, run, err)
+		}
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_runs WHERE retry_of_run_id=$1`, sourceRunID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected one retry row, got %d", count)
+	}
+}

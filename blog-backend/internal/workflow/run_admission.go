@@ -22,6 +22,7 @@ type RunAdmissionStore interface {
 	RetrySource(context.Context, int64) (*workflowdomain.WorkflowRun, error)
 	LockRetrySourceTx(context.Context, *sql.Tx, int64) (*workflowdomain.WorkflowRun, error)
 	CountFailedIterationsTx(context.Context, *sql.Tx, int64, string, []int) (int, error)
+	HasActiveRetryTx(context.Context, *sql.Tx, int64) (bool, error)
 	CreateRetryRunTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRun) error
 	CopyRetryResourcesTx(context.Context, *sql.Tx, int64, int64) error
 	CopyRetryQueryStepsTx(context.Context, *sql.Tx, int64, int64) error
@@ -110,6 +111,17 @@ func (c *RunAdmissionCoordinator) Retry(ctx context.Context, runID int64, childS
 		}
 		if failed != len(iterations) {
 			return fmt.Errorf("%w: retry can target only failed resource iterations", ErrInvalid)
+		}
+
+		// The locked source row serializes admissions across replicas. Check
+		// all active retries, not just overlapping iteration selections: other
+		// steps in the same Workflow may also execute in each retry Run.
+		active, err := c.store.HasActiveRetryTx(ctx, tx, runID)
+		if err != nil {
+			return err
+		}
+		if active {
+			return fmt.Errorf("%w: source run already has an active retry", ErrInvalid)
 		}
 
 		parent := parentStepID
