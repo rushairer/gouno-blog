@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Restrict partial Workflow retries to one isolated top-level batch with no unrelated effectful steps or model siblings. Revalidate persisted retry scope before dispatch, quarantine missing query snapshots and reject out-of-range selections rather than widening the batch. Selected failed model replay and terminal retry idempotency remain separate concerns.
+
 - Remove the dormant failed scheduled-run requeue path. Duplicate schedule keys return the original persisted Run without resetting its status, version, input, usage or resource/checkpoint evidence. New schedule slots remain independent; no external replay guarantee is implied.
 
 - Bind failed-iteration retry admission to the source run's exact Workflow version and original ForEach parent, rather than the current definition. Prevent a later parent rename/move from silently widening old-run iteration selection; preserve the deleted-Workflow denial and verify the behavior against migrated PostgreSQL.

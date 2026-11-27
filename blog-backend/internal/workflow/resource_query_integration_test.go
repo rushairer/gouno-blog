@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"os"
@@ -544,5 +545,47 @@ func TestForEachResumeKeepsIterationOutputs(t *testing.T) {
 				t.Fatal("repeat execution changed outputs or duplicated checkpoints")
 			}
 		})
+	}
+}
+
+func TestRetryScopeDeniesUnsafeGraphBeforeDispatch(t *testing.T) {
+	db := openWorkflowIntegrationDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	workflowID, versionID := createResourceQueryWorkflow(t, ctx, db, []map[string]any{
+		{"id": "outside", "type": "model", "agent_id": 1},
+		{"id": "batch", "type": "for_each", "collection_pointer": "/input/items", "max_items": 3, "continue_on_error": true,
+			"steps": []map[string]any{{"id": "value", "type": "output", "output_pointer": "/item/value"}}},
+	})
+	t.Cleanup(func() { cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0) })
+	service := &Service{execution: newTestExecutionCoordinator(db), admission: newTestRunAdmissionCoordinator(db), definitions: workflowrepository.NewDefinitionRepository(db)}
+	var sourceID int64
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,status,input,trigger_kind)
+		VALUES($1,$2,'succeeded','{"items":[{}]}','manual') RETURNING id`, workflowID, versionID).Scan(&sourceID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs(workflow_run_id,step_id,step_type,iteration,status)
+		VALUES($1,'value','output',0,'failed')`, sourceID); err != nil {
+		t.Fatal(err)
+	}
+	if retry, err := service.RetryFailed(ctx, sourceID, "value", []int{0}, nil); retry != nil || !errors.Is(err, ErrInvalid) {
+		t.Fatalf("unsafe admission: retry=%v err=%v", retry, err)
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_runs WHERE retry_of_run_id=$1`, sourceID).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("denied admission persisted %d rows: %v", count, err)
+	}
+	// A legacy queued retry must not reach the unwired Agent dependency.
+	var retryID int64
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input,trigger_kind,retry_of_run_id,retry_step_id,retry_iterations)
+		VALUES($1,$2,'{"items":[{}]}','retry',$3,'batch','[0]') RETURNING id`, workflowID, versionID, sourceID).Scan(&retryID); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.execute(ctx, retryID); !errors.Is(err, errWorkflowEvidenceUnconfirmed) {
+		t.Fatalf("unsafe persisted retry was not quarantined: %v", err)
+	}
+	assertExecutionFenceStatus(t, db, retryID, "running")
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_step_runs WHERE workflow_run_id=$1`, retryID).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("unsafe retry recorded %d steps: %v", count, err)
 	}
 }

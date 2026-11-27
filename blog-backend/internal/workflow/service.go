@@ -685,6 +685,9 @@ func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID stri
 	if parentStepID == "" {
 		return nil, fmt.Errorf("%w: child step %q is not inside a for_each", ErrInvalid, childStepID)
 	}
+	if err := validateRetryScope(steps, parentStepID); err != nil {
+		return nil, err
+	}
 	return s.admission.Retry(ctx, runID, childStepID, parentStepID, unique, triggeredByPrincipalID)
 }
 
@@ -997,6 +1000,9 @@ func (s *Service) executeClaimed(ctx context.Context, run *workflowdomain.Workfl
 	if err := json.Unmarshal(stepsRaw, &steps); err != nil {
 		return workflowExecutionOutcome{}, err
 	}
+	if err := validateRetryRunScope(run, steps); err != nil {
+		return workflowExecutionOutcome{}, unconfirmedWorkflowEvidence(err)
+	}
 	var input any
 	if err := json.Unmarshal(run.Input, &input); err != nil {
 		return workflowExecutionOutcome{}, err
@@ -1093,6 +1099,9 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 		}
 		switch step.Type {
 		case "resource_query":
+			if run.TriggerKind == "retry" {
+				return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(errors.New("missing retry resource query checkpoint"))
+			}
 			if replay, found, replayErr := s.replayedResourceQuery(ctx, run.ID, step.ID); replayErr != nil {
 				return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(replayErr)
 			} else if found {
@@ -1225,6 +1234,13 @@ func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.Workflow
 					err = fmt.Errorf("%w: for_each collection is not an array", ErrInvalid)
 				} else {
 					count := min(len(items), step.MaxItems)
+					if run.TriggerKind == "retry" {
+						for _, index := range run.RetryIterations {
+							if index < 0 || index >= count {
+								return nil, awaiting, totalInput, totalOutput, unconfirmedWorkflowEvidence(errors.New("retry iteration outside source collection"))
+							}
+						}
+					}
 					selected := make([]int, 0, count)
 					for index := 0; index < count; index++ {
 						if retryIterationSelected(run, step.ID, index) {
