@@ -115,6 +115,15 @@ func (r *RunAdmissionRepository) CountFailedIterationsTx(ctx context.Context, tx
 	return failed, nil
 }
 
+// HasActiveRetryTx must be called after locking the source Run, in the same
+// read-committed admission transaction.
+func (r *RunAdmissionRepository) HasActiveRetryTx(ctx context.Context, tx *sql.Tx, sourceRunID int64) (bool, error) {
+	var exists bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_runs
+		WHERE retry_of_run_id=$1 AND status IN ('queued','running','waiting_for_user','awaiting_approval'))`, sourceRunID).Scan(&exists)
+	return exists, err
+}
+
 func (r *RunAdmissionRepository) CreateRetryRunTx(ctx context.Context, tx *sql.Tx, run *workflowdomain.WorkflowRun) error {
 	rawIterations, err := json.Marshal(run.RetryIterations)
 	if err != nil {

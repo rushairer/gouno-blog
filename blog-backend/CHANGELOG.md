@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Serialize explicit Workflow retry admission per source Run; reject another admission while a direct retry is queued, running, waiting for user or awaiting approval, including disjoint iteration selections. This guards concurrent admission, not terminal replay or external idempotency.
+
 - Preserve observed Workflow token totals across acknowledged human-interaction resume phases. Atomically add only newly executed step usage at each guarded completion, reject negative deltas, and keep zero-work resumes from clearing prior counters. Unconfirmed and failed phase usage reconciliation remains separate.
 
 - Distinguish Agent execution failures from invalid Workflow definitions. Carry typed OpenAI text failure codes into Agent runs and show fixed, non-secret cause summaries in Workflow step/run errors and failure notifications instead of only `invalid workflow: Agent run N failed`. Put the final upstream cause before streaming-negotiation context in Provider errors; do not copy raw Provider bodies into Workflow summaries or rewrite historical failures.
