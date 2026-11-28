@@ -198,6 +198,7 @@ type modelBoundaryRuns struct {
 	usages   int
 	toolRows int
 	claimErr error
+	claimPreview bool
 	usageErr error
 	lastUsage *domain.UsageEvent
 }
@@ -206,8 +207,9 @@ func (s *modelBoundaryRuns) GetRun(context.Context, int64) (*domain.AgentRun, er
 	return s.run, nil
 }
 
-func (s *modelBoundaryRuns) StartRun(context.Context, int64) error {
+func (s *modelBoundaryRuns) StartRun(_ context.Context, _ int64, dryRun bool) error {
 	s.starts++
+	s.claimPreview = dryRun
 	return s.claimErr
 }
 
@@ -290,7 +292,7 @@ func TestRunnerRejectsUnadvertisedBatchBeforeAnyToolSideEffect(t *testing.T) {
 				},
 			}
 			err := runner.execute(context.Background(), 1, tc.preview)
-			if !errors.Is(err, tool.ErrUnauthorized) || executed != 0 || runs.toolRows != 0 || runs.usages != 1 || runs.starts != 1 || len(client.requests) != 1 {
+			if !errors.Is(err, tool.ErrUnauthorized) || executed != 0 || runs.toolRows != 0 || runs.usages != 1 || runs.starts != 1 || runs.claimPreview != tc.preview || len(client.requests) != 1 {
 				t.Fatalf("boundary failure: err=%v effects=%d rows=%d usage=%d starts=%d requests=%d", err, executed, runs.toolRows, runs.usages, runs.starts, len(client.requests))
 			}
 			if lifecycle.calls != 1 || lifecycle.status != domain.AgentRunFailed || lifecycle.inputTokens != 10 || lifecycle.outputTokens != 3 || notifications.calls != 1 {

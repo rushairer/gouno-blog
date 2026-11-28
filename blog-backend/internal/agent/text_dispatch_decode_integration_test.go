@@ -26,7 +26,7 @@ func TestAgentTextDispatchDecodeEvidenceRejectsDuplicateCompletion(t *testing.T)
 			t.Errorf("cleanup dispatch evidence: %v", err)
 		}
 	})
-	if err := repo.StartRun(ctx, runID); err != nil {
+	if err := repo.StartRun(ctx, runID, false); err != nil {
 		t.Fatal(err)
 	}
 

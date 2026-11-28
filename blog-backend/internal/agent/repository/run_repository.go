@@ -50,10 +50,20 @@ func (r *RunRepository) CreateRun(ctx context.Context, run *domain.AgentRun) err
 	).Scan(&run.ID, &run.CreatedAt)
 }
 
-func (r *RunRepository) StartRun(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_agent_runs
+// StartRun binds the requested execution mode to the persisted parent Workflow
+// in the same statement as the one-way claim. A standalone run is live only;
+// a partially linked or mismatched Workflow child cannot be claimed.
+func (r *RunRepository) StartRun(ctx context.Context, id int64, dryRun bool) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_agent_runs r
 		SET status='running', started_at=NOW()
-		WHERE id=$1 AND status='queued'`, id)
+		WHERE r.id=$1 AND r.status='queued' AND (
+			(r.workflow_run_id IS NULL AND r.workflow_version_id IS NULL AND NOT $2::boolean)
+			OR EXISTS (
+				SELECT 1 FROM ai_workflow_runs w
+				WHERE w.id=r.workflow_run_id AND w.workflow_version_id=r.workflow_version_id
+					AND w.dry_run=$2
+			)
+		)`, id, dryRun)
 	if err != nil {
 		return err
 	}

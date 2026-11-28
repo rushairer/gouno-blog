@@ -173,7 +173,7 @@ type runExecutionOutcome struct {
 // (including a lost acknowledgement) cannot authorize dispatch OR a failure
 // transition. A claimed run is never automatically reclaimed or replayed.
 func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
-	if err := r.runs.StartRun(ctx, runID); err != nil {
+	if err := r.runs.StartRun(ctx, runID, dryRun); err != nil {
 		r.logRunStorageFailure(runID, "claim")
 		return err
 	}
