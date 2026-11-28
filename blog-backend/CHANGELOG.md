@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Apply the locked Agent input estimate to the complete model input envelope before Provider invocation, including publication, preview and final-synthesis instructions and actually offered Tool definitions. Reject oversized turns without dispatch or fabricated usage; retain the approximate byte-based contract.
+
 - Cap Agent execution overrides at the Run's locked Skill version limits, even when the Agent was rebound after queueing. Preserve the locked final synthesis turn and output cap; retain valid tighter overrides.
 
 - Retain observed Workflow usage in acknowledged failure transitions, including a failed phase following a human-interaction resume. Do not erase earlier usage or retry unconfirmed failure writes; uncertain execution evidence remains quarantined.
