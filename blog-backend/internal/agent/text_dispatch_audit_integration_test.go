@@ -57,7 +57,7 @@ func TestAgentTextDispatchAuditPersistsEveryHTTPRequestAndSurvivesRunDeletion(t 
 	if !errors.Is(err, provider.ErrTextDispatchStartUnconfirmed) || calls.Load() != 0 {
 		t.Fatalf("unclaimed run dispatched: calls=%d err=%v", calls.Load(), err)
 	}
-	if err := repo.StartRun(ctx, id); err != nil {
+	if err := repo.StartRun(ctx, id, false); err != nil {
 		t.Fatal(err)
 	}
 	audit = newRunTextDispatchAudit(repo, id, agentID, requestID, profile)
@@ -121,7 +121,7 @@ func TestAgentTextDispatchDecodeEvidenceIsOneWayAndSeparateFromHTTPReceipt(t *te
 			t.Errorf("cleanup dispatch evidence: %v", err)
 		}
 	})
-	if err := repo.StartRun(ctx, runID); err != nil { t.Fatal(err) }
+	if err := repo.StartRun(ctx, runID, false); err != nil { t.Fatal(err) }
 	var calls int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls++

@@ -68,7 +68,7 @@ func TestAgentExecutionClaimAndTerminalFence(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			results <- repo.StartRun(ctx, id)
+			results <- repo.StartRun(ctx, id, false)
 		}()
 	}
 	wg.Wait()
@@ -87,7 +87,7 @@ func TestAgentExecutionClaimAndTerminalFence(t *testing.T) {
 	if err := lifecycle.FinishRun(ctx, id, domain.AgentRunSucceeded, "confirmed", 13, 5, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.StartRun(ctx, id); !errors.Is(err, sql.ErrNoRows) {
+	if err := repo.StartRun(ctx, id, false); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("completed run was reclaimed: %v", err)
 	}
 	if err := lifecycle.FinishRun(ctx, id, domain.AgentRunFailed, "overwritten", 0, 0, nil, nil); !errors.Is(err, sql.ErrNoRows) {
@@ -117,7 +117,7 @@ func TestAgentMonthlyUsageIncludesActiveFailedAndLegacyWithoutDoubleCounting(t *
 		t.Fatal(err)
 	}
 	active := createExecutionRun(t, db, agentID, versionID, domain.AgentRunQueued, 0, 0)
-	if err := repo.StartRun(ctx, active); err != nil {
+	if err := repo.StartRun(ctx, active, false); err != nil {
 		t.Fatal(err)
 	}
 	usage := func(id, input, output int64, sequence int) {
@@ -164,7 +164,7 @@ func TestAgentTerminalAndMediaUsageCommitTogether(t *testing.T) {
 	repo := agentrepository.NewRunRepository(db)
 	media := agentrepository.NewMediaCandidateRepository(db)
 	id := createExecutionRun(t, db, agentID, versionID, domain.AgentRunQueued, 0, 0)
-	if err := repo.StartRun(ctx, id); err != nil {
+	if err := repo.StartRun(ctx, id, false); err != nil {
 		t.Fatal(err)
 	}
 	var postID, candidateID int64
@@ -316,5 +316,86 @@ func TestAgentRunUsageArchiveRollsBackWithRunDeletion(t *testing.T) {
 	}
 	if total, err := repo.MonthlyTokenUsage(ctx, agentID); err != nil || total != 20 {
 		t.Fatalf("rollback changed monthly usage: total=%d err=%v", total, err)
+	}
+}
+
+func TestAgentExecutionClaimMatchesPersistedWorkflowMode(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		parent    bool
+		version   bool
+		preview   bool
+		claimable bool
+	}{
+		{"standalone live", false, false, false, true},
+		{"live child", true, true, false, true},
+		{"preview child", true, true, true, true},
+		{"missing parent", false, true, false, false},
+		{"missing version", true, false, true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, agentID, skillVersionID := newExecutionFixture(t)
+			ctx := context.Background()
+			repo := agentrepository.NewRunRepository(db)
+			var workflowVersionID int64
+			if err := db.QueryRow(`SELECT id FROM ai_workflow_versions ORDER BY id LIMIT 1`).Scan(&workflowVersionID); err != nil {
+				t.Fatal(err)
+			}
+			run := &domain.AgentRun{
+				AgentID: agentID, TriggerType: domain.AgentTriggerManual, Status: domain.AgentRunQueued,
+				Provider: "openai", Model: "test", SkillVersionID: &skillVersionID,
+			}
+			if tc.parent {
+				var parentID int64
+				if err := db.QueryRow(`INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,dry_run,status)
+					SELECT workflow_id,id,$2,'running' FROM ai_workflow_versions WHERE id=$1 RETURNING id`,
+					workflowVersionID, tc.preview).Scan(&parentID); err != nil {
+					t.Fatal(err)
+				}
+				run.WorkflowRunID = &parentID
+				t.Cleanup(func() {
+					if _, err := db.Exec(`DELETE FROM ai_workflow_runs WHERE id=$1`, parentID); err != nil {
+						t.Errorf("cleanup parent: %v", err)
+					}
+				})
+			}
+			if tc.version {
+				run.WorkflowVersionID = &workflowVersionID
+			}
+			if err := repo.CreateRun(ctx, run); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if _, err := db.Exec(`DELETE FROM ai_agent_runs WHERE id=$1`, run.ID); err != nil {
+					t.Errorf("cleanup child: %v", err)
+				}
+			})
+			assertQueued := func() {
+				t.Helper()
+				observed, err := repo.GetRun(ctx, run.ID)
+				if err != nil || observed.Status != domain.AgentRunQueued || observed.StartedAt != nil {
+					t.Fatalf("rejected claim changed row: run=%#v err=%v", observed, err)
+				}
+			}
+			if err := repo.StartRun(ctx, run.ID, !tc.preview); !errors.Is(err, sql.ErrNoRows) {
+				t.Fatalf("wrong mode claimed run: %v", err)
+			}
+			assertQueued()
+			err := repo.StartRun(ctx, run.ID, tc.preview)
+			if !tc.claimable {
+				if !errors.Is(err, sql.ErrNoRows) {
+					t.Fatalf("incomplete Workflow identity claimed run: %v", err)
+				}
+				assertQueued()
+				return
+			}
+			if err != nil {
+				t.Fatalf("correct mode could not claim: %v", err)
+			}
+			observed, err := repo.GetRun(ctx, run.ID)
+			if err != nil || observed.Status != domain.AgentRunRunning || observed.StartedAt == nil {
+				t.Fatalf("correct claim not persisted: run=%#v err=%v", observed, err)
+			}
+		})
 	}
 }

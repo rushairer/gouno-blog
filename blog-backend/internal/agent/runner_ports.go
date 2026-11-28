@@ -23,7 +23,7 @@ type RunnerManagement interface {
 
 type RunnerRunStore interface {
 	CreateRun(context.Context, *domain.AgentRun) error
-	StartRun(context.Context, int64) error
+	StartRun(context.Context, int64, bool) error
 	SaveRunCitations(context.Context, int64, []domain.AgentCitation) error
 	GetRun(context.Context, int64) (*domain.AgentRun, error)
 	ListRuns(context.Context, int64, int, int) ([]*domain.AgentRun, int, error)
